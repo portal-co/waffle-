@@ -45,7 +45,7 @@ pub fn tcore(m: &mut Module, do_fuse: bool) -> anyhow::Result<()> {
     }
     let c = b.clone();
     for (k, v) in b.iter_mut() {
-        tcore_tco_pass(&c, *k, v, true)?;
+        tcore_tco_pass(&c, *k, v)?;
     }
     if do_fuse {
         let c = b.clone();
@@ -206,7 +206,6 @@ pub fn tcore_tco_pass(
     mo: &BTreeMap<Func, FunctionBody>,
     f: Func,
     b: &mut FunctionBody,
-    cff: bool,
 ) -> anyhow::Result<()> {
     passes::resolve_aliases::run(b);
     let mut m = BTreeMap::new();

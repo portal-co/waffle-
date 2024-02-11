@@ -202,6 +202,14 @@ impl<'a> Module<'a> {
             }
         }
     }
+    pub fn try_per_func_body<F: Fn(&mut FunctionBody) -> anyhow::Result<()>>(&mut self, f: F) -> anyhow::Result<()>{
+        for func_decl in self.funcs.values_mut() {
+            if let Some(body) = func_decl.body_mut() {
+                f(body)?;
+            }
+        }
+        return Ok(());
+    }
 
     pub fn expand_func<'b>(&'b mut self, id: Func) -> Result<&'b mut FuncDecl<'a>> {
         if let FuncDecl::Lazy(..) = self.funcs[id] {
