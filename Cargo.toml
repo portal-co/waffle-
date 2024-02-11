@@ -24,6 +24,7 @@ addr2line = "0.19"
 libfuzzer-sys = { version = "0.4", optional = true }
 wasm-smith = { version = "0.8", optional = true }
 indexmap = "2.2.2"
+paste = "1.0.14"
 
 [features]
 default = []

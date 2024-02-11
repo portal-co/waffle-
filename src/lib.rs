@@ -15,6 +15,8 @@ pub mod op_traits;
 mod ops;
 pub mod passes;
 pub mod pool;
+pub mod copying;
+pub mod more;
 mod scoped_map;
 
 pub use errors::*;

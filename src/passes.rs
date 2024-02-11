@@ -9,3 +9,7 @@ pub mod reorder_funs;
 pub mod resolve_aliases;
 pub mod ssa;
 pub mod trace;
+pub mod mem_fusing;
+pub mod unmem;
+pub mod tcore;
+pub mod  quinify;
