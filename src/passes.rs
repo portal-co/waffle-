@@ -15,3 +15,4 @@ pub mod tcore;
 pub mod  quinify;
 pub mod flattening;
 pub mod unswitch;
+pub mod splice;

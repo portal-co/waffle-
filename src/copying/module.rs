@@ -29,15 +29,15 @@ impl Hash for IKW {
         }
     }
 }
-#[derive(Clone)]
-pub struct State {
+
+pub struct State<I> {
     cache: HashMap<IKW, ImportKind>,
     fun_cache: BTreeMap<Func, Func>,
     table_cache: BTreeMap<Table, Table>,
-    pub importmap: BTreeMap<(String, String), ImportKind>,
+    pub importmap: I,
 }
-impl State {
-    pub fn new(importmap: BTreeMap<(String, String), ImportKind>) -> Self {
+impl<I> State<I> {
+    pub fn new(importmap: I,instrument: impl FnMut(&mut Module,&mut FunctionBody) -> anyhow::Result<()> + 'static) -> Self {
         return Self {
             importmap,
             cache: Default::default(),
@@ -46,10 +46,10 @@ impl State {
         };
     }
 }
-pub struct Copier<A, B> {
+pub struct Copier<A, B,I> {
     pub src: A,
     pub dest: B,
-    pub state: State,
+    pub state: State<I>,
 }
 macro_rules! translator {
     ($a:tt) => {
@@ -63,12 +63,16 @@ macro_rules! translator {
         }
     };
 }
-impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<'static>> + DerefMut> Copier<A, B> {
+pub enum ImportBehavior{
+    Bind(ImportKind),
+    Passthrough(String,String),
+}
+impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<'static>> + DerefMut,I: FnMut(&mut Module,String,String) -> anyhow::Result<Option<ImportBehavior>>> Copier<A, B,I> {
     pub fn new(
         src: A,
         dest: B,
         // importmap: BTreeMap<(String, String), ImportKind>,
-        cache: State,
+        cache: State<I>,
     ) -> Self {
         return Self {
             src,
@@ -77,17 +81,15 @@ impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<
             state: cache,
         };
     }
-    pub fn resolve_import(&self, a: &ImportKind) -> Option<ImportKind> {
+    pub fn resolve_import(&mut self, a: &ImportKind) -> anyhow::Result<Option<ImportBehavior>> {
         for i in self.src.imports.iter() {
             if i.kind == *a {
-                return self
+                return (self
                     .state
-                    .importmap
-                    .get(&(i.module.clone(), i.name.clone()))
-                    .map(Clone::clone);
+                    .importmap)(&mut self.dest,i.module.clone(),i.name.clone())
             }
         }
-        return None;
+        return Ok(None);
     }
     pub fn internal_translate_mem(&mut self, a: crate::Memory) -> anyhow::Result<crate::Memory> {
         let d = self.src.memories[a].clone();
@@ -101,9 +103,11 @@ impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<
         return Ok(self.dest.globals.push(d));
     }
     pub fn translate_import(&mut self, a: ImportKind) -> anyhow::Result<ImportKind> {
-        if let Some(a) = self.resolve_import(&a) {
-            return Ok(a);
-        }
+        let i = match self.resolve_import(&a)?{
+            None => None,
+            Some(ImportBehavior::Bind(b)) => return Ok(b),
+            Some(ImportBehavior::Passthrough(a, b)) => Some((a,b))
+        };
         if let Some(b) = self.state.cache.get(&IKW(a.clone())) {
             return Ok(b.clone());
         }
@@ -114,6 +118,9 @@ impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<
             ImportKind::Memory(m) => ImportKind::Memory(self.internal_translate_mem(m)?),
         };
         self.state.cache.insert(IKW(a.clone()), c.clone());
+        if let Some(j) = i{
+            self.dest.imports.push(crate::Import { module: j.0, name: j.1, kind: c.clone() })
+        }
         return Ok(c);
     }
     pub fn internal_translate_table(&mut self, tk: Table) -> anyhow::Result<Table> {
@@ -215,6 +222,7 @@ impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<
                 }
                 b.blocks[k] = kv;
             }
+            // (self.state.instrument)(&mut self.dest,b)?;
         }
         match &mut f {
             crate::FuncDecl::Import(a, _) => {
