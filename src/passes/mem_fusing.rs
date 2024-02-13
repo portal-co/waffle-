@@ -1,10 +1,14 @@
 use std::{collections::BTreeMap, iter::empty};
 
-use crate::{
-    entity::{EntityRef, EntityVec}, ExportKind, Func, FunctionBody, Memory, Module, Operator, Type, ValueDef,
-};
+use anyhow::Context;
+use libc::name_t;
 
 use crate::more::append_before;
+use crate::{
+    entity::{EntityRef, EntityVec},
+    ExportKind, Func, FuncDecl, FunctionBody, Memory, Module, Operator, Type, ValueDef,
+};
+use itertools::Itertools;
 
 pub struct Fuse {
     pub resolve: Func,
@@ -19,7 +23,7 @@ pub fn get_exports(m: &Module) -> BTreeMap<String, ExportKind> {
     }
     return b;
 }
-pub fn finalize(m: &mut Module){
+pub fn finalize(m: &mut Module) {
     let mem = m.memories[Memory::new(0)].clone();
     m.memories = EntityVec::default();
     m.memories.push(mem);
@@ -45,6 +49,50 @@ impl Fuse {
             size: c,
         });
     }
+    pub fn finalize(self, m: &mut Module) {
+        let mem = m.memories[Memory::new(0)].clone();
+        let l = m.memories.len() - 1;
+        m.memories = EntityVec::default();
+        m.memories.push(mem);
+        let v = vec![self.resolve, self.grow, self.size];
+        let mut new = vec![];
+        for f in v.clone() {
+            let n = m.funcs[f].clone();
+            let s = n.sig();
+            let name = n.name().to_owned();
+            // let n = m.funcs.push(n);
+            let mut b = FunctionBody::new(&m, s);
+            let mut p = b.blocks[b.entry].params.iter().map(|a| a.1).collect_vec();
+            let vz = b.arg_pool.from_iter(empty());
+            let tz = b.type_pool.from_iter(empty());
+            let ti = b.type_pool.from_iter(vec![Type::I32].into_iter());
+            let i = b.add_value(ValueDef::Operator(
+                Operator::I32Const { value: l as u32 },
+                vz,
+                ti,
+            ));
+            b.append_to_block(b.entry, i);
+            let i = b.arg_pool.from_iter(vec![p[p.len() - 1], i].into_iter());
+            let i = b.add_value(ValueDef::Operator(Operator::I32Add, i, ti));
+            let l = p.len();
+            p[l - 1] = i;
+            b.append_to_block(b.entry, i);
+            b.set_terminator(b.entry, crate::Terminator::ReturnCall { func: f, args: p });
+            let n = FuncDecl::Body(s, name, b);
+            let n = m.funcs.push(n);
+            new.push(n);
+        }
+        for x in m.exports.iter_mut() {
+            let ExportKind::Func(xf) = &mut x.kind else {
+                continue;
+            };
+            for (o, n) in v.iter().zip(new.iter()) {
+                if xf == o {
+                    *xf = *n
+                }
+            }
+        }
+    }
     pub fn process(&self, f: &mut FunctionBody) {
         let vz = f.arg_pool.from_iter(empty());
         let tz = f.type_pool.from_iter(empty());
@@ -62,7 +110,7 @@ impl Fuse {
                         if mem.index() != 0 {
                             let ia = f.add_value(ValueDef::Operator(
                                 Operator::I32Const {
-                                    value: mem.index() as u32,
+                                    value: mem.index() as u32 - 1,
                                 },
                                 vz,
                                 ti,
@@ -78,7 +126,7 @@ impl Fuse {
                         if mem.index() != 0 {
                             let ia = f.add_value(ValueDef::Operator(
                                 Operator::I32Const {
-                                    value: mem.index() as u32,
+                                    value: mem.index() as u32 - 1,
                                 },
                                 vz,
                                 ti,
@@ -94,14 +142,14 @@ impl Fuse {
                         if m.index() != 0 {
                             let ia = f.add_value(ValueDef::Operator(
                                 Operator::I32Const {
-                                    value: m.index() as u32,
+                                    value: m.index() as u32 - 1,
                                 },
                                 vz,
                                 ti,
                             ));
                             append_before(f, ia, vi, k);
                             if let Some(v) = v {
-                                let w = f.arg_pool.from_iter(vec![ia, *v].into_iter());
+                                let w = f.arg_pool.from_iter(vec![*v, ia].into_iter());
                                 let x = f.add_value(ValueDef::Operator(
                                     Operator::Call {
                                         function_index: self.resolve,
@@ -123,4 +171,12 @@ impl Fuse {
             f.values[v] = w;
         }
     }
+}
+pub fn fuse(m: &mut Module) -> anyhow::Result<()> {
+    let f = Fuse::new(m).context("in getting the fuse funcs")?;
+    crate::passes::unmem::metafuse_all(m);
+    crate::passes::splice::splice_module(m)?;
+    m.per_func_body(|b| f.process(b));
+    f.finalize(m);
+    return Ok(());
 }

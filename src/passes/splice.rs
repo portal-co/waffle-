@@ -59,21 +59,28 @@ pub fn splice_func(
     k: &mut SpliceCache,
 ) -> anyhow::Result<()> {
     for v in f.values.values_mut() {
-        if let ValueDef::Operator(o, _, _) = v {
-            if let Operator::Select = o {
-            } else {
-                let f = k.get(&*o);
-                let f = match f {
-                    Some(f) => *f,
-                    None => {
-                        let s = splice_op(m, o.clone())?;
-                        k.insert(o.clone(), s);
-                        s
-                    }
-                };
-                *o = Operator::Call { function_index: f };
-            }
+        let ValueDef::Operator(o, _, _) = v else {
+            continue;
+        };
+        if let Operator::Select = o {
+            continue;
         }
+        if crate::op_traits::op_rematerialize(o){
+            continue;
+        }
+        if let Operator::Call { function_index } = o{
+            continue;
+        }
+        let f = k.get(&*o);
+        let f = match f {
+            Some(f) => *f,
+            None => {
+                let s = splice_op(m, o.clone())?;
+                k.insert(o.clone(), s);
+                s
+            }
+        };
+        *o = Operator::Call { function_index: f };
     }
     return Ok(());
 }

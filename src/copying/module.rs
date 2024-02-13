@@ -1,7 +1,7 @@
 use crate::more::{new_sig, rewrite_mem};
 use paste::paste;
 use std::{
-    backtrace, borrow::Cow, collections::{BTreeMap, HashMap}, hash::Hash, iter::empty, ops::{Deref, DerefMut}
+    backtrace, borrow::Cow, collections::{BTreeMap, BTreeSet, HashMap}, hash::Hash, iter::empty, ops::{Deref, DerefMut}
 };
 
 use crate::{entity::EntityRef, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory, Module, Operator, Signature, SignatureData, Table, TableData, ValueDef};
@@ -35,14 +35,16 @@ pub struct State<I> {
     fun_cache: BTreeMap<Func, Func>,
     table_cache: BTreeMap<Table, Table>,
     pub importmap: I,
+    pub tables: BTreeSet<Table>,
 }
 impl<I> State<I> {
-    pub fn new(importmap: I,instrument: impl FnMut(&mut Module,&mut FunctionBody) -> anyhow::Result<()> + 'static) -> Self {
+    pub fn new(importmap: I,tables: BTreeSet<Table>) -> Self {
         return Self {
             importmap,
             cache: Default::default(),
             fun_cache: Default::default(),
             table_cache: Default::default(),
+            tables
         };
     }
 }
@@ -151,6 +153,9 @@ impl<A: Deref<Target = crate::Module<'static>>, B: Deref<Target = crate::Module<
         }
         let a = self.dest.funcs.push(crate::FuncDecl::None);
         self.state.fun_cache.insert(f, a);
+        for t in &self.state.tables{
+            self.dest.tables[*t].func_elements.get_or_insert(vec![]).push(a);
+        }
         // if Some(f) == self.src.start_func{
         //    add_start(&mut self.dest, a); 
         // }
