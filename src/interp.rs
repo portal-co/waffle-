@@ -91,14 +91,16 @@ impl InterpContext {
         })
     }
 
-    pub fn call(&mut self, module: &Module<'_>, func: Func, args: &[ConstVal]) -> InterpResult {
+    pub fn call(&mut self, module: &Module<'_>, mut func: Func, args: &[ConstVal]) -> InterpResult {
+        let mut args = args.to_vec();
+        'redo: loop{
         let body = match &module.funcs[func] {
             FuncDecl::Lazy(..) => panic!("Un-expanded function"),
             FuncDecl::Compiled(..) => panic!("Already-compiled function"),
             FuncDecl::Import(..) => {
                 let import = &module.imports[func.index()];
                 assert_eq!(import.kind, ImportKind::Func(func));
-                return self.call_import(&import.name[..], args);
+                return self.call_import(&import.name[..], &args);
             }
             FuncDecl::Body(_, _, body) => body,
             FuncDecl::None => panic!("FuncDecl::None in call()"),
@@ -232,9 +234,9 @@ impl InterpContext {
                 &Terminator::ReturnCallIndirect {
                     sig,
                     table,
-                    ref args,
+                    args: ref args2,
                 } => {
-                    let args = args
+                    let args2 = args2
                         .iter()
                         .map(|&arg| {
                             let arg = body.resolve_alias(arg);
@@ -243,13 +245,16 @@ impl InterpContext {
                             multivalue[0]
                         })
                         .collect::<Vec<_>>();
-                    let idx = args.last().unwrap().as_u32().unwrap() as usize;
-                    let func = self.tables[table].elements[idx];
-                    let result = self.call(module, func, &args[..args.len() - 1]);
-                    return result;
+                    let idx = args2.last().unwrap().as_u32().unwrap() as usize;
+                    let fu = self.tables[table].elements[idx];
+                    func = fu;
+                    args = args2[..args2.len()-1].to_vec();
+                    continue 'redo;
+                    // let result = self.call(module, func, &args[..args.len() - 1]);
+                    // return result;
                 }
-                &Terminator::ReturnCall { func, ref args } => {
-                    let args = args
+                &Terminator::ReturnCall { func: fu, args: ref args2 } => {
+                    let args2 = args2
                         .iter()
                         .map(|&arg| {
                             let arg = body.resolve_alias(arg);
@@ -258,8 +263,9 @@ impl InterpContext {
                             multivalue[0]
                         })
                         .collect::<Vec<_>>();
-                    let result = self.call(module, func, &args[..]);
-                    return result;
+                    func = fu;
+                    args = args2;
+                    continue 'redo;
                 }
                 &Terminator::None => {
                     return InterpResult::Trap(frame.func, frame.cur_block, u32::MAX)
@@ -311,6 +317,7 @@ impl InterpContext {
                 }
             }
         }
+    }
     }
 
     fn call_import(&mut self, name: &str, args: &[ConstVal]) -> InterpResult {
