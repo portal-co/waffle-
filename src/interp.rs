@@ -18,6 +18,7 @@ pub struct InterpContext {
     pub globals: PerEntity<Global, ConstVal>,
     pub fuel: u64,
     pub trace_handler: Option<Box<dyn Fn(usize, Vec<ConstVal>) -> bool + Send>>,
+    pub import_hander: Option<Box<dyn FnMut(&mut InterpContext,&str,&[ConstVal]) -> InterpResult>>
 }
 
 type MultiVal = SmallVec<[ConstVal; 2]>;
@@ -86,6 +87,7 @@ impl InterpContext {
             globals,
             fuel: u64::MAX,
             trace_handler: None,
+            import_hander: None,
         })
     }
 
@@ -312,10 +314,10 @@ impl InterpContext {
     }
 
     fn call_import(&mut self, name: &str, args: &[ConstVal]) -> InterpResult {
-        if let Some(ret) = wasi::call_wasi(&mut self.memories[Memory::from(0)], name, args) {
-            return ret;
-        }
-        panic!("Unknown import: {} with args: {:?}", name, args);
+        let mut r = self.import_hander.take().unwrap();
+        let rs = r(self,name,args);
+        self.import_hander = Some(r);
+        return rs;
     }
 }
 
