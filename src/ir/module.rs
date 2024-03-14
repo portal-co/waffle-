@@ -198,7 +198,7 @@ impl<'a> Module<'a> {
         backend::compile(self)
     }
 
-    pub fn per_func_body<F: Fn(&mut FunctionBody)>(&mut self, f: F) {
+    pub fn per_func_body<F: FnMut(&mut FunctionBody)>(&mut self, mut f: F) {
         for func_decl in self.funcs.values_mut() {
             if let Some(body) = func_decl.body_mut() {
                 f(body);
