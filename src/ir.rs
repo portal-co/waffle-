@@ -10,6 +10,7 @@ pub enum Type {
     F64,
     V128,
     FuncRef,
+    ExternRef,
     TypedFuncRef(bool, u32),
 }
 impl From<wasmparser::ValType> for Type {
@@ -26,6 +27,9 @@ impl From<wasmparser::ValType> for Type {
 }
 impl From<wasmparser::RefType> for Type {
     fn from(ty: wasmparser::RefType) -> Self {
+        if ty.is_extern_ref(){
+            return Type::ExternRef;
+        }
         match ty.type_index() {
             Some(idx) => {
                 let nullable = ty.is_nullable();
@@ -45,6 +49,7 @@ impl std::fmt::Display for Type {
             Type::F64 => write!(f, "f64"),
             Type::V128 => write!(f, "v128"),
             Type::FuncRef => write!(f, "funcref"),
+            Type::ExternRef => write!(f,"externref"),
             Type::TypedFuncRef(nullable, idx) => write!(
                 f,
                 "funcref({}, {})",
@@ -63,7 +68,7 @@ impl From<Type> for wasm_encoder::ValType {
             Type::F32 => wasm_encoder::ValType::F32,
             Type::F64 => wasm_encoder::ValType::F64,
             Type::V128 => wasm_encoder::ValType::V128,
-            Type::FuncRef | Type::TypedFuncRef(..) => wasm_encoder::ValType::Ref(ty.into()),
+            Type::FuncRef | Type::TypedFuncRef(..) | Type::ExternRef => wasm_encoder::ValType::Ref(ty.into()),
         }
     }
 }
@@ -71,6 +76,7 @@ impl From<Type> for wasm_encoder::ValType {
 impl From<Type> for wasm_encoder::RefType {
     fn from(ty: Type) -> wasm_encoder::RefType {
         match ty {
+            Type::ExternRef => wasm_encoder::RefType::EXTERNREF,
             Type::FuncRef => wasm_encoder::RefType::FUNCREF,
             Type::TypedFuncRef(nullable, idx) => wasm_encoder::RefType {
                 nullable,
