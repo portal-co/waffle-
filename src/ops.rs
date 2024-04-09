@@ -1,6 +1,7 @@
 //! Operators.
 
 use crate::{entity::EntityRef, Func, Global, Memory, Signature, Table, Type};
+use anyhow::Context;
 use std::convert::TryFrom;
 pub use wasmparser::{Ieee32, Ieee64};
 
@@ -635,6 +636,9 @@ pub enum Operator {
         sig_index: Signature,
     },
     RefIsNull,
+    RefNull {
+        ty: Type,
+    },
     RefFunc {
         func_index: Func,
     },
@@ -1288,6 +1292,9 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             }),
             &wasmparser::Operator::MemoryFill { mem } => Ok(Operator::MemoryFill {
                 mem: Memory::from(mem),
+            }),
+            &wasmparser::Operator::RefNull { hty } => Ok(Operator::RefNull {
+                ty: wasmparser::RefType::new(true, hty).unwrap().into(),
             }),
             _ => Err(()),
         }

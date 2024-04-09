@@ -27,7 +27,7 @@ impl From<wasmparser::ValType> for Type {
 }
 impl From<wasmparser::RefType> for Type {
     fn from(ty: wasmparser::RefType) -> Self {
-        if ty.is_extern_ref(){
+        if ty.is_extern_ref() {
             return Type::ExternRef;
         }
         match ty.type_index() {
@@ -49,7 +49,7 @@ impl std::fmt::Display for Type {
             Type::F64 => write!(f, "f64"),
             Type::V128 => write!(f, "v128"),
             Type::FuncRef => write!(f, "funcref"),
-            Type::ExternRef => write!(f,"externref"),
+            Type::ExternRef => write!(f, "externref"),
             Type::TypedFuncRef(nullable, idx) => write!(
                 f,
                 "funcref({}, {})",
@@ -68,7 +68,9 @@ impl From<Type> for wasm_encoder::ValType {
             Type::F32 => wasm_encoder::ValType::F32,
             Type::F64 => wasm_encoder::ValType::F64,
             Type::V128 => wasm_encoder::ValType::V128,
-            Type::FuncRef | Type::TypedFuncRef(..) | Type::ExternRef => wasm_encoder::ValType::Ref(ty.into()),
+            Type::FuncRef | Type::TypedFuncRef(..) | Type::ExternRef => {
+                wasm_encoder::ValType::Ref(ty.into())
+            }
         }
     }
 }

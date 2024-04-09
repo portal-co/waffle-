@@ -945,6 +945,10 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::RefFunc { func_index } => {
                 Some(wasm_encoder::Instruction::RefFunc(func_index.index() as u32))
             }
+            Operator::RefNull { ty } => {
+                let h: wasm_encoder::RefType = ty.clone().into();
+                Some(wasm_encoder::Instruction::RefNull(h.heap_type))
+            }
         };
 
         if let Some(inst) = inst {

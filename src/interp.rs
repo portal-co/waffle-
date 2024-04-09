@@ -18,7 +18,8 @@ pub struct InterpContext {
     pub globals: PerEntity<Global, ConstVal>,
     pub fuel: u64,
     pub trace_handler: Option<Box<dyn Fn(usize, Vec<ConstVal>) -> bool + Send>>,
-    pub import_hander: Option<Box<dyn FnMut(&mut InterpContext,&str,&[ConstVal]) -> InterpResult>>
+    pub import_hander:
+        Option<Box<dyn FnMut(&mut InterpContext, &str, &[ConstVal]) -> InterpResult>>,
 }
 
 type MultiVal = SmallVec<[ConstVal; 2]>;
@@ -93,115 +94,91 @@ impl InterpContext {
 
     pub fn call(&mut self, module: &Module<'_>, mut func: Func, args: &[ConstVal]) -> InterpResult {
         let mut args = args.to_vec();
-        'redo: loop{
-        let body = match &module.funcs[func] {
-            FuncDecl::Lazy(..) => panic!("Un-expanded function"),
-            FuncDecl::Compiled(..) => panic!("Already-compiled function"),
-            FuncDecl::Import(..) => {
-                let import = &module.imports[func.index()];
-                assert_eq!(import.kind, ImportKind::Func(func));
-                return self.call_import(&import.name[..], &args);
-            }
-            FuncDecl::Body(_, _, body) => body,
-            FuncDecl::None => panic!("FuncDecl::None in call()"),
-        };
+        'redo: loop {
+            let body = match &module.funcs[func] {
+                FuncDecl::Lazy(..) => panic!("Un-expanded function"),
+                FuncDecl::Compiled(..) => panic!("Already-compiled function"),
+                FuncDecl::Import(..) => {
+                    let import = &module.imports[func.index()];
+                    assert_eq!(import.kind, ImportKind::Func(func));
+                    return self.call_import(&import.name[..], &args);
+                }
+                FuncDecl::Body(_, _, body) => body,
+                FuncDecl::None => panic!("FuncDecl::None in call()"),
+            };
 
-        log::trace!(
-            "Interp: entering func {}:\n{}\n",
-            func,
-            body.display_verbose("| ", Some(module))
-        );
-        log::trace!("args: {:?}", args);
+            log::trace!(
+                "Interp: entering func {}:\n{}\n",
+                func,
+                body.display_verbose("| ", Some(module))
+            );
+            log::trace!("args: {:?}", args);
 
-        let mut frame = InterpStackFrame {
-            func,
-            cur_block: body.entry,
-            values: HashMap::new(),
-        };
+            let mut frame = InterpStackFrame {
+                func,
+                cur_block: body.entry,
+                values: HashMap::new(),
+            };
 
-        for (&arg, &(_, blockparam)) in args.iter().zip(body.blocks[body.entry].params.iter()) {
-            log::trace!("Entry block param {} gets arg value {:?}", blockparam, arg);
-            frame.values.insert(blockparam, smallvec![arg]);
-        }
-
-        loop {
-            self.fuel -= 1;
-            if self.fuel == 0 {
-                return InterpResult::OutOfFuel;
+            for (&arg, &(_, blockparam)) in args.iter().zip(body.blocks[body.entry].params.iter()) {
+                log::trace!("Entry block param {} gets arg value {:?}", blockparam, arg);
+                frame.values.insert(blockparam, smallvec![arg]);
             }
 
-            log::trace!("Interpreting block {}", frame.cur_block);
-            for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().enumerate() {
-                log::trace!("Evaluating inst {}", inst);
-                let result = match &body.values[inst] {
-                    &ValueDef::Alias(_) => smallvec![],
-                    &ValueDef::PickOutput(val, idx, _) => {
-                        let val = body.resolve_alias(val);
-                        smallvec![frame.values.get(&val).unwrap()[idx as usize]]
-                    }
-                    &ValueDef::Operator(Operator::Call { function_index }, args, _) => {
-                        let args = body.arg_pool[args]
-                            .iter()
-                            .map(|&arg| {
-                                let arg = body.resolve_alias(arg);
-                                let multivalue = frame.values.get(&arg).unwrap();
-                                assert_eq!(multivalue.len(), 1);
-                                multivalue[0]
-                            })
-                            .collect::<Vec<_>>();
-                        let result = self.call(module, function_index, &args[..]);
-                        match result {
-                            InterpResult::Ok(vals) => vals,
-                            _ => return result,
+            loop {
+                self.fuel -= 1;
+                if self.fuel == 0 {
+                    return InterpResult::OutOfFuel;
+                }
+
+                log::trace!("Interpreting block {}", frame.cur_block);
+                for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().enumerate() {
+                    log::trace!("Evaluating inst {}", inst);
+                    let result = match &body.values[inst] {
+                        &ValueDef::Alias(_) => smallvec![],
+                        &ValueDef::PickOutput(val, idx, _) => {
+                            let val = body.resolve_alias(val);
+                            smallvec![frame.values.get(&val).unwrap()[idx as usize]]
                         }
-                    }
-                    &ValueDef::Operator(Operator::CallIndirect { table_index, .. }, args, _) => {
-                        let args = body.arg_pool[args]
-                            .iter()
-                            .map(|&arg| {
-                                let arg = body.resolve_alias(arg);
-                                let multivalue = frame.values.get(&arg).unwrap();
-                                assert_eq!(multivalue.len(), 1);
-                                multivalue[0]
-                            })
-                            .collect::<Vec<_>>();
-                        let idx = args.last().unwrap().as_u32().unwrap() as usize;
-                        let func = self.tables[table_index].elements[idx];
-                        let result = self.call(module, func, &args[..args.len() - 1]);
-                        match result {
-                            InterpResult::Ok(vals) => vals,
-                            _ => return result,
-                        }
-                    }
-                    &ValueDef::Operator(ref op, args, _) => {
-                        let args = body.arg_pool[args]
-                            .iter()
-                            .map(|&arg| {
-                                let arg = body.resolve_alias(arg);
-                                let multivalue = frame
-                                    .values
-                                    .get(&arg)
-                                    .ok_or_else(|| format!("Unset SSA value: {}", arg))
-                                    .unwrap();
-                                assert_eq!(multivalue.len(), 1);
-                                multivalue[0]
-                            })
-                            .collect::<Vec<_>>();
-                        let result = match const_eval(op, &args[..], Some(self)) {
-                            Some(result) => result,
-                            None => {
-                                log::trace!("const_eval failed on {:?} args {:?}", op, args);
-                                return InterpResult::Trap(
-                                    frame.func,
-                                    frame.cur_block,
-                                    inst_idx as u32,
-                                );
+                        &ValueDef::Operator(Operator::Call { function_index }, args, _) => {
+                            let args = body.arg_pool[args]
+                                .iter()
+                                .map(|&arg| {
+                                    let arg = body.resolve_alias(arg);
+                                    let multivalue = frame.values.get(&arg).unwrap();
+                                    assert_eq!(multivalue.len(), 1);
+                                    multivalue[0]
+                                })
+                                .collect::<Vec<_>>();
+                            let result = self.call(module, function_index, &args[..]);
+                            match result {
+                                InterpResult::Ok(vals) => vals,
+                                _ => return result,
                             }
-                        };
-                        smallvec![result]
-                    }
-                    &ValueDef::Trace(id, args) => {
-                        if let Some(handler) = self.trace_handler.as_ref() {
+                        }
+                        &ValueDef::Operator(
+                            Operator::CallIndirect { table_index, .. },
+                            args,
+                            _,
+                        ) => {
+                            let args = body.arg_pool[args]
+                                .iter()
+                                .map(|&arg| {
+                                    let arg = body.resolve_alias(arg);
+                                    let multivalue = frame.values.get(&arg).unwrap();
+                                    assert_eq!(multivalue.len(), 1);
+                                    multivalue[0]
+                                })
+                                .collect::<Vec<_>>();
+                            let idx = args.last().unwrap().as_u32().unwrap() as usize;
+                            let func = self.tables[table_index].elements[idx];
+                            let result = self.call(module, func, &args[..args.len() - 1]);
+                            match result {
+                                InterpResult::Ok(vals) => vals,
+                                _ => return result,
+                            }
+                        }
+                        &ValueDef::Operator(ref op, args, _) => {
                             let args = body.arg_pool[args]
                                 .iter()
                                 .map(|&arg| {
@@ -214,115 +191,148 @@ impl InterpContext {
                                     assert_eq!(multivalue.len(), 1);
                                     multivalue[0]
                                 })
-                                .collect::<Vec<ConstVal>>();
-                            if !handler(id, args) {
-                                return InterpResult::TraceHandlerQuit;
-                            }
+                                .collect::<Vec<_>>();
+                            let result = match const_eval(op, &args[..], Some(self)) {
+                                Some(result) => result,
+                                None => {
+                                    log::trace!("const_eval failed on {:?} args {:?}", op, args);
+                                    return InterpResult::Trap(
+                                        frame.func,
+                                        frame.cur_block,
+                                        inst_idx as u32,
+                                    );
+                                }
+                            };
+                            smallvec![result]
                         }
-                        smallvec![]
-                    }
-                    &ValueDef::None | &ValueDef::Placeholder(..) | &ValueDef::BlockParam(..) => {
-                        unreachable!();
-                    }
-                };
+                        &ValueDef::Trace(id, args) => {
+                            if let Some(handler) = self.trace_handler.as_ref() {
+                                let args = body.arg_pool[args]
+                                    .iter()
+                                    .map(|&arg| {
+                                        let arg = body.resolve_alias(arg);
+                                        let multivalue = frame
+                                            .values
+                                            .get(&arg)
+                                            .ok_or_else(|| format!("Unset SSA value: {}", arg))
+                                            .unwrap();
+                                        assert_eq!(multivalue.len(), 1);
+                                        multivalue[0]
+                                    })
+                                    .collect::<Vec<ConstVal>>();
+                                if !handler(id, args) {
+                                    return InterpResult::TraceHandlerQuit;
+                                }
+                            }
+                            smallvec![]
+                        }
+                        &ValueDef::None
+                        | &ValueDef::Placeholder(..)
+                        | &ValueDef::BlockParam(..) => {
+                            unreachable!();
+                        }
+                    };
 
-                log::trace!("Inst {} gets result {:?}", inst, result);
-                frame.values.insert(inst, result);
-            }
+                    log::trace!("Inst {} gets result {:?}", inst, result);
+                    frame.values.insert(inst, result);
+                }
 
-            match &body.blocks[frame.cur_block].terminator {
-                &Terminator::ReturnCallIndirect {
-                    sig,
-                    table,
-                    args: ref args2,
-                } => {
-                    let args2 = args2
-                        .iter()
-                        .map(|&arg| {
-                            let arg = body.resolve_alias(arg);
-                            let multivalue = frame.values.get(&arg).unwrap();
-                            assert_eq!(multivalue.len(), 1);
-                            multivalue[0]
-                        })
-                        .collect::<Vec<_>>();
-                    let idx = args2.last().unwrap().as_u32().unwrap() as usize;
-                    let fu = self.tables[table].elements[idx];
-                    func = fu;
-                    args = args2[..args2.len()-1].to_vec();
-                    continue 'redo;
-                    // let result = self.call(module, func, &args[..args.len() - 1]);
-                    // return result;
-                }
-                &Terminator::ReturnCall { func: fu, args: ref args2 } => {
-                    let args2 = args2
-                        .iter()
-                        .map(|&arg| {
-                            let arg = body.resolve_alias(arg);
-                            let multivalue = frame.values.get(&arg).unwrap();
-                            assert_eq!(multivalue.len(), 1);
-                            multivalue[0]
-                        })
-                        .collect::<Vec<_>>();
-                    func = fu;
-                    args = args2;
-                    continue 'redo;
-                }
-                &Terminator::None => {
-                    return InterpResult::Trap(frame.func, frame.cur_block, u32::MAX)
-                }
-                &Terminator::Unreachable => {
-                    return InterpResult::Trap(frame.func, frame.cur_block, u32::MAX)
-                }
-                &Terminator::Br { ref target } => {
-                    frame.apply_target(body, target);
-                }
-                &Terminator::CondBr {
-                    cond,
-                    ref if_true,
-                    ref if_false,
-                } => {
-                    let cond = body.resolve_alias(cond);
-                    let cond = frame.values.get(&cond).unwrap();
-                    let cond = cond[0].as_u32().unwrap() != 0;
-                    if cond {
-                        frame.apply_target(body, if_true);
-                    } else {
-                        frame.apply_target(body, if_false);
+                match &body.blocks[frame.cur_block].terminator {
+                    &Terminator::ReturnCallIndirect {
+                        sig,
+                        table,
+                        args: ref args2,
+                    } => {
+                        let args2 = args2
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame.values.get(&arg).unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        let idx = args2.last().unwrap().as_u32().unwrap() as usize;
+                        let fu = self.tables[table].elements[idx];
+                        func = fu;
+                        args = args2[..args2.len() - 1].to_vec();
+                        continue 'redo;
+                        // let result = self.call(module, func, &args[..args.len() - 1]);
+                        // return result;
                     }
-                }
-                &Terminator::Select {
-                    value,
-                    ref targets,
-                    ref default,
-                } => {
-                    let value = body.resolve_alias(value);
-                    let value = frame.values.get(&value).unwrap();
-                    let value = value[0].as_u32().unwrap() as usize;
-                    if value < targets.len() {
-                        frame.apply_target(body, &targets[value]);
-                    } else {
-                        frame.apply_target(body, default);
+                    &Terminator::ReturnCall {
+                        func: fu,
+                        args: ref args2,
+                    } => {
+                        let args2 = args2
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame.values.get(&arg).unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        func = fu;
+                        args = args2;
+                        continue 'redo;
                     }
-                }
-                &Terminator::Return { ref values } => {
-                    let values = values
-                        .iter()
-                        .map(|&value| {
-                            let value = body.resolve_alias(value);
-                            frame.values.get(&value).unwrap()[0]
-                        })
-                        .collect();
-                    log::trace!("returning from {}: {:?}", func, values);
-                    return InterpResult::Ok(values);
+                    &Terminator::None => {
+                        return InterpResult::Trap(frame.func, frame.cur_block, u32::MAX)
+                    }
+                    &Terminator::Unreachable => {
+                        return InterpResult::Trap(frame.func, frame.cur_block, u32::MAX)
+                    }
+                    &Terminator::Br { ref target } => {
+                        frame.apply_target(body, target);
+                    }
+                    &Terminator::CondBr {
+                        cond,
+                        ref if_true,
+                        ref if_false,
+                    } => {
+                        let cond = body.resolve_alias(cond);
+                        let cond = frame.values.get(&cond).unwrap();
+                        let cond = cond[0].as_u32().unwrap() != 0;
+                        if cond {
+                            frame.apply_target(body, if_true);
+                        } else {
+                            frame.apply_target(body, if_false);
+                        }
+                    }
+                    &Terminator::Select {
+                        value,
+                        ref targets,
+                        ref default,
+                    } => {
+                        let value = body.resolve_alias(value);
+                        let value = frame.values.get(&value).unwrap();
+                        let value = value[0].as_u32().unwrap() as usize;
+                        if value < targets.len() {
+                            frame.apply_target(body, &targets[value]);
+                        } else {
+                            frame.apply_target(body, default);
+                        }
+                    }
+                    &Terminator::Return { ref values } => {
+                        let values = values
+                            .iter()
+                            .map(|&value| {
+                                let value = body.resolve_alias(value);
+                                frame.values.get(&value).unwrap()[0]
+                            })
+                            .collect();
+                        log::trace!("returning from {}: {:?}", func, values);
+                        return InterpResult::Ok(values);
+                    }
                 }
             }
         }
     }
-    }
 
     fn call_import(&mut self, name: &str, args: &[ConstVal]) -> InterpResult {
         let mut r = self.import_hander.take().unwrap();
-        let rs = r(self,name,args);
+        let rs = r(self, name, args);
         self.import_hander = Some(r);
         return rs;
     }
