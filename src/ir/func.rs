@@ -4,6 +4,7 @@ use crate::cfg::CFGInfo;
 use crate::entity::{EntityRef, EntityVec, PerEntity};
 use crate::frontend::parse_body;
 use crate::ir::SourceLoc;
+use crate::passes::basic_opt::OptOptions;
 use crate::pool::{ListPool, ListRef};
 use crate::{Func, Table};
 use anyhow::Result;
@@ -49,10 +50,10 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
-    pub fn optimize(&mut self) {
+    pub fn optimize(&mut self, opts: &OptOptions) {
         match self {
             FuncDecl::Body(_, _, body) => {
-                body.optimize();
+                body.optimize(opts);
             }
             _ => {}
         }
@@ -171,11 +172,9 @@ impl FunctionBody {
         }
     }
 
-    pub fn optimize(&mut self) {
+    pub fn optimize(&mut self, opts: &OptOptions) {
         let cfg = crate::cfg::CFGInfo::new(self);
-        crate::passes::remove_phis::run(self, &cfg);
-        crate::passes::basic_opt::gvn(self, &cfg);
-        crate::passes::remove_phis::run(self, &cfg);
+        crate::passes::basic_opt::basic_opt(self, &cfg, opts);
         crate::passes::empty_blocks::run(self);
     }
 
