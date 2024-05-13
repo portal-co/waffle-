@@ -7,7 +7,7 @@ use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug)]
 pub struct ListPool<T: Clone + Debug> {
-    storage: Vec<T>,
+    pub storage: Vec<T>,
 }
 
 impl<T: Clone + Debug> Default for ListPool<T> {
