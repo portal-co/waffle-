@@ -61,6 +61,12 @@ pub enum WasmBlock<'a> {
         table: Table,
         values: &'a [Value],
     },
+    /// A function refernce tail call instruction
+    ReturnCallRef {
+        sig: Signature,
+        // table: Table,
+        values: &'a [Value],
+    },
     /// An unreachable instruction.
     Unreachable,
 }
@@ -463,6 +469,15 @@ impl<'a, 'b> Context<'a, 'b> {
                 } => into.push(WasmBlock::ReturnCallIndirect {
                     sig,
                     table,
+                    values: args,
+                }),
+                &Terminator::ReturnCallRef {
+                    sig,
+                    // table,
+                    ref args,
+                } => into.push(WasmBlock::ReturnCallRef {
+                    sig,
+                    // table,
                     values: args,
                 }),
             }

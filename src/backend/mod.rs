@@ -214,6 +214,12 @@ impl<'a> WasmFuncBackend<'a> {
                         table: table.index() as u32,
                     });
                 }
+                WasmBlock::ReturnCallRef { sig, values } => {
+                    for &value in &values[..] {
+                        self.lower_value(value, func);
+                    }
+                    func.instruction(&wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32));
+                }
                 WasmBlock::Unreachable => {
                     func.instruction(&wasm_encoder::Instruction::Unreachable);
                 }

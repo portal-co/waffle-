@@ -545,6 +545,10 @@ pub enum Terminator {
         table: Table,
         args: Vec<Value>,
     },
+    ReturnCallRef {
+        sig: Signature,
+        args: Vec<Value>,
+    },
     Unreachable,
     None,
 }
@@ -609,6 +613,16 @@ impl std::fmt::Display for Terminator {
                     .collect::<Vec<_>>()
                     .join(", ")
             )?,
+            Terminator::ReturnCallRef { sig, args } =>write!(
+                f,
+                "return_call_ref ({})({})",
+                sig,
+                // table,
+                args.iter()
+                    .map(|val| format!("{}", val))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )?,
         }
         Ok(())
     }
@@ -641,6 +655,7 @@ impl Terminator {
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
+            Terminator::ReturnCallRef { sig, args } => {},
         }
     }
 
@@ -670,6 +685,9 @@ impl Terminator {
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
+            Terminator::ReturnCallRef { sig, args } => {
+                
+            },
         }
     }
 
@@ -781,6 +799,14 @@ impl Terminator {
             &mut Terminator::ReturnCallIndirect {
                 sig,
                 table,
+                ref mut args,
+            } => {
+                for value in args {
+                    f(value);
+                }
+            }
+            &mut Terminator::ReturnCallRef {
+                sig,
                 ref mut args,
             } => {
                 for value in args {

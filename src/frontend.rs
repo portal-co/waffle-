@@ -1531,7 +1531,22 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 });
                 self.reachable = false;
             }
-
+            wasmparser::Operator::ReturnCallRef {
+                type_index,
+                // table_index,
+            } => {
+                let retvals = self.pop_n(
+                    self.module.signatures[Signature::new(*type_index as usize)]
+                        .params
+                        .len(),
+                );
+                self.emit_term(Terminator::ReturnCallRef {
+                    sig: Signature::new(*type_index as usize),
+                    // table: Table::new(*table_index as usize),
+                    args: retvals,
+                });
+                self.reachable = false;
+            }
             _ => bail!(FrontendError::UnsupportedFeature(format!(
                 "Unsupported operator: {:?}",
                 op

@@ -325,6 +325,7 @@ impl InterpContext {
                         log::trace!("returning from {}: {:?}", func, values);
                         return InterpResult::Ok(values);
                     }
+                    Terminator::ReturnCallRef { sig, args } => todo!(),
                 }
             }
         }
