@@ -23,6 +23,7 @@ pub use ops::{Ieee32, Ieee64, MemoryArg, Operator};
 
 mod interp;
 pub use interp::*;
+pub mod util;
 
 pub use passes::basic_opt::OptOptions;
 

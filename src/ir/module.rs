@@ -205,6 +205,40 @@ impl<'a> Module<'a> {
         }
     }
 
+    pub fn take_per_func_body<F: FnMut(&mut Self,&mut FunctionBody)>(&mut self, mut f: F) {
+        for func_decl in self.funcs.iter().collect::<Vec<_>>() {
+            let mut x = std::mem::take(&mut self.funcs[func_decl]);
+            if let Some(body) = x.body_mut(){
+                f(self,body);
+            }
+            self.funcs[func_decl] = x;
+        }
+    }
+
+    pub fn try_per_func_body<F: FnMut(&mut FunctionBody) -> Result<(),E>,E>(&mut self, mut f: F) -> Result<(),E>{
+        for func_decl in self.funcs.values_mut() {
+            if let Some(body) = func_decl.body_mut() {
+                f(body)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn try_take_per_func_body<F: FnMut(&mut Self,&mut FunctionBody) -> Result<(),E>,E>(&mut self, mut f: F) -> Result<(),E>{
+        for func_decl in self.funcs.iter().collect::<Vec<_>>() {
+            let mut x = std::mem::take(&mut self.funcs[func_decl]);
+            let mut y = None;
+            if let Some(body) = x.body_mut(){
+                y = Some(f(self,body));
+            }
+            self.funcs[func_decl] = x;
+            if let Some(z) = y{
+                z?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn expand_func<'b>(&'b mut self, id: Func) -> Result<&'b mut FuncDecl<'a>> {
         if let FuncDecl::Lazy(..) = self.funcs[id] {
             // End the borrow. This is cheap (a slice copy).

@@ -1,6 +1,6 @@
 [package]
-name = "waffle"
-version = "0.0.27"
+name = "portal-pc-waffle"
+version = "0.0.27+portal"
 description = "Wasm Analysis Framework For Lightweight Experiments"
 authors = ["Chris Fallin <chris@cfallin.org>"]
 license = "Apache-2.0 WITH LLVM-exception"
@@ -29,3 +29,6 @@ wasm-smith = { version = "0.202", optional = true }
 [features]
 default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
+
+[lib]
+name = "waffle"
