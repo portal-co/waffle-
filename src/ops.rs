@@ -8,9 +8,10 @@ pub use wasmparser::{Ieee32, Ieee64};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MemoryArg {
     pub align: u32,
-    pub offset: u32,
+    pub offset: u64 ,
     pub memory: Memory,
 }
+
 
 impl std::fmt::Display for MemoryArg {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -1305,7 +1306,7 @@ impl std::convert::From<wasmparser::MemArg> for MemoryArg {
     fn from(value: wasmparser::MemArg) -> MemoryArg {
         MemoryArg {
             align: value.align as u32,
-            offset: u32::try_from(value.offset).expect("offset too large"),
+            offset: value.offset,
             memory: Memory::from(value.memory),
         }
     }
@@ -1320,3 +1321,4 @@ impl std::convert::From<MemoryArg> for wasm_encoder::MemArg {
         }
     }
 }
+

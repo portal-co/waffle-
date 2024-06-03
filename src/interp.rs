@@ -1022,7 +1022,7 @@ pub fn const_eval(
         (Operator::Unreachable, []) => None,
 
         (Operator::I32Load { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1032,7 +1032,7 @@ pub fn const_eval(
             )))
         }),
         (Operator::I64Load { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(8)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1042,7 +1042,7 @@ pub fn const_eval(
             )))
         }),
         (Operator::F32Load { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1052,7 +1052,7 @@ pub fn const_eval(
             )))
         }),
         (Operator::F64Load { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(8)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1062,7 +1062,7 @@ pub fn const_eval(
             )))
         }),
         (Operator::I32Load8S { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(1)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1071,7 +1071,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I32Load8U { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1080,7 +1080,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I32Load16S { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1089,7 +1089,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I32Load16U { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1098,7 +1098,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load8S { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(1)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1107,7 +1107,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load8U { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(1)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1116,7 +1116,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load16S { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1125,7 +1125,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load16U { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1134,7 +1134,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load32S { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1143,7 +1143,7 @@ pub fn const_eval(
             ))
         }),
         (Operator::I64Load32U { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
-            let addr = addr.checked_add(memory.offset)?;
+            let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                 return None;
             }
@@ -1153,7 +1153,7 @@ pub fn const_eval(
         }),
         (Operator::I32Store { memory }, [ConstVal::I32(addr), ConstVal::I32(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1162,7 +1162,7 @@ pub fn const_eval(
             }),
         (Operator::I64Store { memory }, [ConstVal::I32(addr), ConstVal::I64(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(8)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1171,7 +1171,7 @@ pub fn const_eval(
             }),
         (Operator::I32Store8 { memory }, [ConstVal::I32(addr), ConstVal::I32(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(1)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1180,7 +1180,7 @@ pub fn const_eval(
             }),
         (Operator::I32Store16 { memory }, [ConstVal::I32(addr), ConstVal::I32(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1189,7 +1189,7 @@ pub fn const_eval(
             }),
         (Operator::I64Store8 { memory }, [ConstVal::I32(addr), ConstVal::I64(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(1)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1198,7 +1198,7 @@ pub fn const_eval(
             }),
         (Operator::I64Store16 { memory }, [ConstVal::I32(addr), ConstVal::I64(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(2)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1207,7 +1207,7 @@ pub fn const_eval(
             }),
         (Operator::I64Store32 { memory }, [ConstVal::I32(addr), ConstVal::I64(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1216,7 +1216,7 @@ pub fn const_eval(
             }),
         (Operator::F32Store { memory }, [ConstVal::I32(addr), ConstVal::F32(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }
@@ -1225,7 +1225,7 @@ pub fn const_eval(
             }),
         (Operator::F64Store { memory }, [ConstVal::I32(addr), ConstVal::F64(data)]) => ctx
             .and_then(|global| {
-                let addr = addr.checked_add(memory.offset)?;
+                let addr = addr.checked_add(memory.offset as u32)?;
                 if addr.checked_add(8)? > global.memories[memory.memory].data.len() as u32 {
                     return None;
                 }

@@ -1,6 +1,6 @@
 //! Intermediate representation for Wasm.
 
-use crate::declare_entity;
+use crate::{declare_entity, entity::EntityRef};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -11,7 +11,10 @@ pub enum Type {
     V128,
     FuncRef,
     ExternRef,
-    TypedFuncRef(bool, u32),
+    TypedFuncRef {
+        nullable: bool,
+        sig_index: Signature,
+    },
 }
 impl From<wasmparser::ValType> for Type {
     fn from(ty: wasmparser::ValType) -> Self {
@@ -33,7 +36,10 @@ impl From<wasmparser::RefType> for Type {
         match ty.type_index() {
             Some(idx) => {
                 let nullable = ty.is_nullable();
-                Type::TypedFuncRef(nullable, idx.as_module_index().unwrap())
+                Type::TypedFuncRef {
+                    nullable: nullable,
+                    sig_index: Signature::new(idx.as_module_index().unwrap() as usize),
+                }
             }
             None => Type::FuncRef,
         }
@@ -50,11 +56,14 @@ impl std::fmt::Display for Type {
             Type::V128 => write!(f, "v128"),
             Type::FuncRef => write!(f, "funcref"),
             Type::ExternRef => write!(f, "externref"),
-            Type::TypedFuncRef(nullable, idx) => write!(
+            Type::TypedFuncRef {
+                nullable,
+                sig_index,
+            } => write!(
                 f,
                 "funcref({}, {})",
                 if *nullable { "null" } else { "not_null" },
-                idx
+                sig_index
             ),
         }
     }
@@ -68,7 +77,7 @@ impl From<Type> for wasm_encoder::ValType {
             Type::F32 => wasm_encoder::ValType::F32,
             Type::F64 => wasm_encoder::ValType::F64,
             Type::V128 => wasm_encoder::ValType::V128,
-            Type::FuncRef | Type::TypedFuncRef(..) | Type::ExternRef => {
+            Type::FuncRef | Type::TypedFuncRef { .. } | Type::ExternRef => {
                 wasm_encoder::ValType::Ref(ty.into())
             }
         }
@@ -80,9 +89,9 @@ impl From<Type> for wasm_encoder::RefType {
         match ty {
             Type::ExternRef => wasm_encoder::RefType::EXTERNREF,
             Type::FuncRef => wasm_encoder::RefType::FUNCREF,
-            Type::TypedFuncRef(nullable, idx) => wasm_encoder::RefType {
+            Type::TypedFuncRef{nullable,sig_index} => wasm_encoder::RefType {
                 nullable,
-                heap_type: wasm_encoder::HeapType::Concrete(idx),
+                heap_type: wasm_encoder::HeapType::Concrete(sig_index.0),
             },
             _ => panic!("Cannot convert {:?} into reftype", ty),
         }

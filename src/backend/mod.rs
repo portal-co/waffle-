@@ -1087,7 +1087,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         memories.memory(wasm_encoder::MemoryType {
             minimum: mem_data.initial_pages as u64,
             maximum: mem_data.maximum_pages.map(|val| val as u64),
-            memory64: false,
+            memory64: mem_data.memory64,
             shared: false,
         });
     }
@@ -1160,7 +1160,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                                 wasm_encoder::Elements::Functions(&[elt.index() as u32]),
                             );
                         }
-                        Type::TypedFuncRef(..) => {
+                        Type::TypedFuncRef{..} => {
                             elem.active(
                                 Some(table.index() as u32),
                                 &wasm_encoder::ConstExpr::i32_const(i as i32),

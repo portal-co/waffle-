@@ -36,30 +36,72 @@ pub fn op_inputs(
         &Operator::GlobalGet { .. } => Ok(Cow::Borrowed(&[])),
         &Operator::GlobalSet { global_index } => Ok(vec![module.globals[global_index].ty].into()),
 
-        Operator::I32Load { .. }
-        | Operator::I64Load { .. }
-        | Operator::F32Load { .. }
-        | Operator::F64Load { .. }
-        | Operator::I32Load8S { .. }
-        | Operator::I32Load8U { .. }
-        | Operator::I32Load16S { .. }
-        | Operator::I32Load16U { .. }
-        | Operator::I64Load8S { .. }
-        | Operator::I64Load8U { .. }
-        | Operator::I64Load16S { .. }
-        | Operator::I64Load16U { .. }
-        | Operator::I64Load32S { .. }
-        | Operator::I64Load32U { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        Operator::I32Load { memory }
+        | Operator::I64Load { memory }
+        | Operator::F32Load { memory }
+        | Operator::F64Load { memory }
+        | Operator::I32Load8S { memory }
+        | Operator::I32Load8U { memory }
+        | Operator::I32Load16S { memory }
+        | Operator::I32Load16U { memory }
+        | Operator::I64Load8S { memory }
+        | Operator::I64Load8U { memory }
+        | Operator::I64Load16S { memory }
+        | Operator::I64Load16U { memory }
+        | Operator::I64Load32S { memory }
+        | Operator::I64Load32U { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
 
-        Operator::I32Store { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
-        Operator::I64Store { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I64])),
-        Operator::F32Store { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::F32])),
-        Operator::F64Store { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::F64])),
-        Operator::I32Store8 { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
-        Operator::I32Store16 { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
-        Operator::I64Store8 { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I64])),
-        Operator::I64Store16 { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I64])),
-        Operator::I64Store32 { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I64])),
+        Operator::I32Store { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I32])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I32])
+        }),
+        Operator::I64Store { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I64])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I64])
+        }),
+        Operator::F32Store { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::F32])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::F32])
+        }),
+        Operator::F64Store { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::F64])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::F64])
+        }),
+        Operator::I32Store8 { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I32])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I32])
+        }),
+        Operator::I32Store16 { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I32])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I32])
+        }),
+        Operator::I64Store8 { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I64])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I64])
+        }),
+        Operator::I64Store16 { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I64])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I64])
+        }),
+        Operator::I64Store32 { memory } => Ok(if module.memories[memory.memory].memory64 {
+            Cow::Borrowed(&[Type::I64, Type::I64])
+        } else {
+            Cow::Borrowed(&[Type::I32, Type::I64])
+        }),
 
         Operator::I32Const { .. }
         | Operator::I64Const { .. }
@@ -224,30 +266,167 @@ pub fn op_inputs(
         }
         Operator::TableSize { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemorySize { .. } => Ok(Cow::Borrowed(&[])),
-        Operator::MemoryGrow { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        Operator::MemoryGrow { mem } => Ok(if module.memories[*mem].memory64{
+            Cow::Borrowed(&[Type::I64])
+        }else{
+            Cow::Borrowed(&[Type::I32])
+        }),
 
-        Operator::V128Load { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load8x8S { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load8x8U { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load16x4S { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load16x4U { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load32x2S { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load32x2U { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load8Splat { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load16Splat { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load32Splat { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load64Splat { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load32Zero { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Load64Zero { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::V128Store { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Load8Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Load16Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Load32Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Load64Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Store8Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Store16Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Store32Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
-        Operator::V128Store64Lane { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::V128])),
+        Operator::V128Load { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load8x8S { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load8x8U { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load16x4S { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load16x4U { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load32x2S { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load32x2U { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load8Splat { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load16Splat { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load32Splat { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load64Splat { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load32Zero { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Load64Zero { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
+        }
+        Operator::V128Store { memory } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Load8Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+
+        Operator::V128Load16Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Load32Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Load64Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Store8Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Store16Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Store32Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
+        Operator::V128Store64Lane { memory, .. } => {
+            if module.memories[memory.memory].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
+            }
+        }
 
         Operator::V128Const { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I8x16Shuffle { .. } => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
@@ -482,7 +661,7 @@ pub fn op_inputs(
 
         Operator::CallRef { sig_index } => {
             let mut params = module.signatures[*sig_index].params.to_vec();
-            params.push(Type::TypedFuncRef(true, sig_index.index() as u32));
+            params.push(Type::TypedFuncRef{nullable: true, sig_index: *sig_index});
             Ok(params.into())
         }
         Operator::RefIsNull => {
@@ -490,8 +669,22 @@ pub fn op_inputs(
         }
         Operator::RefNull { ty } => Ok(Cow::Borrowed(&[])),
         Operator::RefFunc { .. } => Ok(Cow::Borrowed(&[])),
-        Operator::MemoryCopy { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32, Type::I32])),
-        Operator::MemoryFill { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32, Type::I32])),
+        Operator::MemoryCopy { dst_mem, src_mem } => match (
+            module.memories[*dst_mem].memory64,
+            module.memories[*src_mem].memory64,
+        ) {
+            (false, false) => Ok(Cow::Borrowed(&[Type::I32, Type::I32, Type::I32])),
+            (false, true) => Ok(Cow::Borrowed(&[Type::I32, Type::I64, Type::I32])),
+            (true, false) => Ok(Cow::Borrowed(&[Type::I64, Type::I32, Type::I32])),
+            (true, true) => Ok(Cow::Borrowed(&[Type::I64, Type::I64, Type::I32])),
+        },
+        Operator::MemoryFill { mem, .. } => {
+            if module.memories[*mem].memory64 {
+                Ok(Cow::Borrowed(&[Type::I64, Type::I32, Type::I32]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32, Type::I32, Type::I32]))
+            }
+        }
     }
 }
 
@@ -697,8 +890,16 @@ pub fn op_outputs(
         Operator::TableSet { .. } => Ok(Cow::Borrowed(&[])),
         Operator::TableGrow { .. } => Ok(Cow::Borrowed(&[])),
         Operator::TableSize { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::MemorySize { .. } => Ok(Cow::Borrowed(&[Type::I32])),
-        Operator::MemoryGrow { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        Operator::MemorySize { mem } => Ok(if module.memories[*mem].memory64{
+            Cow::Borrowed(&[Type::I64])
+        }else{
+            Cow::Borrowed(&[Type::I32])
+        }),
+        Operator::MemoryGrow { mem } => Ok(if module.memories[*mem].memory64{
+            Cow::Borrowed(&[Type::I64])
+        }else{
+            Cow::Borrowed(&[Type::I32])
+        }),
         Operator::MemoryCopy { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemoryFill { .. } => Ok(Cow::Borrowed(&[])),
 
@@ -962,7 +1163,7 @@ pub fn op_outputs(
         Operator::RefIsNull => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::RefFunc { func_index } => {
             let ty = module.funcs[*func_index].sig();
-            Ok(vec![Type::TypedFuncRef(true, ty.index() as u32)].into())
+            Ok(vec![Type::TypedFuncRef{nullable:true, sig_index:ty}].into())
         }
         Operator::RefNull { ty } => Ok(vec![ty.clone()].into()),
     }
@@ -1445,7 +1646,9 @@ impl Operator {
 
     pub fn is_call(&self) -> bool {
         match self {
-            Operator::Call { .. } | Operator::CallIndirect { .. } => true,
+            Operator::Call { .. } | Operator::CallIndirect { .. } | Operator::CallRef { .. } => {
+                true
+            }
             _ => false,
         }
     }
