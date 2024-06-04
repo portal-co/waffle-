@@ -9,3 +9,4 @@ pub mod ssa;
 pub mod trace;
 pub mod mem_fusing;
 pub mod unmem;
+pub mod reorder_funs;
