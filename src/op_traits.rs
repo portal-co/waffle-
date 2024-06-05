@@ -2,7 +2,7 @@
 
 use crate::entity::EntityRef;
 use crate::ir::{Module, Type, Value};
-use crate::Operator;
+use crate::{MemoryArg, Operator};
 use anyhow::{Context, Result};
 use std::borrow::Cow;
 
@@ -2268,5 +2268,56 @@ pub fn mem_count(o: &Operator) -> usize {
         Operator::V128Store32Lane { memory, .. } => 1,
         Operator::V128Store64Lane { memory, .. } => 1,
         _ => 0,
+    }
+}
+pub fn memory_arg(o: &Operator) -> Option<&MemoryArg>{
+    match o{
+        Operator::I32Load { memory } => Some(memory),
+        Operator::I64Load { memory } => Some(memory),
+        Operator::F32Load { memory } => Some(memory),
+        Operator::F64Load { memory } => Some(memory),
+        Operator::I32Load8S { memory } => Some(memory),
+        Operator::I32Load8U { memory } => Some(memory),
+        Operator::I32LoadSome(memory)6S { memory } => Some(memory),
+        Operator::I32LoadSome(memory)6U { memory } => Some(memory),
+        Operator::I64Load8S { memory } => Some(memory),
+        Operator::I64Load8U { memory } => Some(memory),
+        Operator::I64LoadSome(memory)6S { memory } => Some(memory),
+        Operator::I64LoadSome(memory)6U { memory } => Some(memory),
+        Operator::I64Load32S { memory } => Some(memory),
+        Operator::I64Load32U { memory } => Some(memory),
+        Operator::I32Store { memory } => Some(memory),
+        Operator::I64Store { memory } => Some(memory),
+        Operator::F32Store { memory } => Some(memory),
+        Operator::F64Store { memory } => Some(memory),
+        Operator::I32Store8 { memory } => Some(memory),
+        Operator::I32StoreSome(memory)6 { memory } => Some(memory),
+        Operator::I64Store8 { memory } => Some(memory),
+        Operator::I64StoreSome(memory)6 { memory } => Some(memory),
+        Operator::I64Store32 { memory } => Some(memory),
+
+        Operator::VSome(memory)28Load { memory } => Some(memory),
+        Operator::VSome(memory)28Load8x8S { memory } => Some(memory),
+        Operator::VSome(memory)28Load8x8U { memory } => Some(memory),
+        Operator::VSome(memory)28LoadSome(memory)6x4S { memory } => Some(memory),
+        Operator::VSome(memory)28LoadSome(memory)6x4U { memory } => Some(memory),
+        Operator::VSome(memory)28Load32x2S { memory } => Some(memory),
+        Operator::VSome(memory)28Load32x2U { memory } => Some(memory),
+        Operator::VSome(memory)28Load8Splat { memory } => Some(memory),
+        Operator::VSome(memory)28LoadSome(memory)6Splat { memory } => Some(memory),
+        Operator::VSome(memory)28Load32Splat { memory } => Some(memory),
+        Operator::VSome(memory)28Load64Splat { memory } => Some(memory),
+        Operator::VSome(memory)28Load32Zero { memory } => Some(memory),
+        Operator::VSome(memory)28Load64Zero { memory } => Some(memory),
+        Operator::VSome(memory)28Store { memory } => Some(memory),
+        Operator::VSome(memory)28Load8Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28LoadSome(memory)6Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28Load32Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28Load64Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28Store8Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28StoreSome(memory)6Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28Store32Lane { memory, .. } => Some(memory),
+        Operator::VSome(memory)28Store64Lane { memory, .. } => Some(memory),
+        _ => None
     }
 }
