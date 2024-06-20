@@ -29,3 +29,5 @@ pub use passes::basic_opt::OptOptions;
 
 #[cfg(feature = "fuzzing")]
 pub mod fuzzing;
+
+pub mod copying;

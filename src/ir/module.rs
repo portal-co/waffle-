@@ -35,6 +35,7 @@ pub struct MemoryData {
     pub maximum_pages: Option<usize>,
     pub segments: Vec<MemorySegment>,
     pub memory64: bool,
+    pub shared: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

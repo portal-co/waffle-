@@ -145,7 +145,8 @@ fn handle_payload<'a>(
                             initial_pages: mem.initial as usize,
                             maximum_pages: mem.maximum.map(|max| max as usize),
                             segments: vec![],
-                            memory64: mem.memory64
+                            memory64: mem.memory64,
+                            shared: mem.shared
                         });
                         ImportKind::Memory(mem)
                     }
@@ -230,7 +231,8 @@ fn handle_payload<'a>(
                     initial_pages: memory.initial as usize,
                     maximum_pages: memory.maximum.map(|max| max as usize),
                     segments: vec![],
-                    memory64: memory.memory64
+                    memory64: memory.memory64,
+                    shared: memory.shared
                 });
             }
         }

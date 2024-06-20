@@ -105,6 +105,7 @@ pub fn metafuse_all(m: &mut Module, cfg: &mut impl Cfg) {
         .rev()
     {
         let memory64 = mem.1.memory64;
+        let shared = mem.1.shared;
         b.insert(
             mem.0,
             std::mem::replace(
@@ -114,6 +115,7 @@ pub fn metafuse_all(m: &mut Module, cfg: &mut impl Cfg) {
                     maximum_pages: None,
                     segments: vec![],
                     memory64,
+                    shared
                 },
             ),
         );
