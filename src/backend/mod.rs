@@ -8,6 +8,7 @@ use anyhow::Result;
 use rayon::prelude::*;
 use std::borrow::Cow;
 use wasm_encoder::CustomSection;
+use wasm_encoder::Encode;
 
 pub mod stackify;
 use stackify::{Context as StackifyContext, WasmBlock};
@@ -1144,6 +1145,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                         .map(|elts| elts.len() as u32)
                         .unwrap_or(table.initial),
                     maximum: table.max,
+                    table64: false,
                 })
             }
             &ImportKind::Global(global) => {
@@ -1152,6 +1154,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 wasm_encoder::EntityType::Global(wasm_encoder::GlobalType {
                     val_type: wasm_encoder::ValType::from(global.ty),
                     mutable: global.mutable,
+                    shared: false,
                 })
             }
             &ImportKind::Memory(mem) => {
@@ -1162,6 +1165,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     shared: mem.shared,
                     minimum: mem.initial_pages as u64,
                     maximum: mem.maximum_pages.map(|val| val as u64),
+                    page_size_log2: None,
                 })
             }
         };
@@ -1194,6 +1198,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 .map(|elt| elt.len())
                 .unwrap_or(0) as u32,
             maximum: table_data.max,
+            table64: false,
         });
     }
     into_mod.section(&tables);
@@ -1205,6 +1210,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             maximum: mem_data.maximum_pages.map(|val| val as u64),
             memory64: mem_data.memory64,
             shared: mem_data.shared,
+            page_size_log2: None,
         });
     }
     into_mod.section(&memories);
@@ -1215,6 +1221,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             wasm_encoder::GlobalType {
                 val_type: wasm_encoder::ValType::from(global_data.ty),
                 mutable: global_data.mutable,
+                shared: false,
             },
             &const_init(global_data.ty, global_data.value),
         );
