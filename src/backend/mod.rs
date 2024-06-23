@@ -211,8 +211,8 @@ impl<'a> WasmFuncBackend<'a> {
                         self.lower_value(value, func);
                     }
                     func.instruction(&wasm_encoder::Instruction::ReturnCallIndirect {
-                        ty: sig.index() as u32,
-                        table: table.index() as u32,
+                        type_index: sig.index() as u32,
+                        table_index: table.index() as u32,
                     });
                 }
                 WasmBlock::ReturnCallRef { sig, values } => {
@@ -300,8 +300,8 @@ impl<'a> WasmFuncBackend<'a> {
                 sig_index,
                 table_index,
             } => Some(wasm_encoder::Instruction::CallIndirect {
-                ty: sig_index.index() as u32,
-                table: table_index.index() as u32,
+                type_index: sig_index.index() as u32,
+                table_index: table_index.index() as u32,
             }),
             Operator::Select => Some(wasm_encoder::Instruction::Select),
             Operator::TypedSelect { ty } => Some(wasm_encoder::Instruction::TypedSelect(
@@ -1142,7 +1142,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     minimum: table
                         .func_elements
                         .as_ref()
-                        .map(|elts| elts.len() as u32)
+                        .map(|elts| elts.len() as u64)
                         .unwrap_or(table.initial),
                     maximum: table.max,
                     table64: false,
@@ -1196,7 +1196,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 .func_elements
                 .as_ref()
                 .map(|elt| elt.len())
-                .unwrap_or(0) as u32,
+                .unwrap_or(0) as u64,
             maximum: table_data.max,
             table64: false,
         });
