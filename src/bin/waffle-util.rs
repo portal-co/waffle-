@@ -124,7 +124,7 @@ fn main() -> Result<()> {
             let mut ctx = InterpContext::new(&module)?;
             debug!("Calling start function");
             if let Some(start) = module.start_func {
-                ctx.call(&module, start, &[]).ok().unwrap();
+                ctx.call(&mut module, start, &[]).ok().unwrap();
             }
             // Find a function called `_start`, if any.
             if let Some(waffle::Export {
@@ -133,7 +133,7 @@ fn main() -> Result<()> {
             }) = module.exports.iter().find(|e| &e.name == "_start")
             {
                 debug!("Calling _start");
-                ctx.call(&module, *func, &[]).ok().unwrap();
+                ctx.call(&mut module, *func, &[]).ok().unwrap();
             }
         }
     }
