@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ListPool<T: Clone + Debug> {
     pub storage: Vec<T>,
 }
@@ -16,7 +16,7 @@ impl<T: Clone + Debug> Default for ListPool<T> {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ListRef<T>(u32, u32, PhantomData<T>);
 
 impl<T> Default for ListRef<T> {

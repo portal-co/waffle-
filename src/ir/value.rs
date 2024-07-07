@@ -2,7 +2,7 @@ use super::{Block, Type, Value};
 use crate::pool::{ListPool, ListRef};
 use crate::Operator;
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum ValueDef {
     BlockParam(Block, u32, Type),
     Operator(Operator, ListRef<Value>, ListRef<Type>),

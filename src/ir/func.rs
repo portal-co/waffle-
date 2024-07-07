@@ -13,12 +13,12 @@ use std::collections::HashSet;
 
 /// A declaration of a function: there is one `FuncDecl` per `Func`
 /// index.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub enum FuncDecl<'a> {
     /// An imported function.
     Import(Signature, String),
     /// An un-expanded body that can be lazily expanded if needed.
-    Lazy(Signature, String, wasmparser::FunctionBody<'a>),
+    #[serde(skip)]Lazy(Signature, String, wasmparser::FunctionBody<'a>),
     /// A modified or new function body that requires compilation.
     Body(Signature, String, FunctionBody),
     /// A compiled function body (was IR, has been collapsed back to bytecode).
@@ -113,7 +113,7 @@ impl<'a> FuncDecl<'a> {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct FunctionBody {
     /// How many parameters the function has. (Their types are the
     /// first `n_params` values in `locals`.)
@@ -481,7 +481,7 @@ impl FunctionBody {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BlockDef {
     /// Instructions in this block.
     pub insts: Vec<Value>,
@@ -501,7 +501,7 @@ pub struct BlockDef {
     pub desc: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BlockTarget {
     pub block: Block,
     pub args: Vec<Value>,
@@ -518,7 +518,7 @@ impl std::fmt::Display for BlockTarget {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Terminator {
     Br {
         target: BlockTarget,

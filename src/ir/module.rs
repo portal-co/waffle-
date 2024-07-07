@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 
 pub use crate::frontend::FrontendOptions;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Module<'a> {
     pub orig_bytes: &'a [u8],
     pub funcs: EntityVec<Func, FuncDecl<'a>>,
@@ -23,13 +23,13 @@ pub struct Module<'a> {
     pub custom_sections: IndexMap<String, Vec<u8>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct SignatureData {
     pub params: Vec<Type>,
     pub returns: Vec<Type>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct MemoryData {
     pub initial_pages: usize,
     pub maximum_pages: Option<usize>,
@@ -38,13 +38,13 @@ pub struct MemoryData {
     pub shared: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct MemorySegment {
     pub offset: usize,
     pub data: Vec<u8>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct TableData {
     pub ty: Type,
     pub initial: u64,
@@ -52,7 +52,7 @@ pub struct TableData {
     pub func_elements: Option<Vec<Func>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct GlobalData {
     pub ty: Type,
     pub value: Option<u64>,
@@ -81,14 +81,14 @@ impl From<wasmparser::FuncType> for SignatureData {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Import {
     pub module: String,
     pub name: String,
     pub kind: ImportKind,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ImportKind {
     Table(Table),
     Func(Func),
@@ -108,13 +108,13 @@ impl std::fmt::Display for ImportKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Export {
     pub name: String,
     pub kind: ExportKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub enum ExportKind {
     Table(Table),
     Func(Func),

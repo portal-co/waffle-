@@ -2,7 +2,7 @@
 
 use crate::{declare_entity, entity::EntityRef};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Type {
     I32,
     I64,

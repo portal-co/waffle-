@@ -5,7 +5,7 @@ use anyhow::Context;
 use std::convert::TryFrom;
 pub use wasmparser::{Ieee32, Ieee64};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct MemoryArg {
     pub align: u32,
     pub offset: u64 ,
@@ -23,7 +23,7 @@ impl std::fmt::Display for MemoryArg {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Operator {
     Unreachable,
     Nop,

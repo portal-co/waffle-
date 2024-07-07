@@ -22,7 +22,7 @@ pub trait EntityRef: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Hash {
 #[macro_export]
 macro_rules! declare_entity {
     ($name:tt, $prefix:tt) => {
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
         pub struct $name(u32);
 
         impl $crate::entity::EntityRef for $name {
@@ -73,7 +73,7 @@ macro_rules! declare_entity {
     };
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct EntityVec<Idx: EntityRef, T: Clone + Debug>(Vec<T>, PhantomData<Idx>);
 
 impl<Idx: EntityRef, T: Clone + Debug> std::default::Default for EntityVec<Idx, T> {
@@ -151,7 +151,7 @@ impl<Idx: EntityRef, T: Clone + Debug> IndexMut<Idx> for EntityVec<Idx, T> {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct PerEntity<Idx: EntityRef, T: Clone + Debug + Default>(Vec<T>, PhantomData<Idx>, T);
 
 impl<Idx: EntityRef, T: Clone + Debug + Default> Index<Idx> for PerEntity<Idx, T> {

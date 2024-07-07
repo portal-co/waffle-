@@ -9,7 +9,7 @@ use std::collections::HashMap;
 declare_entity!(SourceFile, "file");
 declare_entity!(SourceLoc, "loc");
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Debug {
     pub source_files: EntityVec<SourceFile, String>,
     source_file_dedup: HashMap<String, SourceFile>,
@@ -17,7 +17,7 @@ pub struct Debug {
     source_loc_dedup: HashMap<SourceLocData, SourceLoc>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct SourceLocData {
     pub file: SourceFile,
     pub line: u32,
@@ -46,7 +46,7 @@ impl Debug {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct DebugMap {
     /// Offset of code section relative to the Wasm file start.
     pub code_offset: u32,
