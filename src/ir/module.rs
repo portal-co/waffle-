@@ -47,6 +47,7 @@ pub struct MemorySegment {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct TableData {
     pub ty: Type,
+    pub table64: bool,
     pub initial: u64,
     pub max: Option<u64>,
     pub func_elements: Option<Vec<Func>>,
@@ -177,13 +178,14 @@ impl<'a> Module<'a> {
 }
 
 impl<'a> Module<'a> {
-    pub(crate) fn frontend_add_table(&mut self, ty: Type, initial: u64, max: Option<u64>) -> Table {
+    pub(crate) fn frontend_add_table(&mut self, ty: Type, initial: u64, max: Option<u64>, table64: bool) -> Table {
         let func_elements = Some(vec![]);
         self.tables.push(TableData {
             ty,
             func_elements,
             initial,
             max,
+            table64
         })
     }
 

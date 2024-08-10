@@ -135,6 +135,7 @@ fn handle_payload<'a>(
                             ty.element_type.into(),
                             ty.initial,
                             ty.maximum,
+                            ty.table64,
                         );
                         ImportKind::Table(table)
                     }
@@ -182,6 +183,7 @@ fn handle_payload<'a>(
                     table.ty.element_type.into(),
                     table.ty.initial,
                     table.ty.maximum,
+                    table.ty.table64,
                 );
             }
         }

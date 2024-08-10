@@ -257,12 +257,24 @@ pub fn op_inputs(
         Operator::F64ReinterpretI64 => Ok(Cow::Borrowed(&[Type::I64])),
         Operator::I32ReinterpretF32 => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::I64ReinterpretF64 => Ok(Cow::Borrowed(&[Type::F64])),
-        Operator::TableGet { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        Operator::TableGet { table_index } => if module.tables[*table_index].table64{
+            Ok(Cow::Borrowed(&[Type::I64]))
+        }else{
+            Ok(Cow::Borrowed(&[Type::I32]))
+        },
         Operator::TableSet { table_index } => {
-            Ok(vec![Type::I32, module.tables[*table_index].ty].into())
+            Ok(vec![if module.tables[*table_index].table64{
+                Type::I64
+            }else{
+                Type::I32
+            }, module.tables[*table_index].ty].into())
         }
         Operator::TableGrow { table_index } => {
-            Ok(vec![Type::I32, module.tables[*table_index].ty].into())
+            Ok(vec![if module.tables[*table_index].table64{
+                Type::I64
+            }else{
+                Type::I32
+            }, module.tables[*table_index].ty].into())
         }
         Operator::TableSize { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemorySize { .. } => Ok(Cow::Borrowed(&[])),
@@ -1302,7 +1314,11 @@ pub fn op_outputs(
         Operator::TableGet { table_index } => Ok(vec![module.tables[*table_index].ty].into()),
         Operator::TableSet { .. } => Ok(Cow::Borrowed(&[])),
         Operator::TableGrow { .. } => Ok(Cow::Borrowed(&[])),
-        Operator::TableSize { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        Operator::TableSize { table_index } => Ok(Cow::Borrowed(if module.tables[*table_index].table64{
+            &[Type::I64]
+        }else{
+            &[Type::I32]
+        })),
         Operator::MemorySize { mem } => Ok(if module.memories[*mem].memory64 {
             Cow::Borrowed(&[Type::I64])
         } else {

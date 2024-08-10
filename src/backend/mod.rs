@@ -1145,7 +1145,8 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                         .map(|elts| elts.len() as u64)
                         .unwrap_or(table.initial),
                     maximum: table.max,
-                    table64: false,
+                    table64: table.table64,
+                    
                 })
             }
             &ImportKind::Global(global) => {
@@ -1198,7 +1199,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 .map(|elt| elt.len())
                 .unwrap_or(0) as u64,
             maximum: table_data.max,
-            table64: false,
+            table64: table_data.table64,
         });
     }
     into_mod.section(&tables);
