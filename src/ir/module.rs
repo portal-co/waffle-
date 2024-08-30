@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use super::{Func, FuncDecl, Global, Memory, ModuleDisplay, Signature, Table, Type};
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
@@ -150,6 +152,23 @@ impl<'a> Module<'a> {
             debug: Debug::default(),
             debug_map: DebugMap::default(),
             custom_sections: IndexMap::new(),
+        }
+    }
+
+    pub fn empty() -> Module<'static> {
+        Module {
+            orig_bytes: &[],
+            funcs: EntityVec::default(),
+            signatures: EntityVec::default(),
+            globals: EntityVec::default(),
+            tables: EntityVec::default(),
+            imports: vec![],
+            exports: vec![],
+            memories: EntityVec::default(),
+            start_func: None,
+            debug: Debug::default(),
+            debug_map: DebugMap::default(),
+            custom_sections:Default::default() ,
         }
     }
 
