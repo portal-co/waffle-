@@ -6,10 +6,13 @@ use crate::frontend::parse_body;
 use crate::ir::SourceLoc;
 use crate::passes::basic_opt::OptOptions;
 use crate::pool::{ListPool, ListRef};
-use crate::{Func, Table};
+use crate::{Func, Operator, Table};
 use anyhow::Result;
+use either::Either;
 use fxhash::FxHashMap;
+// use ssa_traits::{Term, Val};
 use std::collections::HashSet;
+use std::iter::{empty, once};
 
 /// A declaration of a function: there is one `FuncDecl` per `Func`
 /// index.
@@ -18,7 +21,8 @@ pub enum FuncDecl<'a> {
     /// An imported function.
     Import(Signature, String),
     /// An un-expanded body that can be lazily expanded if needed.
-    #[serde(skip)]Lazy(Signature, String, wasmparser::FunctionBody<'a>),
+    #[serde(skip)]
+    Lazy(Signature, String, wasmparser::FunctionBody<'a>),
     /// A modified or new function body that requires compilation.
     Body(Signature, String, FunctionBody),
     /// A compiled function body (was IR, has been collapsed back to bytecode).
@@ -613,7 +617,7 @@ impl std::fmt::Display for Terminator {
                     .collect::<Vec<_>>()
                     .join(", ")
             )?,
-            Terminator::ReturnCallRef { sig, args } =>write!(
+            Terminator::ReturnCallRef { sig, args } => write!(
                 f,
                 "return_call_ref ({})({})",
                 sig,
@@ -655,7 +659,7 @@ impl Terminator {
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
-            Terminator::ReturnCallRef { sig, args } => {},
+            Terminator::ReturnCallRef { sig, args } => {}
         }
     }
 
@@ -685,9 +689,7 @@ impl Terminator {
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
-            Terminator::ReturnCallRef { sig, args } => {
-                
-            },
+            Terminator::ReturnCallRef { sig, args } => {}
         }
     }
 
@@ -805,10 +807,7 @@ impl Terminator {
                     f(value);
                 }
             }
-            &mut Terminator::ReturnCallRef {
-                sig,
-                ref mut args,
-            } => {
+            &mut Terminator::ReturnCallRef { sig, ref mut args } => {
                 for value in args {
                     f(value);
                 }
@@ -817,3 +816,349 @@ impl Terminator {
         }
     }
 }
+
+// impl ssa_traits::Func for FunctionBody {
+//     type Value = Value;
+
+//     type Block = Block;
+
+//     type Values = EntityVec<Value, ValueDef>;
+
+//     type Blocks = EntityVec<Block, BlockDef>;
+
+//     fn values(&self) -> &Self::Values {
+//         &self.values
+//     }
+
+//     fn blocks(&self) -> &Self::Blocks {
+//         &self.blocks
+//     }
+
+//     fn values_mut(&mut self) -> &mut Self::Values {
+//         &mut self.values
+//     }
+
+//     fn blocks_mut(&mut self) -> &mut Self::Blocks {
+//         &mut self.blocks
+//     }
+
+//     fn entry(&self) -> Self::Block {
+//         self.entry
+//     }
+// }
+// impl ssa_traits::HasValues<FunctionBody> for ListRef<Value> {
+//     fn values(
+//         &self,
+//         f: &FunctionBody,
+//     ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+//         f.arg_pool[*self].iter().cloned()
+//     }
+
+//     fn values_mut<'a>(
+//         &'a mut self,
+//         g: &'a mut FunctionBody,
+//     ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         g.arg_pool[*self].iter_mut()
+//     }
+// }
+// impl ssa_traits::Value<FunctionBody> for ValueDef {}
+// impl ssa_traits::HasValues<FunctionBody> for ValueDef {
+//     fn values(
+//         &self,
+//         f: &FunctionBody,
+//     ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+//         match self {
+//             ValueDef::BlockParam(_, _, _) => Either::Left(None.into_iter()),
+//             ValueDef::Operator(_, l, _) => Either::Right(f.arg_pool[*l].iter().cloned()),
+//             ValueDef::PickOutput(a, _, _) => Either::Left(Some(*a).into_iter()),
+//             ValueDef::Alias(w) => Either::Left(Some(*w).into_iter()),
+//             ValueDef::Placeholder(_) => todo!(),
+//             ValueDef::Trace(_, _) => todo!(),
+//             ValueDef::None => Either::Left(None.into_iter()),
+//         }
+//     }
+
+//     fn values_mut<'a>(
+//         &'a mut self,
+//         g: &'a mut FunctionBody,
+//     ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         match self {
+//             ValueDef::BlockParam(_, _, _) => Either::Left(None.into_iter()),
+//             ValueDef::Operator(_, l, _) => Either::Right(g.arg_pool[*l].iter_mut()),
+//             ValueDef::PickOutput(a, _, _) => Either::Left(Some(a).into_iter()),
+//             ValueDef::Alias(w) => Either::Left(Some(w).into_iter()),
+//             ValueDef::Placeholder(_) => todo!(),
+//             ValueDef::Trace(_, _) => todo!(),
+//             ValueDef::None => Either::Left(None.into_iter()),
+//         }
+//     }
+// }
+// impl ssa_traits::op::OpValue<FunctionBody, Operator> for ValueDef {
+//     type Residue = ValueDef;
+
+//     type Capture = ListRef<Value>;
+//     type Spit = Vec<Type>;
+
+//     fn disasm(
+//         self,
+//         f: &mut FunctionBody,
+//     ) -> std::result::Result<(Operator, Self::Capture, Self::Spit), Self::Residue> {
+//         match self {
+//             ValueDef::Operator(a, b, c) => Ok((a, b, f.type_pool[c].to_owned())),
+//             s => Err(s),
+//         }
+//     }
+
+//     fn of(f: &mut FunctionBody, o: Operator, c: Self::Capture, s: Self::Spit) -> Option<Self> {
+//         Some(Self::Operator(o, c, f.type_pool.from_iter(s.into_iter())))
+//     }
+
+//     fn lift(f: &mut FunctionBody, r: Self::Residue) -> Option<Self> {
+//         Some(r)
+//     }
+// }
+// impl ssa_traits::op::OpValue<FunctionBody,u32> for ValueDef{
+//     type Residue = ValueDef;
+
+//     type Capture = Val<FunctionBody>;
+
+//     type Spit = Type;
+
+//     fn disasm(self, f: &mut FunctionBody) -> std::result::Result<(u32, Self::Capture, Self::Spit), Self::Residue> {
+//         match self{
+//             ValueDef::PickOutput(a,b,c) => Ok((b,Val(a),c)),
+//             s => Err(s)
+//         }
+//     }
+
+//     fn of(f: &mut FunctionBody, o: u32, c: Self::Capture, s: Self::Spit) -> Option<Self> {
+//         Some(Self::PickOutput(c.0,o,s))
+//     }
+
+//     fn lift(f: &mut FunctionBody, r: Self::Residue) -> Option<Self> {
+//         Some(r)
+//     }
+// }
+// impl ssa_traits::Block<FunctionBody> for BlockDef {
+//     fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+//         self.insts.iter().cloned()
+//     }
+
+//     type Terminator = Terminator;
+
+//     fn term(&self) -> &Self::Terminator {
+//         &self.terminator
+//     }
+
+//     fn term_mut(&mut self) -> &mut Self::Terminator {
+//         &mut self.terminator
+//     }
+
+//     fn add_inst(
+//         func: &mut FunctionBody,
+//         key: <FunctionBody as ssa_traits::Func>::Block,
+//         v: <FunctionBody as ssa_traits::Func>::Value,
+//     ) {
+//         func.append_to_block(key, v)
+//     }
+// }
+
+// impl ssa_traits::Target<FunctionBody> for BlockTarget {
+//     fn block(&self) -> <FunctionBody as ssa_traits::Func>::Block {
+//         self.block
+//     }
+
+//     fn block_mut(&mut self) -> &mut <FunctionBody as ssa_traits::Func>::Block {
+//         &mut self.block
+//     }
+
+//     fn push_value(&mut self, v: <FunctionBody as ssa_traits::Func>::Value) {
+//         self.args.push(v)
+//     }
+
+//     fn from_values_and_block(
+//         a: impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value>,
+//         k: <FunctionBody as ssa_traits::Func>::Block,
+//     ) -> Self {
+//         BlockTarget {
+//             block: k,
+//             args: a.collect(),
+//         }
+//     }
+// }
+// impl ssa_traits::Term<FunctionBody> for BlockTarget {
+//     type Target = BlockTarget;
+
+//     fn targets<'a>(&'a self) -> impl Iterator<Item = &'a Self::Target>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         std::iter::once(self)
+//     }
+
+//     fn targets_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Self::Target>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         std::iter::once(self)
+//     }
+// }
+// impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
+//     fn values(
+//         &self,
+//         f: &FunctionBody,
+//     ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+//         self.args.iter().cloned()
+//     }
+
+//     fn values_mut<'a>(
+//         &'a mut self,
+//         g: &'a mut FunctionBody,
+//     ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         self.args.iter_mut()
+//     }
+// }
+// impl ssa_traits::Term<FunctionBody> for Terminator {
+//     type Target = BlockTarget;
+
+//     fn targets<'a>(&'a self) -> impl Iterator<Item = &'a Self::Target>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         match self {
+//             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
+//             Terminator::CondBr {
+//                 cond,
+//                 if_true,
+//                 if_false,
+//             } => Either::Right(Either::Left(once(if_true).chain(once(if_false)))),
+//             Terminator::Select {
+//                 value,
+//                 targets,
+//                 default,
+//             } => Either::Right(Either::Right(targets.iter().chain(once(default)))),
+//             Terminator::Return { values } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCall { func, args } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
+//             Terminator::Unreachable => Either::Left(None.into_iter()),
+//             Terminator::None => Either::Left(None.into_iter()),
+//         }
+//     }
+
+//     fn targets_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Self::Target>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         match self {
+//             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
+//             Terminator::CondBr {
+//                 cond,
+//                 if_true,
+//                 if_false,
+//             } => Either::Right(Either::Left(once(if_true).chain(once(if_false)))),
+//             Terminator::Select {
+//                 value,
+//                 targets,
+//                 default,
+//             } => Either::Right(Either::Right(targets.iter_mut().chain(once(default)))),
+//             Terminator::Return { values } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCall { func, args } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
+//             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
+//             Terminator::Unreachable => Either::Left(None.into_iter()),
+//             Terminator::None => Either::Left(None.into_iter()),
+//         }
+//     }
+// }
+// impl ssa_traits::HasValues<FunctionBody> for Terminator {
+//     fn values(
+//         &self,
+//         f: &FunctionBody,
+//     ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+//         match self {
+//             Terminator::Br { target } => {
+//                 Either::Right(Either::Right(Either::Left(target.values(f))))
+//             }
+//             Terminator::CondBr {
+//                 cond,
+//                 if_true,
+//                 if_false,
+//             } => Either::Right(Either::Right(Either::Right(Either::Left(
+//                 once(*cond).chain(if_true.values(f).chain(if_false.values(f))),
+//             )))),
+//             Terminator::Select {
+//                 value,
+//                 targets,
+//                 default,
+//             } => Either::Right(Either::Right(Either::Right(Either::Right(
+//                 once(*value).chain(
+//                     default
+//                         .values(f)
+//                         .chain(targets.iter().flat_map(move |x| x.values(f))),
+//                 ),
+//             )))),
+//             Terminator::Return { values } => Either::Right(Either::Left(values.iter().cloned())),
+//             Terminator::ReturnCall { func, args } => {
+//                 Either::Right(Either::Left(args.iter().cloned()))
+//             }
+//             Terminator::ReturnCallIndirect { sig, table, args } => {
+//                 Either::Right(Either::Left(args.iter().cloned()))
+//             }
+//             Terminator::ReturnCallRef { sig, args } => {
+//                 Either::Right(Either::Left(args.iter().cloned()))
+//             }
+//             Terminator::Unreachable => Either::Left(empty()),
+//             Terminator::None => Either::Left(empty()),
+//         }
+//     }
+
+//     fn values_mut<'a>(
+//         &'a mut self,
+//         g: &'a mut FunctionBody,
+//     ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+//     where
+//         FunctionBody: 'a,
+//     {
+//         match self {
+//             Terminator::Br { target } => {
+//                 Either::Right(Either::Right(Either::Left(target.values_mut(g))))
+//             }
+//             Terminator::CondBr {
+//                 cond,
+//                 if_true,
+//                 if_false,
+//             } => Either::Right(Either::Right(Either::Right(Either::Left(
+//                 once(cond).chain(if_true.args.iter_mut().chain(if_false.values_mut(g))),
+//             )))),
+//             Terminator::Select {
+//                 value,
+//                 targets,
+//                 default,
+//             } => Either::Right(Either::Right(Either::Right(Either::Right(
+//                 once(value).chain(
+//                     default
+//                         .values_mut(g)
+//                         .chain(targets.iter_mut().flat_map(|x| x.args.iter_mut())),
+//                 ),
+//             )))),
+//             Terminator::Return { values } => Either::Right(Either::Left(values.iter_mut())),
+//             Terminator::ReturnCall { func, args } => Either::Right(Either::Left(args.iter_mut())),
+//             Terminator::ReturnCallIndirect { sig, table, args } => {
+//                 Either::Right(Either::Left(args.iter_mut()))
+//             }
+//             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter_mut())),
+//             Terminator::Unreachable => Either::Left(empty()),
+//             Terminator::None => Either::Left(empty()),
+//         }
+//     }
+// }

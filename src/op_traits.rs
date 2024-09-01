@@ -3140,6 +3140,7 @@ pub fn memory_arg(o: &Operator) -> Option<&MemoryArg> {
         Operator::I64AtomicRmw8CmpxchgU { memarg }=> Some(memarg),// => visit_i64_atomic_rmw8_cmpxchg_u
         Operator::I64AtomicRmw16CmpxchgU { memarg }=> Some(memarg),// => visit_i64_atomic_rmw16_cmpxchg_u
         Operator::I64AtomicRmw32CmpxchgU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw32_c
+        
         _ => None,
     }
 }

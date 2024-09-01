@@ -28,6 +28,9 @@ wasm-smith = { version = "0.202", optional = true }
 paste = "1.0.15"
 serde = { version = "1.0.204", features = ["derive"] }
 
+
+either = "1.13.0"
+
 [features]
 default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
