@@ -133,7 +133,8 @@ fn main() -> Result<()> {
             }) = module.exports.iter().find(|e| &e.name == "_start")
             {
                 debug!("Calling _start");
-                ctx.call(&mut module, *func, &[]).ok().unwrap();
+                let func = *func;
+                ctx.call(&mut module, func, &[]).ok().unwrap();
             }
         }
     }

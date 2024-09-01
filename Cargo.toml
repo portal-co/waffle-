@@ -37,3 +37,4 @@ fuzzing = ["libfuzzer-sys", "wasm-smith"]
 
 [lib]
 name = "waffle"
+ 
