@@ -30,6 +30,8 @@ serde = { version = "1.0.204", features = ["derive"] }
 
 
 either = "1.13.0"
+arena-traits = "0.1.1"
+ssa-traits = "0.1.1"
 
 [features]
 default = []
