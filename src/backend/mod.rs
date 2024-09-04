@@ -1474,7 +1474,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         .map(|(func, func_decl)| -> Result<_> {
             match func_decl {
                 FuncDecl::Lazy(_, _name, reader) => {
-                    let data = &module.orig_bytes[reader.range()];
+                    let data = &module.orig_bytes.unwrap()[reader.range()];
                     Ok(Cow::Borrowed(data))
                 }
                 FuncDecl::Compiled(_, _name, bytes) => Ok(Cow::Borrowed(&bytes[..])),

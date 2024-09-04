@@ -131,12 +131,13 @@ fn handle_payload<'a>(
                         ImportKind::Global(global)
                     }
                     TypeRef::Table(ty) => {
-                        let table = module.frontend_add_table(
-                            ty.element_type.into(),
-                            ty.initial,
-                            ty.maximum,
-                            ty.table64,
-                        );
+                        let table = module.tables.push(TableData {
+                            ty: ty.element_type.into(),
+                            initial: ty.initial,
+                            max: ty.maximum,
+                            func_elements: Some(vec![]),
+                            table64: ty.table64
+                        });
                         ImportKind::Table(table)
                     }
                     TypeRef::Memory(mem) => {
@@ -179,12 +180,13 @@ fn handle_payload<'a>(
         Payload::TableSection(reader) => {
             for table in reader {
                 let table = table?;
-                module.frontend_add_table(
-                    table.ty.element_type.into(),
-                    table.ty.initial,
-                    table.ty.maximum,
-                    table.ty.table64,
-                );
+                module.tables.push(TableData {
+                    ty: table.ty.element_type.into(),
+                    initial: table.ty.initial,
+                    max: table.ty.maximum,
+                    func_elements: Some(vec![]),
+                    table64: table.ty.table64
+                });
             }
         }
         Payload::FunctionSection(reader) => {
@@ -2060,3 +2062,4 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         Ok(())
     }
 }
+
