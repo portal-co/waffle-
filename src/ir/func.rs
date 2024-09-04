@@ -895,7 +895,7 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
             ValueDef::PickOutput(a, _, _) => Either::Left(Some(*a).into_iter()),
             ValueDef::Alias(w) => Either::Left(Some(*w).into_iter()),
             ValueDef::Placeholder(_) => todo!(),
-            ValueDef::Trace(_, _) => todo!(),
+            // ValueDef::Trace(_, _) => todo!(),
             ValueDef::None => Either::Left(None.into_iter()),
         }
     }
@@ -913,7 +913,7 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
             ValueDef::PickOutput(a, _, _) => Either::Left(Some(a).into_iter()),
             ValueDef::Alias(w) => Either::Left(Some(w).into_iter()),
             ValueDef::Placeholder(_) => todo!(),
-            ValueDef::Trace(_, _) => todo!(),
+            // ValueDef::Trace(_, _) => todo!(),
             ValueDef::None => Either::Left(None.into_iter()),
         }
     }

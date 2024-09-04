@@ -131,126 +131,100 @@ impl InterpContext {
                     return InterpResult::OutOfFuel;
                 }
 
-                log::trace!("Interpreting block {}", frame.cur_block);
-                for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().enumerate() {
-                    log::trace!("Evaluating inst {}", inst);
-                    let result = match &body.values[inst] {
-                        &ValueDef::Alias(_) => smallvec![],
-                        &ValueDef::PickOutput(val, idx, _) => {
-                            let val = body.resolve_alias(val);
-                            smallvec![frame.values.get(&val).unwrap()[idx as usize]]
+            log::trace!("Interpreting block {}", frame.cur_block);
+            for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().enumerate() {
+                log::trace!("Evaluating inst {}", inst);
+                let result = match &body.values[inst] {
+                    &ValueDef::Alias(_) => smallvec![],
+                    &ValueDef::PickOutput(val, idx, _) => {
+                        let val = body.resolve_alias(val);
+                        smallvec![frame.values.get(&val).unwrap()[idx as usize]]
+                    }
+                    &ValueDef::Operator(Operator::Call { function_index }, args, _) => {
+                        let args = body.arg_pool[args]
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame.values.get(&arg).unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        let result = self.call(module, function_index, &args[..]);
+                        match result {
+                            InterpResult::Ok(vals) => vals,
+                            _ => return result,
                         }
-                        &ValueDef::Operator(Operator::Call { function_index }, args, _) => {
-                            let args = body.arg_pool[args]
-                                .iter()
-                                .map(|&arg| {
-                                    let arg = body.resolve_alias(arg);
-                                    let multivalue = frame.values.get(&arg).unwrap();
-                                    assert_eq!(multivalue.len(), 1);
-                                    multivalue[0]
-                                })
-                                .collect::<Vec<_>>();
-                            let result = self.call(module, function_index, &args[..]);
-                            match result {
-                                InterpResult::Ok(vals) => vals,
-                                _ => return result,
+                    }
+                    &ValueDef::Operator(Operator::CallIndirect { table_index, .. }, args, _) => {
+                        let args = body.arg_pool[args]
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame.values.get(&arg).unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        let idx = args.last().unwrap().as_u32().unwrap() as usize;
+                        let func = self.tables[table_index].elements[idx];
+                        let result = self.call(module, func, &args[..args.len() - 1]);
+                        match result {
+                            InterpResult::Ok(vals) => vals,
+                            _ => return result,
+                        }
+                    }
+                    &ValueDef::Operator(Operator::CallRef { .. }, args, _) => {
+                        let args = body.arg_pool[args]
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame.values.get(&arg).unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        let ConstVal::Ref(idx) = args.last().unwrap() else{
+                            todo!()
+                        };
+                        let func = idx.unwrap();
+                        let result = self.call(module, func, &args[..args.len() - 1]);
+                        match result {
+                            InterpResult::Ok(vals) => vals,
+                            _ => return result,
+                        }
+                    }
+                    &ValueDef::Operator(ref op, args, _) => {
+                        let args = body.arg_pool[args]
+                            .iter()
+                            .map(|&arg| {
+                                let arg = body.resolve_alias(arg);
+                                let multivalue = frame
+                                    .values
+                                    .get(&arg)
+                                    .ok_or_else(|| format!("Unset SSA value: {}", arg))
+                                    .unwrap();
+                                assert_eq!(multivalue.len(), 1);
+                                multivalue[0]
+                            })
+                            .collect::<Vec<_>>();
+                        let result = match const_eval(op, &args[..], Some(self)) {
+                            Some(result) => result,
+                            None => {
+                                log::trace!("const_eval failed on {:?} args {:?}", op, args);
+                                return InterpResult::Trap(
+                                    frame.func,
+                                    frame.cur_block,
+                                    inst_idx as u32,
+                                );
                             }
-                        }
-                        &ValueDef::Operator(
-                            Operator::CallIndirect { table_index, .. },
-                            args,
-                            _,
-                        ) => {
-                            let args = body.arg_pool[args]
-                                .iter()
-                                .map(|&arg| {
-                                    let arg = body.resolve_alias(arg);
-                                    let multivalue = frame.values.get(&arg).unwrap();
-                                    assert_eq!(multivalue.len(), 1);
-                                    multivalue[0]
-                                })
-                                .collect::<Vec<_>>();
-                            let idx = args.last().unwrap().as_u32().unwrap() as usize;
-                            let func = self.tables[table_index].elements[idx];
-                            let result = self.call(module, func, &args[..args.len() - 1]);
-                            match result {
-                                InterpResult::Ok(vals) => vals,
-                                _ => return result,
-                            }
-                        }
-                        &ValueDef::Operator(Operator::CallRef { .. }, args, _) => {
-                            let args = body.arg_pool[args]
-                                .iter()
-                                .map(|&arg| {
-                                    let arg = body.resolve_alias(arg);
-                                    let multivalue = frame.values.get(&arg).unwrap();
-                                    assert_eq!(multivalue.len(), 1);
-                                    multivalue[0]
-                                })
-                                .collect::<Vec<_>>();
-                            let ConstVal::Ref(Some(func)) = args.last().unwrap() else {
-                                return InterpResult::TraceHandlerQuit;
-                            };
-                            let result = self.call(module, *func, &args[..args.len() - 1]);
-                            match result {
-                                InterpResult::Ok(vals) => vals,
-                                _ => return result,
-                            }
-                        }
-                        &ValueDef::Operator(ref op, args, _) => {
-                            let args = body.arg_pool[args]
-                                .iter()
-                                .map(|&arg| {
-                                    let arg = body.resolve_alias(arg);
-                                    let multivalue = frame
-                                        .values
-                                        .get(&arg)
-                                        .ok_or_else(|| format!("Unset SSA value: {}", arg))
-                                        .unwrap();
-                                    assert_eq!(multivalue.len(), 1);
-                                    multivalue[0]
-                                })
-                                .collect::<Vec<_>>();
-                            let result = match const_eval(op, &args[..], Some(self)) {
-                                Some(result) => result,
-                                None => {
-                                    log::trace!("const_eval failed on {:?} args {:?}", op, args);
-                                    return InterpResult::Trap(
-                                        frame.func,
-                                        frame.cur_block,
-                                        inst_idx as u32,
-                                    );
-                                }
-                            };
-                            smallvec![result]
-                        }
-                        &ValueDef::Trace(id, args) => {
-                            if let Some(handler) = self.trace_handler.as_ref() {
-                                let args = body.arg_pool[args]
-                                    .iter()
-                                    .map(|&arg| {
-                                        let arg = body.resolve_alias(arg);
-                                        let multivalue = frame
-                                            .values
-                                            .get(&arg)
-                                            .ok_or_else(|| format!("Unset SSA value: {}", arg))
-                                            .unwrap();
-                                        assert_eq!(multivalue.len(), 1);
-                                        multivalue[0]
-                                    })
-                                    .collect::<Vec<ConstVal>>();
-                                if !handler(id, args) {
-                                    return InterpResult::TraceHandlerQuit;
-                                }
-                            }
-                            smallvec![]
-                        }
-                        &ValueDef::None
-                        | &ValueDef::Placeholder(..)
-                        | &ValueDef::BlockParam(..) => {
-                            unreachable!();
-                        }
-                    };
+                        };
+                        smallvec![result]
+                    }
+                    &ValueDef::None | &ValueDef::Placeholder(..) | &ValueDef::BlockParam(..) => {
+                        unreachable!();
+                    }
+                };
 
                     log::trace!("Inst {} gets result {:?}", inst, result);
                     frame.values.insert(inst, result);
