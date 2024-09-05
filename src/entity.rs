@@ -8,17 +8,32 @@ use std::ops::{Index, IndexMut};
 
 use arena_traits::Arena;
 
+/// An index into an index-space of entities.
 pub trait EntityRef: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Hash {
+    /// Create a new type-safe index value from a known index.
     fn new(value: usize) -> Self;
+    /// Get the index value of this type-safe index. Must be a valid
+    /// index (will panic otherwise).
     fn index(self) -> usize;
+    /// A sentinel invalid value.
     fn invalid() -> Self;
+    /// Is this index a valid index (not equal to `Self::invalid()`)?
     fn is_valid(self) -> bool {
         self != Self::invalid()
     }
+    /// Is this index an invalid index (equal to `Self::invalid()`)?
     fn is_invalid(self) -> bool {
         self == Self::invalid()
     }
-    fn maybe_index(self) -> Option<usize>;
+    /// Turn a valid index into `Some(index)`, and an invalid index
+    /// into `None`.
+    fn maybe_index(self) -> Option<usize> {
+        if self.is_valid() {
+            Some(self.index())
+        } else {
+            None
+        }
+    }
 }
 
 #[macro_export]
@@ -37,13 +52,6 @@ macro_rules! declare_entity {
             fn index(self) -> usize {
                 debug_assert!(self.is_valid());
                 self.0 as usize
-            }
-            fn maybe_index(self) -> Option<usize> {
-                if self.is_valid() {
-                    Some(self.0 as usize)
-                } else {
-                    None
-                }
             }
             fn invalid() -> Self {
                 Self(u32::MAX)
@@ -91,28 +99,34 @@ impl<Idx: EntityRef, T: Clone + Debug> From<Vec<T>> for EntityVec<Idx, T> {
 }
 
 impl<Idx: EntityRef, T: Clone + Debug> EntityVec<Idx, T> {
+    /// Add a new entity, returning its assigned index.
     pub fn push(&mut self, t: T) -> Idx {
         let idx = Idx::new(self.0.len());
         self.0.push(t);
         idx
     }
 
+    /// Get the number of entities in this entity space.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Get an iterator over the index-space.
     pub fn iter(&self) -> impl DoubleEndedIterator<Item = Idx> {
         (0..self.0.len()).map(|index| Idx::new(index))
     }
 
+    /// Get an iterator over (borrows of) entity values.
     pub fn values(&self) -> impl DoubleEndedIterator<Item = &T> {
         self.0.iter()
     }
 
+    /// Get an iterator over (mutable borrows of) entity values.
     pub fn values_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut T> {
         self.0.iter_mut()
     }
 
+    /// Get an iterator over index, borrow-of-entity tuples.
     pub fn entries(&self) -> impl DoubleEndedIterator<Item = (Idx, &T)> {
         self.0
             .iter()
@@ -120,6 +134,7 @@ impl<Idx: EntityRef, T: Clone + Debug> EntityVec<Idx, T> {
             .map(|(index, t)| (Idx::new(index), t))
     }
 
+    /// Get an iterator over index, mutable-borrow-of-entity tuples.
     pub fn entries_mut(&mut self) -> impl Iterator<Item = (Idx, &mut T)> {
         self.0
             .iter_mut()
@@ -127,14 +142,20 @@ impl<Idx: EntityRef, T: Clone + Debug> EntityVec<Idx, T> {
             .map(|(index, t)| (Idx::new(index), t))
     }
 
+    /// Typesafe element access, returning `None` if `idx` is the
+    /// invalid index.
     pub fn get(&self, idx: Idx) -> Option<&T> {
-        self.0.get(idx.index())
+        self.0.get(idx.maybe_index()?)
     }
 
+    /// Typesafe mutable element access, returning `None` if `idx` is
+    /// the invalid index.
     pub fn get_mut(&mut self, idx: Idx) -> Option<&mut T> {
-        self.0.get_mut(idx.index())
+        self.0.get_mut(idx.maybe_index()?)
     }
 
+    /// Convert this `EntityVec` into the underlying `Vec` and return
+    /// it.
     pub fn into_vec(self) -> Vec<T> {
         self.0
     }
@@ -164,6 +185,12 @@ impl<Idx: EntityRef, T: Clone + Debug> Arena<Idx> for EntityVec<Idx, T> {
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+/// Vector of state per entity in an index-space that does *not*
+/// define the index-space. In other words, this container will not
+/// pass out new indices, it will only allow associating state with
+/// existing indices; and it requires a default value for data at an
+/// index not yet assigned.
+
 pub struct PerEntity<Idx: EntityRef, T: Clone + Debug + Default>(Vec<T>, PhantomData<Idx>, T);
 
 impl<Idx: EntityRef, T: Clone + Debug + Default> Index<Idx> for PerEntity<Idx, T> {

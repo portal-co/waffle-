@@ -14,9 +14,12 @@ use ssa_traits::{Term, Val};
 use std::collections::HashSet;
 use std::iter::{empty, once};
 
-/// A declaration of a function: there is one `FuncDecl` per `Func`
-/// index.
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+///
+/// `FuncDecl` represents the various forms in which we can hold a
+/// function body: not yet parsed, parsed into full IR, recompiled
+/// into new bytecode, or an import (none of the above).
+
 pub enum FuncDecl<'a> {
     /// An imported function.
     Import(Signature, String),
@@ -33,6 +36,7 @@ pub enum FuncDecl<'a> {
 }
 
 impl<'a> FuncDecl<'a> {
+    /// Get the signature for this function.
     pub fn sig(&self) -> Signature {
         match self {
             FuncDecl::Import(sig, ..) => *sig,
@@ -43,6 +47,8 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// If this function is not yet parsed to IR, do so, mutating in
+    /// place.
     pub fn parse(&mut self, module: &Module) -> Result<()> {
         match self {
             FuncDecl::Lazy(sig, name, body) => {
@@ -54,6 +60,7 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Run the specified optimization passes on the function.
     pub fn optimize(&mut self, opts: &OptOptions) {
         match self {
             FuncDecl::Body(_, _, body) => {
@@ -63,6 +70,17 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Convert the function to "maximal SSA" with respect to the
+    /// given cut-set of blocks, or all blocks if `None`.
+    ///
+    /// After this returns, the function will have no live values
+    /// across the entries to cut-blocks except for the blockparams of
+    /// those blocks. This eases some control-flow mutations: if
+    /// control flow will be reconnected somehow at certain points in
+    /// the CFG, making those points (the blocks that receive new
+    /// predecessor edges) cut-blocks in a max-SSA transform
+    /// beforehand will ensure that simply connecting blockparams
+    /// appropriately will reconnect all SSA.
     pub fn convert_to_max_ssa(&mut self, cut_blocks: Option<HashSet<Block>>) {
         match self {
             FuncDecl::Body(_, _, body) => {
@@ -72,6 +90,7 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Return the function body, if it exists.
     pub fn body(&self) -> Option<&FunctionBody> {
         match self {
             FuncDecl::Body(_, _, body) => Some(body),
@@ -79,6 +98,7 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Return the function body, if it exists, in mutable form.
     pub fn body_mut(&mut self) -> Option<&mut FunctionBody> {
         match self {
             FuncDecl::Body(_, _, body) => Some(body),
@@ -86,6 +106,7 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Return the name of this function.
     pub fn name(&self) -> &str {
         match self {
             FuncDecl::Body(_, name, _)
@@ -96,6 +117,7 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
+    /// Set the name of this function.
     pub fn set_name(&mut self, new_name: &str) {
         match self {
             FuncDecl::Body(_, name, _)
@@ -106,7 +128,12 @@ impl<'a> FuncDecl<'a> {
         }
     }
 
-    pub fn without_orig_bytes(self) -> FuncDecl<'static> {
+    /// Remove any references to a function's original bytes. This
+    /// exists to assist `Module::without_orig_bytes()`, which will
+    /// parse all `Lazy` `FuncDecl`s beforehand; here we just panic in
+    /// that case, and rewrite the lifetime otherwise (because no
+    /// borrow actually exists in the remaining variants).
+    pub(crate) fn without_orig_bytes(self) -> FuncDecl<'static> {
         match self {
             FuncDecl::Body(sig, name, body) => FuncDecl::Body(sig, name, body),
             FuncDecl::Import(sig, name) => FuncDecl::Import(sig, name),
@@ -118,6 +145,8 @@ impl<'a> FuncDecl<'a> {
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+/// The body of a function, as an SSA-based intermediate
+/// representation.
 pub struct FunctionBody {
     /// How many parameters the function has. (Their types are the
     /// first `n_params` values in `locals`.)
@@ -147,6 +176,10 @@ pub struct FunctionBody {
 }
 
 impl FunctionBody {
+    /// Create a new function body with the given signature. The body
+    /// will have an entry block with blockparams defined that match
+    /// the function parameters in the signature, but no
+    /// contents. `module` is necessary to look up the signature.
     pub fn new(module: &Module, sig: Signature) -> FunctionBody {
         let locals = EntityVec::from(module.signatures[sig].params.clone());
         let n_params = locals.len();
@@ -176,23 +209,30 @@ impl FunctionBody {
         }
     }
 
+    /// Optimize this function given the options in `opts`.
     pub fn optimize(&mut self, opts: &OptOptions) {
         let cfg = crate::cfg::CFGInfo::new(self);
         crate::passes::basic_opt::basic_opt(self, &cfg, opts);
         crate::passes::empty_blocks::run(self);
     }
 
+    /// Perform a maximal-SSA transform on this function. See comments
+    /// on `FuncDecl::convert_to_max_ssa()` for more.
     pub fn convert_to_max_ssa(&mut self, cut_blocks: Option<HashSet<Block>>) {
         let cfg = crate::cfg::CFGInfo::new(self);
         crate::passes::maxssa::run(self, cut_blocks, &cfg);
     }
 
+    /// Add a new, empty block and return its ID.
     pub fn add_block(&mut self) -> Block {
         let id = self.blocks.push(BlockDef::default());
         log::trace!("add_block: block {}", id);
         id
     }
 
+    /// Convenience: intern a single type as a
+    /// result-type-list. Caches and deduplicates to minimize
+    /// type-pool growth.
     pub fn single_type_list(&mut self, ty: Type) -> ListRef<Type> {
         let type_pool = &mut self.type_pool;
         *self
@@ -201,6 +241,10 @@ impl FunctionBody {
             .or_insert_with(|| type_pool.single(ty))
     }
 
+    /// Add an edge in the succs/preds lists of the respective
+    /// blocks. These edges must exist once a function has been built;
+    /// they can be (re)computed in bulk with
+    /// `FunctionBody::recompute_edges()` if necessary.
     pub fn add_edge(&mut self, from: Block, to: Block) {
         let succ_pos = self.blocks[from].succs.len();
         let pred_pos = self.blocks[to].preds.len();
@@ -211,6 +255,10 @@ impl FunctionBody {
         log::trace!("add_edge: from {} to {}", from, to);
     }
 
+    /// Split a given edge (disambiguated with `succ_idx` since there
+    /// may be multiple edges from `from` to `to`), creating an
+    /// intermediate block with an unconditional branch and carrying
+    /// through all blockparams.
     pub fn split_edge(&mut self, from: Block, to: Block, succ_idx: usize) -> Block {
         assert_eq!(self.blocks[from].succs[succ_idx], to);
         let pred_idx = self.blocks[from].pos_in_succ_pred[succ_idx];
@@ -254,6 +302,10 @@ impl FunctionBody {
         edge_block
     }
 
+    /// Recompute all successor/predecessor lists according to the
+    /// edges implied by terminator instructions. Must be updated
+    /// after building a function body or mutating its CFG and prior
+    /// to analyses.
     pub fn recompute_edges(&mut self) {
         for block in self.blocks.values_mut() {
             block.preds.clear();
@@ -271,6 +323,8 @@ impl FunctionBody {
         }
     }
 
+    /// Add a new value node to the function (not yet in any block)
+    /// and return its SSA value number.
     pub fn add_value(&mut self, value: ValueDef) -> Value {
         log::trace!("add_value: def {:?}", value);
         let value = self.values.push(value);
@@ -278,6 +332,7 @@ impl FunctionBody {
         value
     }
 
+    /// Make one value an alias to another. Panics on cycles.
     pub fn set_alias(&mut self, value: Value, to: Value) {
         log::trace!("set_alias: value {:?} to {:?}", value, to);
         // Resolve the `to` value through all existing aliases.
@@ -289,6 +344,8 @@ impl FunctionBody {
         self.values[value] = ValueDef::Alias(to);
     }
 
+    /// Resolve the value through any alias references to the original
+    /// value.
     pub fn resolve_alias(&self, value: Value) -> Value {
         if value.is_invalid() {
             return value;
@@ -305,32 +362,9 @@ impl FunctionBody {
         result
     }
 
-    pub fn add_blockparam(&mut self, block: Block, ty: Type) -> Value {
-        let index = self.blocks[block].params.len();
-        let value = self.add_value(ValueDef::BlockParam(block, index as u32, ty));
-        self.blocks[block].params.push((ty, value));
-        self.value_blocks[value] = block;
-        value
-    }
-
-    pub fn add_placeholder(&mut self, ty: Type) -> Value {
-        self.add_value(ValueDef::Placeholder(ty))
-    }
-
-    pub fn replace_placeholder_with_blockparam(&mut self, block: Block, value: Value) {
-        let index = self.blocks[block].params.len();
-        let ty = match &self.values[value] {
-            &ValueDef::Placeholder(ty) => ty,
-            _ => unreachable!(),
-        };
-        self.blocks[block].params.push((ty, value));
-        self.values[value] = ValueDef::BlockParam(block, index as u32, ty);
-    }
-
-    pub fn mark_value_as_local(&mut self, value: Value, local: Local) {
-        self.value_locals[value] = Some(local);
-    }
-
+    /// Resolve a value through alias references, updating the value
+    /// definition to short-circuit the (arbitrarily long) alias chain
+    /// afterward.
     pub fn resolve_and_update_alias(&mut self, value: Value) -> Value {
         let to = self.resolve_alias(value);
         // Short-circuit the chain, union-find-style.
@@ -342,11 +376,49 @@ impl FunctionBody {
         to
     }
 
+    /// Add a new blockparam to the given block, returning its SSA
+    /// value number.
+    pub fn add_blockparam(&mut self, block: Block, ty: Type) -> Value {
+        let index = self.blocks[block].params.len();
+        let value = self.add_value(ValueDef::BlockParam(block, index as u32, ty));
+        self.blocks[block].params.push((ty, value));
+        self.value_blocks[value] = block;
+        value
+    }
+
+    /// Add a new `Placeholder` value that can be replaced with an
+    /// actual definition later. Useful in some algorithms that
+    /// follow or resolve cycles.
+    pub fn add_placeholder(&mut self, ty: Type) -> Value {
+        self.add_value(ValueDef::Placeholder(ty))
+    }
+
+    /// Convert a `Placeholder` value into a blockparam on the given
+    /// block.
+    pub fn replace_placeholder_with_blockparam(&mut self, block: Block, value: Value) {
+        let index = self.blocks[block].params.len();
+        let ty = match &self.values[value] {
+            &ValueDef::Placeholder(ty) => ty,
+            _ => unreachable!(),
+        };
+        self.blocks[block].params.push((ty, value));
+        self.values[value] = ValueDef::BlockParam(block, index as u32, ty);
+    }
+
+    /// Mark an SSA value as carrying the Wasm local `local`. This is
+    /// useful for debugging and manually reading the IR.
+    pub fn mark_value_as_local(&mut self, value: Value, local: Local) {
+        self.value_locals[value] = Some(local);
+    }
+
+    /// Append a value to the instruction list in a block.
     pub fn append_to_block(&mut self, block: Block, value: Value) {
         self.blocks[block].insts.push(value);
         self.value_blocks[value] = block;
     }
 
+    /// Set the terminator instruction on a block, updating the edge
+    /// lists as well.
     pub fn set_terminator(&mut self, block: Block, terminator: Terminator) {
         debug_assert_eq!(&self.blocks[block].terminator, &Terminator::None);
         log::trace!("block {} terminator {:?}", block, terminator);
@@ -356,10 +428,9 @@ impl FunctionBody {
         self.blocks[block].terminator = terminator;
     }
 
-    pub fn add_local(&mut self, ty: Type) -> Local {
-        self.locals.push(ty)
-    }
-
+    /// Prety-print this function body. `indent` is prepended to each
+    /// line of output. `module`, if provided, allows printing source
+    /// locations as comments at each operator.
     pub fn display<'a>(
         &'a self,
         indent: &'a str,
@@ -373,6 +444,9 @@ impl FunctionBody {
         }
     }
 
+    /// Pretty-print this function body, with "verbose" format:
+    /// includes all value nodes, even those not listed in a block's
+    /// instruction list. (Roughly doubles output size.)
     pub fn display_verbose<'a>(
         &'a self,
         indent: &'a str,
@@ -386,6 +460,12 @@ impl FunctionBody {
         }
     }
 
+    /// Validate consistency of the IR against required invariants and properties:
+    ///
+    /// - Block successor and predecessor lists are accurate with
+    ///   respect to terminator instructions.
+    /// - SSA is valid: values are used in locations dominated by
+    ///   their uses.
     pub fn validate(&self) -> anyhow::Result<()> {
         // Verify that every block's succs are accurate.
         for (block, block_def) in self.blocks.entries() {
@@ -479,6 +559,11 @@ impl FunctionBody {
         Ok(())
     }
 
+    /// Verify that the CFG of this function is reducible. (This is
+    /// not necessary to produce Wasm, as the backend can turn
+    /// irreducible control flow into reducible control flow via the
+    /// Reducifier. However, it is a useful property in other
+    /// situations, so one may want to test for or verify it.)
     pub fn verify_reducible(&self) -> Result<()> {
         let cfg = CFGInfo::new(self);
         for (rpo, &block) in cfg.rpo.entries() {
@@ -498,6 +583,10 @@ impl FunctionBody {
         Ok(())
     }
 
+    /// Compile this function to Wasm bytecode. See
+    /// `Module::to_wasm_bytes()` for the Wasm-level compilation entry
+    /// point. This is mostly useful for custom per-function
+    /// compilation flows, e.g. per-function caching.
     pub fn compile(&self) -> Result<wasm_encoder::Function> {
         let backend = WasmFuncBackend::new(self)?;
         backend.compile()

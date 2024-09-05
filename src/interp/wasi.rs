@@ -59,7 +59,8 @@ pub fn call_wasi(mem: &mut InterpMemory, name: &str, args: &[ConstVal]) -> Optio
         }
         "proc_exit" => {
             eprintln!("WASI exit: {:?}", args[0]);
-            Some(InterpResult::Exit)
+            // Some(InterpResult::Exit)
+            todo!()
         }
         "clock_time_get" => {
             let p_time = args[2].as_u32().unwrap();

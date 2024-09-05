@@ -54,6 +54,10 @@ pub struct SignatureData {
     pub returns: Vec<Type>,
 }
 
+/// The size of a single Wasm page, used in memory definitions.
+pub const WASM_PAGE: usize = 0x1_0000; // 64KiB
+
+/// A memory definition.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MemoryData {
     /// How many Wasm pages (64KiB size) in the initial memory size?

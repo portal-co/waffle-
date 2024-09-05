@@ -1480,7 +1480,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 FuncDecl::Compiled(_, _name, bytes) => Ok(Cow::Borrowed(&bytes[..])),
                 FuncDecl::Body(_, name, body) => {
                     log::debug!("Compiling {} \"{}\"", func, name);
-                    WasmFuncBackend::new(body)?
+                    WasmFuncBackend::new(&body)?
                         .compile()
                         .map(|func| Cow::Owned(func.into_raw_body()))
                 }
@@ -1518,7 +1518,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     for (n, e) in module.custom_sections.iter() {
         into_mod.section(&CustomSection {
             name: Cow::Borrowed(n.as_str()),
-            data: Cow::Borrowed(e.as_slice()),
+            data: Cow::Borrowed(e),
         });
     }
 

@@ -10,30 +10,76 @@ use std::sync::Arc;
 
 mod wasi;
 
-const WASM_PAGE: usize = 0x1_0000; // 64KiB
+/// How large do we allow a Wasm memory to be when interpreting? Limit
+/// the size somewhat (apply an implementation limit) so we do not
+/// have unreasonably large state.
 const MAX_PAGES: usize = 2048; // 2048 * 64KiB = 128MiB
 
+/// Context for the IR interpreter. Corresponds roughly to Wasm module
+/// state.
 pub struct InterpContext {
+    /// Contents of memories.
     pub memories: PerEntity<Memory, InterpMemory>,
+    /// Contents of tables.
     pub tables: PerEntity<Table, InterpTable>,
+    /// Values of globals.
     pub globals: PerEntity<Global, ConstVal>,
+    /// Fuel remaining: allows deterministic stopping of execution.
     pub fuel: u64,
     pub trace_handler: Option<Box<dyn Fn(usize, Vec<ConstVal>) -> bool + Send>>,
     pub import_hander: Arc<dyn Fn(&mut InterpContext,&mut Module<'_>, &str, &[ConstVal]) -> InterpResult>,
 }
 
-type MultiVal = SmallVec<[ConstVal; 2]>;
-
-#[derive(Clone, Debug)]
-pub enum InterpResult {
-    Ok(MultiVal),
-    Exit,
-    Trap(Func, Block, u32),
-    OutOfFuel,
-    TraceHandlerQuit,
+/// The state of one interpreter memory.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct InterpMemory {
+    pub data: Vec<u8>,
+    pub max_pages: usize,
 }
 
+/// The state of one interpreter table.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct InterpTable {
+    pub elements: Vec<Func>,
+}
+
+/// One stack frame in the interpreted execution context.
+#[derive(Debug, Clone, Default)]
+pub struct InterpStackFrame {
+    func: Func,
+    cur_block: Block,
+    values: HashMap<Value, SmallVec<[ConstVal; 2]>>,
+}
+
+/// The result of an interpreter session.
+#[derive(Clone, Debug)]
+pub enum InterpResult {
+    /// The function returned with the given value(s).
+    Ok(MultiVal),
+    /// The module trapped.
+    Trap(Func, Block, u32),
+    /// The module ran out of fuel.
+    OutOfFuel,
+}
+
+/// A constant concrete value during interpretation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+pub enum ConstVal {
+    I32(u32),
+    I64(u64),
+    F32(u32),
+    F64(u64),
+    #[default]
+    None,
+    Ref(Option<Func>)
+}
+
+/// Representation of multiple result values.
+type MultiVal = SmallVec<[ConstVal; 2]>;
+
 impl InterpResult {
+    /// Extract the return value(s), if normal return, otherwise
+    /// produce an error.
     pub fn ok(self) -> anyhow::Result<MultiVal> {
         match self {
             InterpResult::Ok(vals) => Ok(vals),
@@ -43,6 +89,7 @@ impl InterpResult {
 }
 
 impl InterpContext {
+    /// Construct a new interpreter context for the given module.
     pub fn new(module: &Module<'_>) -> anyhow::Result<Self> {
         let mut memories = PerEntity::default();
         for (memory, data) in module.memories.entries() {
@@ -88,41 +135,50 @@ impl InterpContext {
             globals,
             fuel: u64::MAX,
             trace_handler: None,
-            import_hander: Arc::new(|_, _, _,_| InterpResult::TraceHandlerQuit),
+            import_hander: Arc::new(|_, _, _,_| todo!()),
         })
     }
 
-    pub fn call(&mut self, module: &mut Module<'_>, mut func: Func, args: &[ConstVal]) -> InterpResult {
+    /// Call the given function with the given args, running the
+    /// interpreter until fuel is exhausted or the function returns.
+    pub fn call(&mut self, module: &Module<'_>, mut func: Func, args: &[ConstVal]) -> InterpResult {
         let mut args = args.to_vec();
         'redo: loop {
-            let body = match &module.funcs[func] {
-                FuncDecl::Lazy(..) => panic!("Un-expanded function"),
-                FuncDecl::Compiled(..) => panic!("Already-compiled function"),
-                FuncDecl::Import(..) => {
-                    let import = &module.imports[func.index()];
-                    assert_eq!(import.kind, ImportKind::Func(func));
-                    return self.call_import(module,&import.name[..].to_owned(), &args);
-                }
-                FuncDecl::Body(_, _, body) => body.clone(),
-                FuncDecl::None => panic!("FuncDecl::None in call()"),
-            };
+        let body = match &module.funcs[func] {
+            FuncDecl::Lazy(..) => panic!("Un-expanded function"),
+            FuncDecl::Compiled(..) => panic!("Already-compiled function"),
+            FuncDecl::Import(..) => {
+                let import = &module.imports[func.index()];
+                assert_eq!(import.kind, ImportKind::Func(func));
+                // return self.call_import(module,&import.name[..], args);
+                todo!()
+            }
+            FuncDecl::Body(_, _, body) => body,
+            FuncDecl::None => panic!("FuncDecl::None in call()"),
+        };
 
-            log::trace!(
-                "Interp: entering func {}:\n{}\n",
-                func,
-                body.display_verbose("| ", Some(module))
-            );
-            log::trace!("args: {:?}", args);
+        log::trace!(
+            "Interp: entering func {}:\n{}\n",
+            func,
+            body.display_verbose("| ", Some(module))
+        );
+        log::trace!("args: {:?}", args);
 
-            let mut frame = InterpStackFrame {
-                func,
-                cur_block: body.entry,
-                values: HashMap::new(),
-            };
+        let mut frame = InterpStackFrame {
+            func,
+            cur_block: body.entry,
+            values: HashMap::new(),
+        };
 
-            for (&arg, &(_, blockparam)) in args.iter().zip(body.blocks[body.entry].params.iter()) {
-                log::trace!("Entry block param {} gets arg value {:?}", blockparam, arg);
-                frame.values.insert(blockparam, smallvec![arg]);
+        for (&arg, &(_, blockparam)) in args.iter().zip(body.blocks[body.entry].params.iter()) {
+            log::trace!("Entry block param {} gets arg value {:?}", blockparam, arg);
+            frame.values.insert(blockparam, smallvec![arg]);
+        }
+
+        loop {
+            self.fuel -= 1;
+            if self.fuel == 0 {
+                return InterpResult::OutOfFuel;
             }
 
             loop {
@@ -332,7 +388,8 @@ impl InterpContext {
                             })
                             .collect::<Vec<_>>();
                         let ConstVal::Ref(Some(fu)) = args.last().unwrap() else {
-                            return InterpResult::TraceHandlerQuit;
+                            // return InterpResult::TraceHandlerQuit;
+                            todo!()
                         };
                         func = *fu;
                         args = args2[..args2.len() - 1].to_vec();
@@ -341,6 +398,8 @@ impl InterpContext {
                 }
             }
         }
+        // break 'redo;
+    }
     }
 
     fn call_import(&mut self,module: &mut Module<'_>, name: &str, args: &[ConstVal]) -> InterpResult {
@@ -349,13 +408,6 @@ impl InterpContext {
         // self.import_hander = Some(r);
         return rs;
     }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct InterpStackFrame {
-    func: Func,
-    cur_block: Block,
-    values: HashMap<Value, SmallVec<[ConstVal; 2]>>,
 }
 
 impl InterpStackFrame {
@@ -383,28 +435,6 @@ impl InterpStackFrame {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct InterpMemory {
-    pub data: Vec<u8>,
-    pub max_pages: usize,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct InterpTable {
-    pub elements: Vec<Func>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-pub enum ConstVal {
-    I32(u32),
-    I64(u64),
-    F32(u32),
-    F64(u64),
-    Ref(Option<Func>),
-    #[default]
-    None,
-}
-
 impl ConstVal {
     pub fn as_u32(self) -> Option<u32> {
         match self {
@@ -423,6 +453,8 @@ impl ConstVal {
     }
 }
 
+/// Constant-evaluate the given operator with the given arguments,
+/// returning a constant result if possible to know.
 pub fn const_eval(
     op: &Operator,
     vals: &[ConstVal],

@@ -3,12 +3,35 @@
 use crate::{declare_entity, entity::EntityRef};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+/// Types in waffle's IR.
+///
+/// These types correspond to (a subset of) the primitive Wasm value
+/// types: integers, floats, SIMD vectors, and function references
+/// (optionally typed).
+///
+/// Every SSA value in a function body has a `Type`, unless it is a
+/// tuple (multi-value or zero-value result).
+
 pub enum Type {
+    /// A 32-bit integer. Signedness is unspecified: individual
+    /// operators specify how they handle sign.
     I32,
+    /// A 64-bit integer. Signedness is unspecified: individual
+    /// operators specify how they handle sign.
     I64,
+    /// A 32-bit IEEE 754 floating point value. Semantics around NaNs
+    /// are defined by individual operators; from the point of view of
+    /// IR scaffolding, floating-point values are bags of bits.
     F32,
+    /// A 64-bit IEEE 754 floating point value. Semantics around NaNs
+    /// are defined by individual operators; from the point of view of
+    /// IR scaffolding, floating-point values are bags of bits.
     F64,
+    /// A 128-bit SIMD vector value. Lanes and lane types are
+    /// specified by individual operators; from the point of view of
+    /// IR scaffolding, SIMD vector values are bags of bits.
     V128,
+    /// A function reference.
     FuncRef,
     ExternRef,
     TypedFuncRef {
@@ -98,13 +121,27 @@ impl From<Type> for wasm_encoder::RefType {
     }
 }
 
+// Per-module index spaces:
+
+// A signature (list of parameter types and list of return types) in
+// the module.
 declare_entity!(Signature, "sig");
+// A function in the module.
 declare_entity!(Func, "func");
-declare_entity!(Block, "block");
-declare_entity!(Local, "local");
+// A global variable in the module.
 declare_entity!(Global, "global");
+// A table in the module.
 declare_entity!(Table, "table");
+// A memory in the module.
 declare_entity!(Memory, "memory");
+
+// Per-function index spaces:
+
+// A basic block in one function body.
+declare_entity!(Block, "block");
+// A local variable (storage slot) in one function body.
+declare_entity!(Local, "local");
+// An SSA value in one function body.
 declare_entity!(Value, "v");
 
 mod module;

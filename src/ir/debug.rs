@@ -11,13 +11,20 @@ declare_entity!(SourceLoc, "loc");
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Debug {
+    /// Interned source-file names, indexed by a `SourceFile` entity
+    /// index.
     pub source_files: EntityVec<SourceFile, String>,
     source_file_dedup: HashMap<String, SourceFile>,
+    /// Interned source locations (file, line, and column),, indexed
+    /// by a `SourceLoc` entity index.
     pub source_locs: EntityVec<SourceLoc, SourceLocData>,
     source_loc_dedup: HashMap<SourceLocData, SourceLoc>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+/// A "source location": a filename (interned to an ID), a line, and a
+/// column.
+
 pub struct SourceLocData {
     pub file: SourceFile,
     pub line: u32,
@@ -25,6 +32,7 @@ pub struct SourceLocData {
 }
 
 impl Debug {
+    /// Intern a filename to an ID.
     pub fn intern_file(&mut self, path: &str) -> SourceFile {
         if let Some(id) = self.source_file_dedup.get(path) {
             return *id;
@@ -34,6 +42,8 @@ impl Debug {
         id
     }
 
+    /// Intern a location (line and column) in an already-interned
+    /// filename.
     pub fn intern_loc(&mut self, file: SourceFile, line: u32, col: u32) -> SourceLoc {
         let data = SourceLocData { file, line, col };
         match self.source_loc_dedup.entry(data) {
@@ -47,6 +57,9 @@ impl Debug {
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+/// A map from ranges of offsets in the original Wasm file to source
+/// locations.
+
 pub struct DebugMap {
     /// Offset of code section relative to the Wasm file start.
     pub code_offset: u32,
