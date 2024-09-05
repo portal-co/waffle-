@@ -332,6 +332,24 @@ impl FunctionBody {
         value
     }
 
+    /// Convenience method: add an operator value to the function in
+    /// the given block. Creates the argument and type list(s), adds
+    /// the value node, and appends the value node to the given block.
+    pub fn add_op(&mut self, block: Block, op: Operator, args: &[Value], tys: &[Type]) -> Value {
+        let args = match args.len() {
+            0 => ListRef::default(),
+            _ => self.arg_pool.from_iter(args.iter().cloned()),
+        };
+        let tys = match tys.len() {
+            0 => ListRef::default(),
+            1 => self.single_type_list(tys[0]),
+            _ => self.type_pool.from_iter(tys.iter().cloned()),
+        };
+        let value = self.add_value(ValueDef::Operator(op, args, tys));
+        self.append_to_block(block, value);
+        value
+    }
+
     /// Make one value an alias to another. Panics on cycles.
     pub fn set_alias(&mut self, value: Value, to: Value) {
         log::trace!("set_alias: value {:?} to {:?}", value, to);
