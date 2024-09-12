@@ -33,6 +33,9 @@ either = "1.13.0"
 arena-traits = "0.1.1"
 ssa-traits = "0.1.1"
 
+[dev-dependencies]
+wat = "1.212.0"
+
 [features]
 default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
