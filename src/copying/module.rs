@@ -1,6 +1,7 @@
-use crate::util::{add_start, new_sig};
 use crate::op_traits::rewrite_mem;
+use crate::util::{add_start, new_sig};
 use paste::paste;
+use std::mem::{replace, take};
 use std::{
     backtrace,
     borrow::Cow,
@@ -9,9 +10,25 @@ use std::{
     iter::empty,
     ops::{Deref, DerefMut},
 };
-
+pub fn x2i(x: ExportKind) -> ImportKind {
+    match x {
+        ExportKind::Table(a) => ImportKind::Table(a),
+        ExportKind::Func(a) => ImportKind::Func(a),
+        ExportKind::Global(a) => ImportKind::Global(a),
+        ExportKind::Memory(a) => ImportKind::Memory(a),
+    }
+}
+pub fn i2x(x: ImportKind) -> ExportKind {
+    match x {
+        ImportKind::Table(a) => ExportKind::Table(a),
+        ImportKind::Func(a) => ExportKind::Func(a),
+        ImportKind::Global(a) => ExportKind::Global(a),
+        ImportKind::Memory(a) => ExportKind::Memory(a),
+    }
+}
 use crate::{
-    entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef
+    entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory,
+    Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef,
 };
 #[derive(Eq, PartialEq, Clone)]
 pub struct IKW(pub ImportKind);
@@ -73,6 +90,27 @@ macro_rules! translator {
         }
     };
 }
+pub fn tree_shake(m: &mut Module) -> anyhow::Result<()> {
+    let n = replace(m, Module::empty());
+    let mut s = Copier::new(
+        &n,
+        m,
+        Box::new(State::new(
+            Box::new(import_fn(|_, m, n| {
+                Ok(Some(ImportBehavior::Passthrough(m, n)))
+            })),
+            BTreeSet::new(),
+        )),
+    );
+    for x in n.exports.iter() {
+        let i = x2i(x.kind.clone());
+        let i = s.translate_import(i)?;
+        let mut x = x.clone();
+        x.kind = i2x(i);
+        s.dest.exports.push(x);
+    }
+    Ok(())
+}
 pub trait Imports {
     fn get_import(
         &mut self,
@@ -84,6 +122,12 @@ pub trait Imports {
 #[repr(transparent)]
 #[derive(Clone, Debug, Copy)]
 pub struct ImportFn<F>(pub F);
+
+pub fn import_fn(
+    a: impl FnMut(&mut Module<'_>, String, String) -> anyhow::Result<Option<ImportBehavior>>,
+) -> impl Imports {
+    ImportFn(a)
+}
 
 impl<F: FnMut(&mut Module<'_>, String, String) -> anyhow::Result<Option<ImportBehavior>>> Imports
     for ImportFn<F>
@@ -152,10 +196,7 @@ impl<
         let d = self.src.memories[a].clone();
         return Ok(self.dest.memories.push(d));
     }
-    pub fn internal_translate_global(
-        &mut self,
-        a: crate::Global,
-    ) -> anyhow::Result<crate::Global> {
+    pub fn internal_translate_global(&mut self, a: crate::Global) -> anyhow::Result<crate::Global> {
         let d = self.src.globals[a].clone();
         return Ok(self.dest.globals.push(d));
     }
@@ -196,7 +237,7 @@ impl<
         //     return Ok(*c);
         // }
         let mut t = self.src.tables[tk].clone();
-        if let Type::TypedFuncRef{sig_index,..} = &mut t.ty{
+        if let Type::TypedFuncRef { sig_index, .. } = &mut t.ty {
             *sig_index = self.translate_sig(*sig_index)?;
         }
         // let nt = self.dest.tables.push(t.clone());
@@ -211,8 +252,8 @@ impl<
     }
     pub fn translate_sig(&mut self, s: Signature) -> anyhow::Result<Signature> {
         let mut d = self.src.signatures[s].clone();
-        for x in d.params.iter_mut().chain(d.returns.iter_mut()){
-            if let Type::TypedFuncRef{sig_index,..} = x{
+        for x in d.params.iter_mut().chain(d.returns.iter_mut()) {
+            if let Type::TypedFuncRef { sig_index, .. } = x {
                 *sig_index = self.translate_sig(*sig_index)?;
             }
         }
@@ -240,13 +281,13 @@ impl<
         if let Some(b) = f.body_mut() {
             for v in b.values.iter() {
                 let mut k = b.values[v].clone();
-                if let ValueDef::BlockParam(_, _, x) = &mut k{
-                    if let Type::TypedFuncRef{sig_index,..} = x{
+                if let ValueDef::BlockParam(_, _, x) = &mut k {
+                    if let Type::TypedFuncRef { sig_index, .. } = x {
                         *sig_index = self.translate_sig(*sig_index)?;
                     }
                 }
-                if let ValueDef::PickOutput(_,_ , x) = &mut k{
-                    if let Type::TypedFuncRef{sig_index,..} = x{
+                if let ValueDef::PickOutput(_, _, x) = &mut k {
+                    if let Type::TypedFuncRef { sig_index, .. } = x {
                         *sig_index = self.translate_sig(*sig_index)?;
                     }
                 }
@@ -255,7 +296,7 @@ impl<
                     let mut e = None;
                     rewrite_mem(a, &mut w, |m, _| {
                         *m = self.translate_Memory(*m)?;
-                        Ok::<_,anyhow::Error>(())
+                        Ok::<_, anyhow::Error>(())
                     })?;
                     if let Some(e) = e {
                         return Err(e);
@@ -268,19 +309,19 @@ impl<
                             *func_index = self.translate_Func(*func_index)?;
                         }
                         crate::Operator::RefNull { ty } => {
-                            if let Type::TypedFuncRef{sig_index,..} = ty{
+                            if let Type::TypedFuncRef { sig_index, .. } = ty {
                                 *sig_index = self.translate_sig(*sig_index)?;
                             }
                         }
                         crate::Operator::TypedSelect { ty } => {
-                            if let Type::TypedFuncRef{sig_index,..} = ty{
+                            if let Type::TypedFuncRef { sig_index, .. } = ty {
                                 *sig_index = self.translate_sig(*sig_index)?;
                             }
                         }
                         Operator::CallRef { sig_index } => {
                             *sig_index = self.translate_sig(*sig_index)?;
                         }
-                         crate::Operator::CallIndirect {
+                        crate::Operator::CallIndirect {
                             sig_index,
                             table_index,
                         } => {
@@ -321,12 +362,16 @@ impl<
                         *sig = self.translate_sig(*sig)?;
                         *table = self.translate_Table(*table)?;
                     }
+                    crate::Terminator::ReturnCallRef { sig, args } => {
+                        *sig = self.translate_sig(*sig)?;
+                        // *table = self.translate_Table(*table)?;
+                    }
                     _ => {}
                 }
                 b.blocks[k] = kv;
             }
-            for x in b.type_pool.storage.iter_mut(){
-                if let Type::TypedFuncRef{sig_index,..} = x{
+            for x in b.type_pool.storage.iter_mut() {
+                if let Type::TypedFuncRef { sig_index, .. } = x {
                     *sig_index = self.translate_sig(*sig_index)?;
                 }
             }
