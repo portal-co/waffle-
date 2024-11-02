@@ -1,7 +1,9 @@
 use crate::{
-    pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator, Terminator, Value,
-    ValueDef,
+    entity::EntityVec, pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator, Terminator, Type, Value, ValueDef
 };
+use either::Either;
+use ssa_traits::Val;
+use std::iter::{empty, once};
 
 impl cfg_traits::Func for FunctionBody {
     type Block = Block;
@@ -187,7 +189,7 @@ impl cfg_traits::Term<FunctionBody> for BlockTarget {
 
     fn targets<'a>(
         &'a self,
-    ) -> Box<(dyn std::iter::Iterator<Item = &'a crate::func::BlockTarget> + 'a)>
+    ) -> Box<(dyn std::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
@@ -196,7 +198,7 @@ impl cfg_traits::Term<FunctionBody> for BlockTarget {
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::func::BlockTarget> + 'a)>
+    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
@@ -224,7 +226,7 @@ impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for Terminator {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a func::BlockTarget> + 'a)>
+    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
@@ -251,7 +253,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut func::BlockTarget> + 'a)>
+    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
