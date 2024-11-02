@@ -941,28 +941,12 @@ impl Terminator {
         }
     }
 }
-
-impl ssa_traits::Func for FunctionBody {
-    type Value = Value;
-
+impl cfg_traits::Func for FunctionBody{
     type Block = Block;
-
-    type Values = EntityVec<Value, ValueDef>;
-
     type Blocks = EntityVec<Block, BlockDef>;
-
-    fn values(&self) -> &Self::Values {
-        &self.values
-    }
-
     fn blocks(&self) -> &Self::Blocks {
         &self.blocks
     }
-
-    fn values_mut(&mut self) -> &mut Self::Values {
-        &mut self.values
-    }
-
     fn blocks_mut(&mut self) -> &mut Self::Blocks {
         &mut self.blocks
     }
@@ -971,31 +955,49 @@ impl ssa_traits::Func for FunctionBody {
         self.entry
     }
 }
+impl ssa_traits::Func for FunctionBody {
+    type Value = Value;
+
+
+
+    type Values = EntityVec<Value, ValueDef>;
+
+
+    fn values(&self) -> &Self::Values {
+        &self.values
+    }
+
+
+    fn values_mut(&mut self) -> &mut Self::Values {
+        &mut self.values
+    }
+
+}
 impl ssa_traits::HasValues<FunctionBody> for ListRef<Value> {
-    fn values(
-        &self,
-        f: &FunctionBody,
-    ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        f.arg_pool[*self].iter().cloned()
+    fn values<'a>(
+        &'a self,
+        f: &'a FunctionBody,
+    ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a> {
+        Box::new(f.arg_pool[*self].iter().cloned())
     }
 
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
-    ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+    ) -> Box<dyn Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value> + 'a>
     where
         FunctionBody: 'a,
     {
-        g.arg_pool[*self].iter_mut()
+        Box::new(g.arg_pool[*self].iter_mut())
     }
 }
 impl ssa_traits::Value<FunctionBody> for ValueDef {}
 impl ssa_traits::HasValues<FunctionBody> for ValueDef {
-    fn values(
-        &self,
-        f: &FunctionBody,
-    ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        match self {
+    fn values<'a>(
+        &'a self,
+        f: &'a FunctionBody,
+    ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a>  {
+        Box::new(match self {
             ValueDef::BlockParam(_, _, _) => Either::Left(None.into_iter()),
             ValueDef::Operator(_, l, _) => Either::Right(f.arg_pool[*l].iter().cloned()),
             ValueDef::PickOutput(a, _, _) => Either::Left(Some(*a).into_iter()),
@@ -1003,17 +1005,17 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
             ValueDef::Placeholder(_) => todo!(),
             // ValueDef::Trace(_, _) => todo!(),
             ValueDef::None => Either::Left(None.into_iter()),
-        }
+        })
     }
 
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
-    ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+    ) -> Box<dyn Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value> + 'a>
     where
         FunctionBody: 'a,
     {
-        match self {
+        Box::new(match self {
             ValueDef::BlockParam(_, _, _) => Either::Left(None.into_iter()),
             ValueDef::Operator(_, l, _) => Either::Right(g.arg_pool[*l].iter_mut()),
             ValueDef::PickOutput(a, _, _) => Either::Left(Some(a).into_iter()),
@@ -1021,7 +1023,7 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
             ValueDef::Placeholder(_) => todo!(),
             // ValueDef::Trace(_, _) => todo!(),
             ValueDef::None => Either::Left(None.into_iter()),
-        }
+        })
     }
 }
 impl ssa_traits::op::OpValue<FunctionBody, Operator> for ValueDef {
@@ -1070,11 +1072,7 @@ impl ssa_traits::op::OpValue<FunctionBody,u32> for ValueDef{
         Some(r)
     }
 }
-impl ssa_traits::Block<FunctionBody> for BlockDef {
-    fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        self.insts.iter().cloned()
-    }
-
+impl cfg_traits::Block<FunctionBody> for BlockDef{
     type Terminator = Terminator;
 
     fn term(&self) -> &Self::Terminator {
@@ -1084,24 +1082,33 @@ impl ssa_traits::Block<FunctionBody> for BlockDef {
     fn term_mut(&mut self) -> &mut Self::Terminator {
         &mut self.terminator
     }
+}
+impl ssa_traits::Block<FunctionBody> for BlockDef {
+    fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
+        self.insts.iter().cloned()
+    }
+
 
     fn add_inst(
         func: &mut FunctionBody,
-        key: <FunctionBody as ssa_traits::Func>::Block,
+        key: <FunctionBody as cfg_traits::Func>::Block,
         v: <FunctionBody as ssa_traits::Func>::Value,
     ) {
         func.append_to_block(key, v)
     }
 }
 
-impl ssa_traits::Target<FunctionBody> for BlockTarget {
-    fn block(&self) -> <FunctionBody as ssa_traits::Func>::Block {
+impl cfg_traits::Target<FunctionBody> for BlockTarget{
+    fn block(&self) -> <FunctionBody as cfg_traits::Func>::Block {
         self.block
     }
 
-    fn block_mut(&mut self) -> &mut <FunctionBody as ssa_traits::Func>::Block {
+    fn block_mut(&mut self) -> &mut <FunctionBody as cfg_traits::Func>::Block {
         &mut self.block
     }
+}
+
+impl ssa_traits::Target<FunctionBody> for BlockTarget {
 
     fn push_value(&mut self, v: <FunctionBody as ssa_traits::Func>::Value) {
         self.args.push(v)
@@ -1109,7 +1116,7 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
 
     fn from_values_and_block(
         a: impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value>,
-        k: <FunctionBody as ssa_traits::Func>::Block,
+        k: <FunctionBody as cfg_traits::Func>::Block,
     ) -> Self {
         BlockTarget {
             block: k,
@@ -1117,49 +1124,49 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
         }
     }
 }
-impl ssa_traits::Term<FunctionBody> for BlockTarget {
+impl cfg_traits::Term<FunctionBody> for BlockTarget {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> impl Iterator<Item = &'a Self::Target>
+    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a func::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        std::iter::once(self)
+        Box::new(std::iter::once(self))
     }
 
-    fn targets_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Self::Target>
+    fn targets_mut<'a>(&'a mut self) -> Box<(dyn std::iter::Iterator<Item = &'a mut func::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        std::iter::once(self)
+        Box::new(std::iter::once(self))
     }
 }
 impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
-    fn values(
-        &self,
-        f: &FunctionBody,
-    ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        self.args.iter().cloned()
+    fn values<'a>(
+        &'a self,
+        f: &'a FunctionBody,
+    ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a>  {
+        Box::new(self.args.iter().cloned())
     }
 
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
-    ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::ir::Value> + 'a)>
     where
         FunctionBody: 'a,
     {
-        self.args.iter_mut()
+        Box::new(self.args.iter_mut())
     }
 }
-impl ssa_traits::Term<FunctionBody> for Terminator {
+impl cfg_traits::Term<FunctionBody> for Terminator {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> impl Iterator<Item = &'a Self::Target>
+    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a func::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        match self {
+        Box::new(match self {
             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
             Terminator::CondBr {
                 cond,
@@ -1177,14 +1184,14 @@ impl ssa_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
             Terminator::None => Either::Left(None.into_iter()),
-        }
+        })
     }
 
-    fn targets_mut<'a>(&'a mut self) -> impl Iterator<Item = &'a mut Self::Target>
+    fn targets_mut<'a>(&'a mut self) -> Box<(dyn std::iter::Iterator<Item = &'a mut func::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        match self {
+        Box::new(match self {
             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
             Terminator::CondBr {
                 cond,
@@ -1202,15 +1209,15 @@ impl ssa_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
             Terminator::None => Either::Left(None.into_iter()),
-        }
+        })
     }
 }
 impl ssa_traits::HasValues<FunctionBody> for Terminator {
-    fn values(
-        &self,
-        f: &FunctionBody,
-    ) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        match self {
+    fn values<'a>(
+        &'a self,
+        f: &'a FunctionBody,
+    ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a>  {
+        Box::new(match self {
             Terminator::Br { target } => {
                 Either::Right(Either::Right(Either::Left(target.values(f))))
             }
@@ -1244,17 +1251,17 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             }
             Terminator::Unreachable => Either::Left(empty()),
             Terminator::None => Either::Left(empty()),
-        }
+        })
     }
 
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
-    ) -> impl Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value>
+    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::ir::Value> + 'a)>
     where
         FunctionBody: 'a,
     {
-        match self {
+        Box::new(match self {
             Terminator::Br { target } => {
                 Either::Right(Either::Right(Either::Left(target.values_mut(g))))
             }
@@ -1284,6 +1291,6 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter_mut())),
             Terminator::Unreachable => Either::Left(empty()),
             Terminator::None => Either::Left(empty()),
-        }
+        })
     }
 }

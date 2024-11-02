@@ -6,7 +6,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
-use arena_traits::Arena;
+use arena_traits::{Arena, IndexAlloc, IndexIter};
 
 /// An index into an index-space of entities.
 pub trait EntityRef: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Hash {
@@ -174,13 +174,16 @@ impl<Idx: EntityRef, T: Clone + Debug> IndexMut<Idx> for EntityVec<Idx, T> {
     }
 }
 
-impl<Idx: EntityRef, T: Clone + Debug> Arena<Idx> for EntityVec<Idx, T> {
+impl<Idx: EntityRef, T: Clone + Debug> IndexAlloc<Idx> for EntityVec<Idx, T> {
     fn alloc(&mut self, a: Self::Output) -> Idx {
         self.push(a)
     }
 
-    fn iter(&self) -> impl Iterator<Item = Idx> {
-        self.iter()
+
+}
+impl<Idx: EntityRef, T: Clone + Debug> IndexIter<Idx> for EntityVec<Idx, T> {
+    fn iter(&self) -> Box<dyn Iterator<Item = Idx> + '_> {
+        Box::new(self.iter())
     }
 }
 
