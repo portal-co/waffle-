@@ -284,6 +284,7 @@ impl<
         let mut f = self.src.funcs[f].clone();
         let sig = self.translate_sig(f.sig())?;
         if let Some(b) = f.body_mut() {
+            b.convert_to_max_ssa(None);
             let mut c = FunctionBody::new(&self.dest, sig);
             let l = Kts::default().translate(&mut c, &*b, b.entry)?;
             c.entry = l;
