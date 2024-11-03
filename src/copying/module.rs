@@ -1,5 +1,6 @@
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
+use anyhow::Context;
 use paste::paste;
 use std::mem::{replace, take};
 use std::{
@@ -30,6 +31,9 @@ use crate::{
     entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory,
     Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef,
 };
+
+use super::fcopy::{clone_fn, DontObf};
+use super::kts::Kts;
 #[derive(Eq, PartialEq, Clone)]
 pub struct IKW(pub ImportKind);
 impl Hash for IKW {
@@ -278,7 +282,12 @@ impl<
             add_start(&mut self.dest, a);
         }
         let mut f = self.src.funcs[f].clone();
+        let sig = self.translate_sig(f.sig())?;
         if let Some(b) = f.body_mut() {
+            let mut c = FunctionBody::new(&self.dest, sig);
+            let l = Kts::default().translate(&mut c, &*b, b.entry)?;
+            c.entry = l;
+            *b = c;
             for v in b.values.iter() {
                 let mut k = b.values[v].clone();
                 if let ValueDef::BlockParam(_, _, x) = &mut k {
