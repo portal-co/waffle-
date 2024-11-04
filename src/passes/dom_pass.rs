@@ -13,9 +13,11 @@ pub fn dom_pass<P: DomtreePass>(body: &mut FunctionBody, cfg: &CFGInfo, pass: &m
 }
 
 fn visit<P: DomtreePass>(body: &mut FunctionBody, cfg: &CFGInfo, pass: &mut P, block: Block) {
-    pass.enter(block, body);
-    for child in cfg.dom_children(block) {
-        visit(body, cfg, pass, child);
-    }
-    pass.leave(block, body);
+    return stacker::maybe_grow(32 * 1024, 1024 * 1024, move||{
+        pass.enter(block, body);
+        for child in cfg.dom_children(block) {
+            visit(body, cfg, pass, child);
+        }
+        pass.leave(block, body);
+    });
 }
