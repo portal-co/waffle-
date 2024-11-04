@@ -3,7 +3,10 @@ use std::{collections::BTreeMap, default};
 use anyhow::Context;
 use arena_traits::IndexAlloc;
 
-use crate::{Block, BlockTarget, FunctionBody, Operator, ValueDef};
+use crate::{
+    cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, FunctionBody, Operator,
+    ValueDef,
+};
 #[derive(Default)]
 pub struct Kts {
     pub blocks: BTreeMap<Block, Block>,
@@ -26,7 +29,20 @@ impl Kts {
                 .map(|(k, v)| (*v, dst.add_blockparam(new, *k)))
                 .collect::<BTreeMap<_, _>>();
             self.blocks.insert(k, new);
-            for i in src.blocks[k].insts.iter().cloned() {
+            'a: for i in src.blocks[k].insts.iter().cloned() {
+                if value_is_pure(i, src) {
+                    let mut unused = true;
+                    for j in src.blocks[k].insts.iter().cloned() {
+                        src.values[j].visit_uses(&src.arg_pool, |u| {
+                            if u == i {
+                                unused = false;
+                            }
+                        });
+                    }
+                    if unused {
+                        continue 'a;
+                    }
+                }
                 let v = match &src.values[i] {
                     crate::ValueDef::BlockParam(block, _, _) => todo!(),
                     crate::ValueDef::Operator(operator, list_ref, list_ref1) => {
