@@ -18,7 +18,7 @@ impl Kts {
         src: &FunctionBody,
         k: Block,
     ) -> anyhow::Result<Block> {
-        loop {
+        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
             if let Some(l) = self.blocks.get(&k) {
                 return Ok(*l);
             }
@@ -32,19 +32,15 @@ impl Kts {
             'a: for i in src.blocks[k].insts.iter().cloned() {
                 if value_is_pure(i, src) {
                     let mut unused = true;
-                    for j in src.blocks[k]
-                        .insts
-                        .iter()
-                        .cloned()
-                    {
+                    for j in src.blocks[k].insts.iter().cloned() {
                         src.values[j].visit_uses(&src.arg_pool, |u| {
                             if u == i {
                                 unused = false;
                             }
                         });
                     }
-                    src.blocks[k].terminator.visit_uses(|u|{
-                        if u == i{
+                    src.blocks[k].terminator.visit_uses(|u| {
+                        if u == i {
                             unused = false;
                         }
                     });
@@ -161,6 +157,6 @@ impl Kts {
                 crate::Terminator::None => crate::Terminator::None,
             };
             dst.set_terminator(new, t);
-        }
+        });
     }
 }

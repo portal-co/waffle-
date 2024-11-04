@@ -18,7 +18,7 @@ impl Fts {
         src: &FunctionBody,
         k: Block,
     ) -> anyhow::Result<Func> {
-        loop {
+        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
             if let Some(l) = self.blocks.get(&k) {
                 return Ok(*l);
             }
@@ -177,7 +177,7 @@ impl Fts {
             };
             dst.set_terminator(new, t);
             module.funcs[new_f] = FuncDecl::Body(s, k.to_string(), dst);
-        }
+        });
     }
 }
 pub fn run_once(f: &mut FunctionBody, module: &mut Module) -> anyhow::Result<()> {
