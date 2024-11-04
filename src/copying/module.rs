@@ -264,142 +264,144 @@ impl<
         return Ok(new_sig(&mut *self.dest, d));
     }
     pub fn internal_translate_func(&mut self, f: Func) -> anyhow::Result<Func> {
-        if f == Func::invalid() {
-            return Ok(f);
-        }
-        if let Some(x) = self.state.fun_cache.get(&f) {
-            return Ok(*x);
-        }
-        let a = self.dest.funcs.push(crate::FuncDecl::None);
-        self.state.fun_cache.insert(f, a);
-        for t in &self.state.tables {
-            self.dest.tables[*t]
-                .func_elements
-                .get_or_insert(vec![])
-                .push(a);
-        }
-        if Some(f) == self.src.start_func {
-            add_start(&mut self.dest, a);
-        }
-        let mut f = self.src.funcs[f].clone();
-        let sig = self.translate_sig(f.sig())?;
-        if let Some(b) = f.body_mut() {
-            b.convert_to_max_ssa(None);
-            let mut c = FunctionBody::new(&self.dest, sig);
-            let l = Kts::default().translate(&mut c, &*b, b.entry)?;
-            c.entry = l;
-            *b = c;
-            for v in b.values.iter() {
-                let mut k = b.values[v].clone();
-                if let ValueDef::BlockParam(_, _, x) = &mut k {
-                    if let Type::TypedFuncRef { sig_index, .. } = x {
-                        *sig_index = self.translate_sig(*sig_index)?;
-                    }
-                }
-                if let ValueDef::PickOutput(_, _, x) = &mut k {
-                    if let Type::TypedFuncRef { sig_index, .. } = x {
-                        *sig_index = self.translate_sig(*sig_index)?;
-                    }
-                }
-                if let ValueDef::Operator(a, vs, c) = &mut k {
-                    let mut w = b.arg_pool[*vs].to_vec();
-                    let mut e = None;
-                    rewrite_mem(a, &mut w, |m, _| {
-                        *m = self.translate_Memory(*m)?;
-                        Ok::<_, anyhow::Error>(())
-                    })?;
-                    if let Some(e) = e {
-                        return Err(e);
-                    }
-                    match a {
-                        crate::Operator::Call { function_index } => {
-                            *function_index = self.translate_Func(*function_index)?;
-                        }
-                        crate::Operator::RefFunc { func_index } => {
-                            *func_index = self.translate_Func(*func_index)?;
-                        }
-                        crate::Operator::RefNull { ty } => {
-                            if let Type::TypedFuncRef { sig_index, .. } = ty {
-                                *sig_index = self.translate_sig(*sig_index)?;
-                            }
-                        }
-                        crate::Operator::TypedSelect { ty } => {
-                            if let Type::TypedFuncRef { sig_index, .. } = ty {
-                                *sig_index = self.translate_sig(*sig_index)?;
-                            }
-                        }
-                        Operator::CallRef { sig_index } => {
+        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || {
+            if f == Func::invalid() {
+                return Ok(f);
+            }
+            if let Some(x) = self.state.fun_cache.get(&f) {
+                return Ok(*x);
+            }
+            let a = self.dest.funcs.push(crate::FuncDecl::None);
+            self.state.fun_cache.insert(f, a);
+            for t in &self.state.tables {
+                self.dest.tables[*t]
+                    .func_elements
+                    .get_or_insert(vec![])
+                    .push(a);
+            }
+            if Some(f) == self.src.start_func {
+                add_start(&mut self.dest, a);
+            }
+            let mut f = self.src.funcs[f].clone();
+            let sig = self.translate_sig(f.sig())?;
+            if let Some(b) = f.body_mut() {
+                b.convert_to_max_ssa(None);
+                let mut c = FunctionBody::new(&self.dest, sig);
+                let l = Kts::default().translate(&mut c, &*b, b.entry)?;
+                c.entry = l;
+                *b = c;
+                for v in b.values.iter() {
+                    let mut k = b.values[v].clone();
+                    if let ValueDef::BlockParam(_, _, x) = &mut k {
+                        if let Type::TypedFuncRef { sig_index, .. } = x {
                             *sig_index = self.translate_sig(*sig_index)?;
                         }
-                        crate::Operator::CallIndirect {
-                            sig_index,
-                            table_index,
-                        } => {
+                    }
+                    if let ValueDef::PickOutput(_, _, x) = &mut k {
+                        if let Type::TypedFuncRef { sig_index, .. } = x {
                             *sig_index = self.translate_sig(*sig_index)?;
-                            *table_index = self.translate_Table(*table_index)?;
                         }
-                        crate::Operator::GlobalGet { global_index } => {
-                            *global_index = self.translate_Global(*global_index)?;
+                    }
+                    if let ValueDef::Operator(a, vs, c) = &mut k {
+                        let mut w = b.arg_pool[*vs].to_vec();
+                        let mut e = None;
+                        rewrite_mem(a, &mut w, |m, _| {
+                            *m = self.translate_Memory(*m)?;
+                            Ok::<_, anyhow::Error>(())
+                        })?;
+                        if let Some(e) = e {
+                            return Err(e);
                         }
-                        crate::Operator::GlobalSet { global_index } => {
-                            *global_index = self.translate_Global(*global_index)?;
+                        match a {
+                            crate::Operator::Call { function_index } => {
+                                *function_index = self.translate_Func(*function_index)?;
+                            }
+                            crate::Operator::RefFunc { func_index } => {
+                                *func_index = self.translate_Func(*func_index)?;
+                            }
+                            crate::Operator::RefNull { ty } => {
+                                if let Type::TypedFuncRef { sig_index, .. } = ty {
+                                    *sig_index = self.translate_sig(*sig_index)?;
+                                }
+                            }
+                            crate::Operator::TypedSelect { ty } => {
+                                if let Type::TypedFuncRef { sig_index, .. } = ty {
+                                    *sig_index = self.translate_sig(*sig_index)?;
+                                }
+                            }
+                            Operator::CallRef { sig_index } => {
+                                *sig_index = self.translate_sig(*sig_index)?;
+                            }
+                            crate::Operator::CallIndirect {
+                                sig_index,
+                                table_index,
+                            } => {
+                                *sig_index = self.translate_sig(*sig_index)?;
+                                *table_index = self.translate_Table(*table_index)?;
+                            }
+                            crate::Operator::GlobalGet { global_index } => {
+                                *global_index = self.translate_Global(*global_index)?;
+                            }
+                            crate::Operator::GlobalSet { global_index } => {
+                                *global_index = self.translate_Global(*global_index)?;
+                            }
+                            crate::Operator::TableGet { table_index } => {
+                                *table_index = self.translate_Table(*table_index)?;
+                            }
+                            crate::Operator::TableSet { table_index } => {
+                                *table_index = self.translate_Table(*table_index)?;
+                            }
+                            crate::Operator::TableGrow { table_index } => {
+                                *table_index = self.translate_Table(*table_index)?;
+                            }
+                            crate::Operator::TableSize { table_index } => {
+                                *table_index = self.translate_Table(*table_index)?;
+                            }
+                            _ => {}
                         }
-                        crate::Operator::TableGet { table_index } => {
-                            *table_index = self.translate_Table(*table_index)?;
+                        *vs = b.arg_pool.from_iter(w.into_iter());
+                    }
+                    b.values[v] = k;
+                }
+                for k in b.blocks.iter() {
+                    let mut kv = b.blocks[k].clone();
+                    match &mut kv.terminator {
+                        crate::Terminator::ReturnCall { func, args } => {
+                            *func = self.translate_Func(*func)?;
                         }
-                        crate::Operator::TableSet { table_index } => {
-                            *table_index = self.translate_Table(*table_index)?;
+                        crate::Terminator::ReturnCallIndirect { sig, table, args } => {
+                            *sig = self.translate_sig(*sig)?;
+                            *table = self.translate_Table(*table)?;
                         }
-                        crate::Operator::TableGrow { table_index } => {
-                            *table_index = self.translate_Table(*table_index)?;
-                        }
-                        crate::Operator::TableSize { table_index } => {
-                            *table_index = self.translate_Table(*table_index)?;
+                        crate::Terminator::ReturnCallRef { sig, args } => {
+                            *sig = self.translate_sig(*sig)?;
+                            // *table = self.translate_Table(*table)?;
                         }
                         _ => {}
                     }
-                    *vs = b.arg_pool.from_iter(w.into_iter());
+                    b.blocks[k] = kv;
                 }
-                b.values[v] = k;
-            }
-            for k in b.blocks.iter() {
-                let mut kv = b.blocks[k].clone();
-                match &mut kv.terminator {
-                    crate::Terminator::ReturnCall { func, args } => {
-                        *func = self.translate_Func(*func)?;
+                for x in b.type_pool.storage.iter_mut() {
+                    if let Type::TypedFuncRef { sig_index, .. } = x {
+                        *sig_index = self.translate_sig(*sig_index)?;
                     }
-                    crate::Terminator::ReturnCallIndirect { sig, table, args } => {
-                        *sig = self.translate_sig(*sig)?;
-                        *table = self.translate_Table(*table)?;
-                    }
-                    crate::Terminator::ReturnCallRef { sig, args } => {
-                        *sig = self.translate_sig(*sig)?;
-                        // *table = self.translate_Table(*table)?;
-                    }
-                    _ => {}
                 }
-                b.blocks[k] = kv;
+                // (self.state.instrument)(&mut self.dest,b)?;
             }
-            for x in b.type_pool.storage.iter_mut() {
-                if let Type::TypedFuncRef { sig_index, .. } = x {
-                    *sig_index = self.translate_sig(*sig_index)?;
+            match &mut f {
+                crate::FuncDecl::Import(a, _) => {
+                    *a = self.translate_sig(*a)?;
                 }
+                crate::FuncDecl::Lazy(_, _, _) => todo!(),
+                crate::FuncDecl::Body(a, _, _) => {
+                    *a = self.translate_sig(*a)?;
+                }
+                crate::FuncDecl::Compiled(_, _, _) => todo!(),
+                crate::FuncDecl::None => {}
             }
-            // (self.state.instrument)(&mut self.dest,b)?;
-        }
-        match &mut f {
-            crate::FuncDecl::Import(a, _) => {
-                *a = self.translate_sig(*a)?;
-            }
-            crate::FuncDecl::Lazy(_, _, _) => todo!(),
-            crate::FuncDecl::Body(a, _, _) => {
-                *a = self.translate_sig(*a)?;
-            }
-            crate::FuncDecl::Compiled(_, _, _) => todo!(),
-            crate::FuncDecl::None => {}
-        }
-        self.dest.funcs[a] = f;
-        return Ok(a);
+            self.dest.funcs[a] = f;
+            return Ok(a);
+        });
     }
     translator!(Memory);
     translator!(Table);
