@@ -65,15 +65,17 @@ pub struct State<I> {
     table_cache: BTreeMap<Table, Table>,
     pub importmap: I,
     pub tables: BTreeSet<Table>,
+    pub invasive: bool,
 }
 impl<I> State<I> {
-    pub fn new(importmap: I, tables: BTreeSet<Table>) -> Self {
+    pub fn new(importmap: I, tables: BTreeSet<Table>, invasive: bool) -> Self {
         return Self {
             importmap,
             cache: Default::default(),
             fun_cache: Default::default(),
             table_cache: Default::default(),
             tables,
+            invasive,
         };
     }
 }
@@ -95,18 +97,20 @@ macro_rules! translator {
     };
 }
 pub fn tree_shake(m: &mut Module) -> anyhow::Result<()> {
-    let n = replace(m, Module::empty());
+    let mut n = replace(m, Module::empty());
+    let exports = n.exports.clone();
     let mut s = Copier::new(
-        &n,
+        &mut n,
         m,
         Box::new(State::new(
             Box::new(import_fn(|_, m, n| {
                 Ok(Some(ImportBehavior::Passthrough(m, n)))
             })),
             BTreeSet::new(),
+            true,
         )),
     );
-    for x in n.exports.iter() {
+    for x in exports.iter() {
         let i = x2i(x.kind.clone());
         let i = s.translate_import(i)?;
         let mut x = x.clone();
@@ -153,7 +157,7 @@ pub enum ImportBehavior {
 impl<
         'a: 'b,
         'b,
-        A: Deref<Target = crate::Module<'a>>,
+        A: DerefMut<Target = crate::Module<'a>>,
         B: Deref<Target = crate::Module<'b>> + DerefMut,
         S: Deref<Target = State<I>> + DerefMut,
         I: Deref<Target = J> + DerefMut,
@@ -282,14 +286,18 @@ impl<
             if Some(f) == self.src.start_func {
                 add_start(&mut self.dest, a);
             }
-            let mut f = self.src.funcs[f].clone();
-            let sig = self.translate_sig(f.sig())?;
+            let mut f = if self.state.invasive {
+                take(&mut self.src.funcs[f])
+            } else {
+                self.src.funcs[f].clone()
+            };
+            // let sig = self.translate_sig(f.sig())?;
             if let Some(b) = f.body_mut() {
-                b.convert_to_max_ssa(None);
-                let mut c = FunctionBody::new(&self.dest, sig);
-                let l = Kts::default().translate(&mut c, &*b, b.entry)?;
-                c.entry = l;
-                *b = c;
+                // b.convert_to_max_ssa(None);
+                // let mut c = FunctionBody::new(&self.dest, sig);
+                // let l = Kts::default().translate(&mut c, &*b, b.entry)?;
+                // c.entry = l;
+                // *b = c;
                 for v in b.values.iter() {
                     let mut k = b.values[v].clone();
                     if let ValueDef::BlockParam(_, _, x) = &mut k {
