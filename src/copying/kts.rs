@@ -36,7 +36,6 @@ impl Kts {
                         .insts
                         .iter()
                         .cloned()
-                        .chain(src.blocks[k].params.iter().map(|a| a.1))
                     {
                         src.values[j].visit_uses(&src.arg_pool, |u| {
                             if u == i {
@@ -44,6 +43,11 @@ impl Kts {
                             }
                         });
                     }
+                    src.blocks[k].terminator.visit_uses(|u|{
+                        if u == i{
+                            unused = false;
+                        }
+                    });
                     if unused {
                         continue 'a;
                     }
