@@ -108,8 +108,9 @@ impl Fts {
                 })
             };
             let t = match &src.blocks[k].terminator {
-                crate::Terminator::Br { target } => crate::Terminator::Br {
-                    target: target_(target)?,
+                crate::Terminator::Br { target } => crate::Terminator::ReturnCall {
+                    func: self.translate(module, src, target.block)?,
+                    args: target.args.iter().filter_map(|b| state.get(b)).cloned().collect(),
                 },
                 crate::Terminator::CondBr {
                     cond,
