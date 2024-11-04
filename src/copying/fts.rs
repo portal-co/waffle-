@@ -1,7 +1,12 @@
-use std::{collections::BTreeMap, default};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    default,
+    iter::once,
+};
 
 use anyhow::Context;
 use arena_traits::IndexAlloc;
+// use rayon::iter::{once, ParallelIterator};
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, Block, BlockTarget, Func,
@@ -10,7 +15,6 @@ use crate::{
 #[derive(Default)]
 pub struct Fts {
     pub blocks: BTreeMap<Block, Func>,
-    pub fuel: usize,
 }
 impl Fts {
     pub fn fueled_translate(
@@ -20,13 +24,13 @@ impl Fts {
         dst: &mut FunctionBody,
         src: &FunctionBody,
         k: Block,
-        fuel: usize,
+        stack: &BTreeSet<Block>,
     ) -> anyhow::Result<Block> {
         return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
             if let Some(k) = f.get(&k) {
                 return Ok(*k);
             }
-            if fuel == 0 {
+            if stack.contains(&k) {
                 let f = self.translate(module, src, k)?;
                 let shim = dst.add_block();
                 let args = src.blocks[k]
@@ -43,6 +47,8 @@ impl Fts {
                 );
                 return Ok(shim);
             };
+            let mut stack = stack.clone();
+            stack.insert(k);
             let new = dst.add_block();
             let mut state = src.blocks[k]
                 .params
@@ -106,7 +112,7 @@ impl Fts {
                         .filter_map(|b| state.get(b))
                         .cloned()
                         .collect(),
-                    block: self.fueled_translate(f, module, dst, src, k.block, fuel - 1)?,
+                    block: self.fueled_translate(f, module, dst, src, k.block, &stack)?,
                 })
             };
             let t = match &src.blocks[k].terminator {
@@ -256,48 +262,27 @@ impl Fts {
                 state.insert(i, v);
             }
             let mut f = BTreeMap::new();
-            let mut target_ = |k: &BlockTarget| {
-                if self.fuel == 0 {
-                    let f = self.translate(module, src, k.block)?;
-                    let shim = dst.add_block();
-                    dst.set_terminator(
-                        shim,
-                        crate::Terminator::ReturnCall {
-                            func: f,
-                            args: k
-                                .args
-                                .iter()
-                                .filter_map(|b| state.get(b))
-                                .cloned()
-                                .collect(),
-                        },
-                    );
-                    anyhow::Ok(BlockTarget {
-                        args: vec![],
-                        block: shim,
-                    })
-                } else {
-                    Ok(BlockTarget {
-                        block: self
-                            .fueled_translate(&mut f, module, &mut dst, src, k.block, self.fuel)?,
-                        args: k
-                            .args
-                            .iter()
-                            .filter_map(|b| state.get(b))
-                            .cloned()
-                            .collect(),
-                    })
-                }
-            };
-            let t = match &src.blocks[k].terminator {
-                crate::Terminator::Br { target } => crate::Terminator::ReturnCall {
-                    func: self.translate(module, src, target.block)?,
-                    args: target
+            let mut target_ = |k2: &BlockTarget| {
+                Ok(BlockTarget {
+                    block: self.fueled_translate(
+                        &mut f,
+                        module,
+                        &mut dst,
+                        src,
+                        k2.block,
+                        &once(k).collect(),
+                    )?,
+                    args: k2
                         .args
                         .iter()
                         .filter_map(|b| state.get(b))
                         .cloned()
                         .collect(),
+                })
+            };
+            let t = match &src.blocks[k].terminator {
+                crate::Terminator::Br { target } => crate::Terminator::Br {
+                    target: target_(target)?,
                 },
                 crate::Terminator::CondBr {
                     cond,
@@ -368,11 +353,11 @@ impl Fts {
         });
     }
 }
-pub fn run_once(f: &mut FunctionBody, module: &mut Module, fuel: usize) -> anyhow::Result<()> {
+pub fn run_once(f: &mut FunctionBody, module: &mut Module) -> anyhow::Result<()> {
     f.convert_to_max_ssa(None);
     let k = Fts {
         blocks: Default::default(),
-        fuel,
+        // fuel,
     }
     .translate(module, &f, f.entry)?;
     let e2 = f.add_block();
@@ -395,9 +380,9 @@ pub fn run_once(f: &mut FunctionBody, module: &mut Module, fuel: usize) -> anyho
     );
     return Ok(());
 }
-pub fn go2(module: &mut Module, fuel: usize) -> anyhow::Result<()> {
-    return module.try_take_per_func_body(|module, f| run_once(f, module, fuel));
-}
 pub fn go(module: &mut Module) -> anyhow::Result<()> {
-    return go2(module, 0);
+    return module.try_take_per_func_body(|module, f| run_once(f, module));
 }
+// pub fn go(module: &mut Module) -> anyhow::Result<()> {
+//     return go2(module, 0);
+// }
