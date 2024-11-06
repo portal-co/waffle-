@@ -34,6 +34,10 @@ arena-traits = "0.2.0"
 ssa-traits = "0.2.0"
 cfg-traits = "0.2.0"
 
+cfg-traits-03 = {version="0.3.0-alpha.0",package="cfg-traits"}
+ssa-traits-03 = {version="0.3.0-alpha.0",package="ssa-traits"}
+lending-iterator = "0.1.7"
+
 [dev-dependencies]
 wat = "1.212.0"
 
