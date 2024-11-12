@@ -66,7 +66,9 @@ pub struct State<I> {
     pub importmap: I,
     pub tables: BTreeSet<Table>,
     pub invasive: bool,
+    pub(crate) tm: crate::td::TM,
 }
+
 impl<I> State<I> {
     pub fn new(importmap: I, tables: BTreeSet<Table>, invasive: bool) -> Self {
         return Self {
@@ -76,6 +78,7 @@ impl<I> State<I> {
             table_cache: Default::default(),
             tables,
             invasive,
+            tm: Default::default(),
         };
     }
 }
@@ -83,6 +86,18 @@ pub struct Copier<A, B, S> {
     pub src: A,
     pub dest: B,
     pub state: S,
+}
+impl<A,B: Deref,S> Deref for Copier<A,B,S>{
+    type Target = B::Target;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.dest
+    }
+}
+impl<A,B: DerefMut,S> DerefMut for Copier<A,B,S>{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut *self.dest
+    }
 }
 macro_rules! translator {
     ($a:tt) => {
@@ -97,18 +112,18 @@ macro_rules! translator {
     };
 }
 pub fn tree_shake(m: &mut Module) -> anyhow::Result<()> {
+    return tree_shake_via(
+        m,
+        import_fn(|_, m, n| Ok(Some(ImportBehavior::Passthrough(m, n)))),
+    );
+}
+pub fn tree_shake_via(m: &mut Module, i: impl Imports) -> anyhow::Result<()> {
     let mut n = replace(m, Module::empty());
     let exports = n.exports.clone();
     let mut s = Copier::new(
         &mut n,
         m,
-        Box::new(State::new(
-            Box::new(import_fn(|_, m, n| {
-                Ok(Some(ImportBehavior::Passthrough(m, n)))
-            })),
-            BTreeSet::new(),
-            true,
-        )),
+        Box::new(State::new(Box::new(i), BTreeSet::new(), true)),
     );
     for x in exports.iter() {
         let i = x2i(x.kind.clone());
@@ -154,6 +169,7 @@ pub enum ImportBehavior {
     Bind(ImportKind),
     Passthrough(String, String),
 }
+
 impl<
         'a: 'b,
         'b,
@@ -224,11 +240,20 @@ impl<
         if let Some(b) = self.state.cache.get(&IKW(a.clone())) {
             return Ok(b.clone());
         }
-        let c = match a {
+        let mut c = match a {
             ImportKind::Table(t) => ImportKind::Table(self.internal_translate_table(t)?),
             ImportKind::Func(f) => ImportKind::Func(self.internal_translate_func(f)?),
             ImportKind::Global(g) => ImportKind::Global(self.internal_translate_global(g)?),
             ImportKind::Memory(m) => ImportKind::Memory(self.internal_translate_mem(m)?),
+        };
+        if let Some((j, k)) = i.as_ref() {
+            crate::td::tm(
+                // &mut self.dest,
+                j.as_str(),
+                k.as_str(),
+                &mut c,
+                &mut *self,
+            )?;
         };
         self.state.cache.insert(IKW(a.clone()), c.clone());
         if let Some(j) = i {
