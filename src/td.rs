@@ -19,3 +19,6 @@ pub fn tm<
 #[derive(Default)]
 pub struct TM {}
 impl TM {}
+pub fn fi(a: &mut crate::FunctionBody, b: &mut crate::Module) -> anyhow::Result<()>{
+    Ok(())
+}

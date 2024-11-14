@@ -419,6 +419,7 @@ impl<
                         *sig_index = self.translate_sig(*sig_index)?;
                     }
                 }
+                crate::td::fi(b, &mut self.dest)?;
                 // (self.state.instrument)(&mut self.dest,b)?;
             }
             match &mut f {

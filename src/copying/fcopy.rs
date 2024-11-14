@@ -356,6 +356,7 @@ pub fn obf_fn(m: &mut Module, f: Func, obf: &mut impl Obfuscate) -> anyhow::Resu
         let mut n = FunctionBody::new(&m, s);
         let r = clone_fn(&mut n, &b, obf, m)?;
         n.entry = *r.all.get(&b.entry).unwrap();
+        crate::td::fi(&mut n, m)?;
         *m.funcs[f].body_mut().unwrap() = n;
     }
     return Ok(());

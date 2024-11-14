@@ -1378,7 +1378,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             maximum: mem_data.maximum_pages.map(|val| val as u64),
             memory64: mem_data.memory64,
             shared: mem_data.shared,
-            page_size_log2: None,
+            page_size_log2: mem_data.page_size_log2,
         });
     }
     into_mod.section(&memories);

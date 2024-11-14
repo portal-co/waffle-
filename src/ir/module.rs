@@ -68,6 +68,7 @@ pub struct MemoryData {
     pub segments: Vec<MemorySegment>,
     pub memory64: bool,
     pub shared: bool,
+    pub page_size_log2: Option<u32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
