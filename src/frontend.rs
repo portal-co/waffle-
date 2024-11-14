@@ -154,6 +154,10 @@ fn handle_payload<'a>(
                         });
                         ImportKind::Memory(mem)
                     }
+                    TypeRef::Tag(tag) => {
+                        let tag = module.control_tags.push(ControlTagData { sig: Signature::new(tag.func_type_idx as usize) });
+                        ImportKind::ControlTag(tag)
+                    }
                     t => {
                         bail!(FrontendError::UnsupportedFeature(format!(
                             "Unknown import type: {:?}",
@@ -223,6 +227,7 @@ fn handle_payload<'a>(
                     ExternalKind::Table => Some(ExportKind::Table(Table::from(export.index))),
                     ExternalKind::Global => Some(ExportKind::Global(Global::from(export.index))),
                     ExternalKind::Memory => Some(ExportKind::Memory(Memory::from(export.index))),
+                    ExternalKind::Tag => Some(ExportKind::ControlTag(ControlTag::from(export.index))),
                     _ => None,
                 };
                 if let Some(kind) = kind {
@@ -241,6 +246,12 @@ fn handle_payload<'a>(
                     shared: memory.shared,
                     page_size_log2: memory.page_size_log2
                 });
+            }
+        }
+        Payload::TagSection(reader) => {
+            for tag in reader{
+                let tag = tag?;
+                module.control_tags.push(ControlTagData { sig: Signature::new(tag.func_type_idx as usize) });
             }
         }
         Payload::DataSection(reader) => {

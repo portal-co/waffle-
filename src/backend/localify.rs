@@ -6,7 +6,7 @@ use crate::cfg::CFGInfo;
 use crate::entity::{EntityVec, PerEntity};
 use crate::ir::{Block, FunctionBody, Local, Type, Value, ValueDef};
 use smallvec::{smallvec, SmallVec};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Range;
 
 #[derive(Clone, Debug, Default)]

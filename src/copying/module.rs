@@ -17,6 +17,7 @@ pub fn x2i(x: ExportKind) -> ImportKind {
         ExportKind::Func(a) => ImportKind::Func(a),
         ExportKind::Global(a) => ImportKind::Global(a),
         ExportKind::Memory(a) => ImportKind::Memory(a),
+        ExportKind::ControlTag(control_tag) => ImportKind::ControlTag(control_tag),
     }
 }
 pub fn i2x(x: ImportKind) -> ExportKind {
@@ -25,11 +26,12 @@ pub fn i2x(x: ImportKind) -> ExportKind {
         ImportKind::Func(a) => ExportKind::Func(a),
         ImportKind::Global(a) => ExportKind::Global(a),
         ImportKind::Memory(a) => ExportKind::Memory(a),
+        ImportKind::ControlTag(control_tag) => ExportKind::ControlTag(control_tag),
     }
 }
 use crate::{
     entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory,
-    Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef,
+    Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef, ControlTag
 };
 
 use super::fcopy::{clone_fn, DontObf};
@@ -55,6 +57,10 @@ impl Hash for IKW {
                 state.write_usize(3);
                 a.hash(state);
             }
+            ImportKind::ControlTag(control_tag) => {
+                state.write_usize(4);
+                control_tag.hash(state);
+            },
         }
     }
 }
@@ -221,8 +227,14 @@ impl<
         return Ok(self.dest.memories.push(d));
     }
     pub fn internal_translate_global(&mut self, a: crate::Global) -> anyhow::Result<crate::Global> {
-        let d = self.src.globals[a].clone();
+        let mut d = self.src.globals[a].clone();
+        self.translate_type(&mut d.ty)?;
         return Ok(self.dest.globals.push(d));
+    }
+    pub fn internal_translate_control_tag(&mut self, a: crate::ControlTag) -> anyhow::Result<crate::ControlTag> {
+        let d = self.src.control_tags[a].sig;
+        let d = self.translate_sig(d)?;
+        return Ok(self.dest.control_tags.push(crate::ControlTagData { sig: d }));
     }
     pub fn translate_import(&mut self, a: ImportKind) -> anyhow::Result<ImportKind> {
         let i = match self.resolve_import(&a)? {
@@ -245,6 +257,7 @@ impl<
             ImportKind::Func(f) => ImportKind::Func(self.internal_translate_func(f)?),
             ImportKind::Global(g) => ImportKind::Global(self.internal_translate_global(g)?),
             ImportKind::Memory(m) => ImportKind::Memory(self.internal_translate_mem(m)?),
+            ImportKind::ControlTag(control_tag) => ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?),
         };
         if let Some((j, k)) = i.as_ref() {
             crate::td::tm(
@@ -270,9 +283,7 @@ impl<
         //     return Ok(*c);
         // }
         let mut t = self.src.tables[tk].clone();
-        if let Type::TypedFuncRef { sig_index, .. } = &mut t.ty {
-            *sig_index = self.translate_sig(*sig_index)?;
-        }
+        self.translate_type(&mut t.ty)?;
         // let nt = self.dest.tables.push(t.clone());
         // self.state.table_cache.insert(tk, nt);
         if let Some(u) = t.func_elements.as_mut() {
@@ -283,12 +294,16 @@ impl<
         // self.dest.tables[nt] = t;
         return Ok(self.dest.tables.push(t));
     }
+    pub fn translate_type(&mut self, ty: &mut Type) -> anyhow::Result<()>{
+        if let Type::TypedFuncRef { sig_index, .. } = ty {
+            *sig_index = self.translate_sig(*sig_index)?;
+        };
+        Ok(())
+    }
     pub fn translate_sig(&mut self, s: Signature) -> anyhow::Result<Signature> {
         let mut d = self.src.signatures[s].clone();
         for x in d.params.iter_mut().chain(d.returns.iter_mut()) {
-            if let Type::TypedFuncRef { sig_index, .. } = x {
-                *sig_index = self.translate_sig(*sig_index)?;
-            }
+            self.translate_type(x)?;
         }
         return Ok(new_sig(&mut *self.dest, d));
     }
@@ -326,14 +341,10 @@ impl<
                 for v in b.values.iter() {
                     let mut k = b.values[v].clone();
                     if let ValueDef::BlockParam(_, _, x) = &mut k {
-                        if let Type::TypedFuncRef { sig_index, .. } = x {
-                            *sig_index = self.translate_sig(*sig_index)?;
-                        }
+                        self.translate_type(x)?;
                     }
                     if let ValueDef::PickOutput(_, _, x) = &mut k {
-                        if let Type::TypedFuncRef { sig_index, .. } = x {
-                            *sig_index = self.translate_sig(*sig_index)?;
-                        }
+                        self.translate_type(x)?;
                     }
                     if let ValueDef::Operator(a, vs, c) = &mut k {
                         let mut w = b.arg_pool[*vs].to_vec();
@@ -353,14 +364,10 @@ impl<
                                 *func_index = self.translate_Func(*func_index)?;
                             }
                             crate::Operator::RefNull { ty } => {
-                                if let Type::TypedFuncRef { sig_index, .. } = ty {
-                                    *sig_index = self.translate_sig(*sig_index)?;
-                                }
+                                self.translate_type(ty)?;
                             }
                             crate::Operator::TypedSelect { ty } => {
-                                if let Type::TypedFuncRef { sig_index, .. } = ty {
-                                    *sig_index = self.translate_sig(*sig_index)?;
-                                }
+                                self.translate_type(ty)?;
                             }
                             Operator::CallRef { sig_index } => {
                                 *sig_index = self.translate_sig(*sig_index)?;
@@ -441,6 +448,7 @@ impl<
     translator!(Table);
     translator!(Global);
     translator!(Func);
+    translator!(ControlTag);
 }
 
 #[cfg(test)]

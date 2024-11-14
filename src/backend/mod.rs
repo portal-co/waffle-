@@ -7,7 +7,7 @@ use crate::Operator;
 use anyhow::Result;
 use rayon::prelude::*;
 use std::borrow::Cow;
-use wasm_encoder::CustomSection;
+use wasm_encoder::{CustomSection, TagType};
 use wasm_encoder::Encode;
 
 pub mod reducify;
@@ -201,9 +201,20 @@ impl<'a> WasmFuncBackend<'a> {
                     }
                     func.instruction(&wasm_encoder::Instruction::ReturnCall(f.index() as u32));
                 }
-                WasmBlock::BlockParams { from, to } => {
-                    debug_assert_eq!(from.len(), to.len());
-                    for (&from, &(to_ty, to)) in from.iter().zip(to.iter()) {
+                WasmBlock::BlockParams { from, to, prefix } => {
+                    debug_assert_eq!(from.len() + *prefix, to.len());
+                    let mut iter = to.iter();
+                    for _ in 0..*prefix{
+                        let &(to_ty,to) = iter.next().unwrap();
+                        if ctx.locals.values[to].is_empty() {
+                            continue;
+                        }
+                        if ctx.locals.values[to].len() == 1 {
+                            assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
+                        }
+                        self.lower_set_value(ctx, to, func);
+                    }
+                    for (&from, &(to_ty, to)) in from.iter().zip(iter) {
                         if ctx.locals.values[to].is_empty() {
                             continue;
                         }
@@ -216,7 +227,7 @@ impl<'a> WasmFuncBackend<'a> {
                         }
                         self.lower_value(ctx, from, func);
                     }
-                    for &(to_ty, to) in to.iter().rev() {
+                    for &(to_ty, to) in to.iter().skip(*prefix).rev() {
                         if ctx.locals.values[to].is_empty() {
                             continue;
                         }
@@ -1295,6 +1306,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut num_table_imports = 0;
     let mut num_global_imports = 0;
     let mut num_mem_imports = 0;
+    let mut num_tag_imports = 0;
     for import in &module.imports {
         let entity = match &import.kind {
             &ImportKind::Func(func) => {
@@ -1336,6 +1348,11 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     page_size_log2: None,
                 })
             }
+            &ImportKind::ControlTag(control_tag) => {
+                num_tag_imports += 1;
+                let tag = &module.control_tags[control_tag];
+                wasm_encoder::EntityType::Tag(wasm_encoder::TagType { kind: wasm_encoder::TagKind::Exception, func_type_idx: tag.sig.index() as u32 })
+            },
         };
         imports.import(&import.module[..], &import.name[..], entity);
     }
@@ -1383,6 +1400,15 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     }
     into_mod.section(&memories);
 
+    let mut tags = wasm_encoder::TagSection::new();
+    for tag_data in module.control_tags.values().skip(num_tag_imports){
+        tags.tag(TagType{
+            kind: wasm_encoder::TagKind::Exception,
+            func_type_idx: tag_data.sig.index() as u32,
+        });
+    }
+    into_mod.section(&tags);
+
     let mut globals = wasm_encoder::GlobalSection::new();
     for global_data in module.globals.values().skip(num_global_imports) {
         globals.global(
@@ -1427,6 +1453,13 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     global.index() as u32,
                 );
             }
+            ExportKind::ControlTag(control_tag) => {
+                exports.export(
+                    &export.name[..],
+                    wasm_encoder::ExportKind::Tag,
+                    control_tag.index() as u32,
+                );
+            },
         }
     }
     into_mod.section(&exports);

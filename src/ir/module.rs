@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::{Func, FuncDecl, Global, Memory, ModuleDisplay, Signature, Table, Type};
+use super::{ControlTag, Func, FuncDecl, Global, Memory, ModuleDisplay, Signature, Table, Type};
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
@@ -33,6 +33,8 @@ pub struct Module<'a> {
     pub exports: Vec<Export>,
     /// Memories/heapds that this module contains.
     pub memories: EntityVec<Memory, MemoryData>,
+    /// Control tags that this module contains
+    pub control_tags: EntityVec<ControlTag,ControlTagData>,
     /// The "start function" invoked at instantiation, if any.
     pub start_func: Option<Func>,
     /// Debug-info associated with function bodies: interning pools
@@ -42,7 +44,11 @@ pub struct Module<'a> {
     pub debug_map: DebugMap,
     pub custom_sections: BTreeMap<String, Vec<u8>>,
 }
-
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ControlTagData{
+    ///The signature used when invoking this tag
+    pub sig: Signature
+}
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SignatureData {
     /// Parameters: a Wasm function may have zero or more primitive
@@ -148,6 +154,8 @@ pub enum ImportKind {
     Global(Global),
     /// An import of a memory.
     Memory(Memory),
+    /// An import of a control tag
+    ControlTag(ControlTag)
 }
 
 impl std::fmt::Display for ImportKind {
@@ -157,6 +165,7 @@ impl std::fmt::Display for ImportKind {
             ImportKind::Func(func) => write!(f, "{}", func)?,
             ImportKind::Global(global) => write!(f, "{}", global)?,
             ImportKind::Memory(mem) => write!(f, "{}", mem)?,
+            ImportKind::ControlTag(control_tag) => write!(f,"{}",control_tag)?,
         }
         Ok(())
     }
@@ -180,6 +189,8 @@ pub enum ExportKind {
     Global(Global),
     /// An export of a memory.
     Memory(Memory),
+    /// An export of a control tag
+    ControlTag(ControlTag)
 }
 
 impl std::fmt::Display for ExportKind {
@@ -189,6 +200,7 @@ impl std::fmt::Display for ExportKind {
             ExportKind::Func(func) => write!(f, "{}", func)?,
             ExportKind::Global(global) => write!(f, "{}", global)?,
             ExportKind::Memory(memory) => write!(f, "{}", memory)?,
+            ExportKind::ControlTag(control_tag) => write!(f,"{}",control_tag)?,
         }
         Ok(())
     }
@@ -226,6 +238,7 @@ impl<'a> Module<'a> {
             debug: Debug::default(),
             debug_map: DebugMap::default(),
             custom_sections:Default::default() ,
+            control_tags: Default::default(),
         }
     }
 
@@ -265,6 +278,7 @@ impl<'a> Module<'a> {
             debug: self.debug,
             debug_map: self.debug_map,
             custom_sections: self.custom_sections,
+            control_tags: self.control_tags,
         }
     }
 }
@@ -394,6 +408,7 @@ impl<'a> Module<'a> {
             debug: Debug::default(),
             debug_map: DebugMap::default(),
             custom_sections: BTreeMap::default(),
+            control_tags: EntityVec::default(),
         }
     }
 }

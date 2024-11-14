@@ -134,7 +134,8 @@ declare_entity!(Global, "global");
 declare_entity!(Table, "table");
 // A memory in the module.
 declare_entity!(Memory, "memory");
-
+// A control tag in the module
+declare_entity!(ControlTag, "control_tag");
 // Per-function index spaces:
 
 // A basic block in one function body.

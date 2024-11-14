@@ -50,6 +50,7 @@ pub enum WasmBlock<'a> {
     BlockParams {
         from: &'a [Value],
         to: &'a [(Type, Value)],
+        prefix: usize,
     },
     /// A function return instruction.
     Return { values: &'a [Value] },
@@ -127,7 +128,11 @@ enum StackEntry<'a> {
     FinishBlock(Block),
     Else,
     FinishIf(Value),
-    DoBranch(Block, &'a BlockTarget),
+    DoBranch{
+        block: Block,
+        target: &'a BlockTarget,
+        prefix: usize,
+    },
 }
 
 impl<'a, 'b> Context<'a, 'b> {
@@ -238,8 +243,8 @@ impl<'a, 'b> Context<'a, 'b> {
             StackEntry::FinishIf(cond) => {
                 self.finish_if(cond);
             }
-            StackEntry::DoBranch(source, target) => {
-                self.do_branch(source, target);
+            StackEntry::DoBranch{block,target, prefix} => {
+                self.do_branch(block, target,prefix);
             }
         }
     }
@@ -308,7 +313,7 @@ impl<'a, 'b> Context<'a, 'b> {
         )
     }
 
-    fn do_branch(&mut self, source: Block, target: &'a BlockTarget) {
+    fn do_branch(&mut self, source: Block, target: &'a BlockTarget, prefix: usize) {
         let into = self.result.last_mut().unwrap();
         log::trace!("do_branch: {} -> {:?}", source, target);
         // This will be a branch to some entry in the control stack if
@@ -322,6 +327,7 @@ impl<'a, 'b> Context<'a, 'b> {
                 &target.args[..],
                 &self.body.blocks[target.block].params[..],
                 into,
+                prefix,
             );
             into.push(WasmBlock::Br { target: index });
         } else {
@@ -331,6 +337,7 @@ impl<'a, 'b> Context<'a, 'b> {
                 &target.args[..],
                 &self.body.blocks[target.block].params[..],
                 into,
+                prefix,
             );
             self.process_stack
                 .push(StackEntry::DomSubtree(target.block));
@@ -364,6 +371,7 @@ impl<'a, 'b> Context<'a, 'b> {
                 WasmBlock::BlockParams {
                     from: &target.args[..],
                     to: &self.body.blocks[target.block].params[..],
+                    prefix: 0,
                 },
                 WasmBlock::Br {
                     target: Self::resolve_target(&self.ctrl_stack[..], target.block).add(extra),
@@ -379,8 +387,9 @@ impl<'a, 'b> Context<'a, 'b> {
         from: &'a [Value],
         to: &'a [(Type, Value)],
         into: &mut Vec<WasmBlock<'a>>,
+        prefix: usize,
     ) {
-        into.push(WasmBlock::BlockParams { from, to });
+        into.push(WasmBlock::BlockParams { from, to, prefix });
     }
 
     fn finish_block(&mut self, out: Block) {
@@ -427,7 +436,7 @@ impl<'a, 'b> Context<'a, 'b> {
             into.push(WasmBlock::Leaf { block });
             match &self.body.blocks[block].terminator {
                 &Terminator::Br { ref target } => {
-                    self.process_stack.push(StackEntry::DoBranch(block, target));
+                    self.process_stack.push(StackEntry::DoBranch{block,target,prefix: 0});
                 }
                 &Terminator::CondBr {
                     cond,
@@ -437,10 +446,10 @@ impl<'a, 'b> Context<'a, 'b> {
                     self.ctrl_stack.push(CtrlEntry::IfThenElse);
                     self.process_stack.push(StackEntry::FinishIf(cond));
                     self.process_stack
-                        .push(StackEntry::DoBranch(block, if_false));
+                        .push(StackEntry::DoBranch { block: block, target: if_false, prefix: 0 });
                     self.process_stack.push(StackEntry::Else);
                     self.process_stack
-                        .push(StackEntry::DoBranch(block, if_true));
+                        .push(StackEntry::DoBranch {block: block, target: if_true, prefix: 0});
                     self.result.push(vec![]); // if-body
                 }
                 &Terminator::Select {
