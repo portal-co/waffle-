@@ -1287,7 +1287,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut into_mod = wasm_encoder::Module::new();
 
     let mut types = wasm_encoder::TypeSection::new();
-    let recurses = module.signatures.iter().any(|s| s.recurses(module));
+    let recurses = module.signatures.iter().any(|s| s.is_backref(module));
     if recurses {
         let mut v: Vec<wasm_encoder::SubType> = vec![];
         for sig_data in module.signatures.values() {

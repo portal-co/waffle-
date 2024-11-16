@@ -149,7 +149,7 @@ impl From<&SignatureData> for wasm_encoder::SubType {
 }
 
 impl Signature {
-    pub fn recurses(&self, module: &Module) -> bool {
+    pub fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
             SignatureData { params, returns } => params
                 .iter()
