@@ -1,6 +1,7 @@
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
 use anyhow::Context;
+use arena_traits::IndexAlloc;
 use paste::paste;
 use std::mem::{replace, take};
 use std::{
@@ -30,8 +31,8 @@ pub fn i2x(x: ImportKind) -> ExportKind {
     }
 }
 use crate::{
-    entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind, Memory,
-    Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef, ControlTag
+    entity::EntityRef, ControlTag, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind,
+    Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef,
 };
 
 use super::fcopy::{clone_fn, DontObf};
@@ -60,7 +61,7 @@ impl Hash for IKW {
             ImportKind::ControlTag(control_tag) => {
                 state.write_usize(4);
                 control_tag.hash(state);
-            },
+            }
         }
     }
 }
@@ -69,6 +70,7 @@ pub struct State<I> {
     cache: HashMap<IKW, ImportKind>,
     fun_cache: BTreeMap<Func, Func>,
     table_cache: BTreeMap<Table, Table>,
+    sig_cache: BTreeMap<Signature, Signature>,
     pub importmap: I,
     pub tables: BTreeSet<Table>,
     pub invasive: bool,
@@ -85,6 +87,7 @@ impl<I> State<I> {
             tables,
             invasive,
             tm: Default::default(),
+            sig_cache: Default::default(),
         };
     }
 }
@@ -93,14 +96,14 @@ pub struct Copier<A, B, S> {
     pub dest: B,
     pub state: S,
 }
-impl<A,B: Deref,S> Deref for Copier<A,B,S>{
+impl<A, B: Deref, S> Deref for Copier<A, B, S> {
     type Target = B::Target;
 
     fn deref(&self) -> &Self::Target {
         &*self.dest
     }
 }
-impl<A,B: DerefMut,S> DerefMut for Copier<A,B,S>{
+impl<A, B: DerefMut, S> DerefMut for Copier<A, B, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut *self.dest
     }
@@ -231,10 +234,16 @@ impl<
         self.translate_type(&mut d.ty)?;
         return Ok(self.dest.globals.push(d));
     }
-    pub fn internal_translate_control_tag(&mut self, a: crate::ControlTag) -> anyhow::Result<crate::ControlTag> {
+    pub fn internal_translate_control_tag(
+        &mut self,
+        a: crate::ControlTag,
+    ) -> anyhow::Result<crate::ControlTag> {
         let d = self.src.control_tags[a].sig;
         let d = self.translate_sig(d)?;
-        return Ok(self.dest.control_tags.push(crate::ControlTagData { sig: d }));
+        return Ok(self
+            .dest
+            .control_tags
+            .push(crate::ControlTagData { sig: d }));
     }
     pub fn translate_import(&mut self, a: ImportKind) -> anyhow::Result<ImportKind> {
         let i = match self.resolve_import(&a)? {
@@ -257,7 +266,9 @@ impl<
             ImportKind::Func(f) => ImportKind::Func(self.internal_translate_func(f)?),
             ImportKind::Global(g) => ImportKind::Global(self.internal_translate_global(g)?),
             ImportKind::Memory(m) => ImportKind::Memory(self.internal_translate_mem(m)?),
-            ImportKind::ControlTag(control_tag) => ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?),
+            ImportKind::ControlTag(control_tag) => {
+                ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?)
+            }
         };
         if let Some((j, k)) = i.as_ref() {
             crate::td::tm(
@@ -294,18 +305,28 @@ impl<
         // self.dest.tables[nt] = t;
         return Ok(self.dest.tables.push(t));
     }
-    pub fn translate_type(&mut self, ty: &mut Type) -> anyhow::Result<()>{
+    pub fn translate_type(&mut self, ty: &mut Type) -> anyhow::Result<()> {
         if let Type::TypedFuncRef { sig_index, .. } = ty {
             *sig_index = self.translate_sig(*sig_index)?;
         };
         Ok(())
     }
     pub fn translate_sig(&mut self, s: Signature) -> anyhow::Result<Signature> {
-        let mut d = self.src.signatures[s].clone();
-        for x in d.params.iter_mut().chain(d.returns.iter_mut()) {
-            self.translate_type(x)?;
+        loop {
+            if let Some(k) = self.state.sig_cache.get(&s) {
+                return Ok(*k);
+            }
+            let k = self.dest.signatures.alloc(SignatureData {
+                params: vec![],
+                returns: vec![],
+            });
+            self.state.sig_cache.insert(s, k);
+            let mut d = self.src.signatures[s].clone();
+            for x in d.params.iter_mut().chain(d.returns.iter_mut()) {
+                self.translate_type(x)?;
+            }
+            self.dest.signatures[k] = d;
         }
-        return Ok(new_sig(&mut *self.dest, d));
     }
     pub fn internal_translate_func(&mut self, f: Func) -> anyhow::Result<Func> {
         return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || {
