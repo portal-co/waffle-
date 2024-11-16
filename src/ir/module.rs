@@ -1,10 +1,12 @@
 use std::collections::BTreeMap;
+use std::iter::{empty, once};
 
 use super::{ControlTag, Func, FuncDecl, Global, Memory, ModuleDisplay, Signature, Table, Type};
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
 use anyhow::Result;
+use either::Either;
 use indexmap::IndexMap;
 
 pub use crate::frontend::FrontendOptions;
@@ -34,7 +36,7 @@ pub struct Module<'a> {
     /// Memories/heapds that this module contains.
     pub memories: EntityVec<Memory, MemoryData>,
     /// Control tags that this module contains
-    pub control_tags: EntityVec<ControlTag,ControlTagData>,
+    pub control_tags: EntityVec<ControlTag, ControlTagData>,
     /// The "start function" invoked at instantiation, if any.
     pub start_func: Option<Func>,
     /// Debug-info associated with function bodies: interning pools
@@ -45,9 +47,9 @@ pub struct Module<'a> {
     pub custom_sections: BTreeMap<String, Vec<u8>>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ControlTagData{
+pub struct ControlTagData {
     ///The signature used when invoking this tag
-    pub sig: Signature
+    pub sig: Signature,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SignatureData {
@@ -133,6 +135,43 @@ impl From<wasmparser::FuncType> for SignatureData {
     }
 }
 
+impl From<&SignatureData> for wasm_encoder::SubType {
+    fn from(value: &SignatureData) -> Self {
+        wasm_encoder::SubType {
+            is_final: true,
+            supertype_idx: None,
+            composite_type: wasm_encoder::CompositeType::Func(wasm_encoder::FuncType::new(
+                value.params.iter().cloned().map(|a| a.into()),
+                value.returns.iter().cloned().map(|a| a.into()),
+            )),
+        }
+    }
+}
+
+impl Signature {
+    pub fn recurses(&self, module: &Module) -> bool {
+        return match &module.signatures[*self] {
+            SignatureData { params, returns } => params
+                .iter()
+                .chain(returns.iter())
+                .flat_map(|a| a.sigs())
+                .any(|sig| sig.index() >= self.index()),
+        };
+    }
+}
+
+impl Type {
+    pub fn sigs<'a>(&'a self) -> impl Iterator<Item = Signature> + 'a {
+        match self {
+            Type::TypedFuncRef {
+                nullable,
+                sig_index,
+            } => Either::Right(once(*sig_index)),
+            _ => Either::Left(empty()),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Import {
     /// The name of the module the import comes from.
@@ -155,7 +194,7 @@ pub enum ImportKind {
     /// An import of a memory.
     Memory(Memory),
     /// An import of a control tag
-    ControlTag(ControlTag)
+    ControlTag(ControlTag),
 }
 
 impl std::fmt::Display for ImportKind {
@@ -165,7 +204,7 @@ impl std::fmt::Display for ImportKind {
             ImportKind::Func(func) => write!(f, "{}", func)?,
             ImportKind::Global(global) => write!(f, "{}", global)?,
             ImportKind::Memory(mem) => write!(f, "{}", mem)?,
-            ImportKind::ControlTag(control_tag) => write!(f,"{}",control_tag)?,
+            ImportKind::ControlTag(control_tag) => write!(f, "{}", control_tag)?,
         }
         Ok(())
     }
@@ -190,7 +229,7 @@ pub enum ExportKind {
     /// An export of a memory.
     Memory(Memory),
     /// An export of a control tag
-    ControlTag(ControlTag)
+    ControlTag(ControlTag),
 }
 
 impl std::fmt::Display for ExportKind {
@@ -200,7 +239,7 @@ impl std::fmt::Display for ExportKind {
             ExportKind::Func(func) => write!(f, "{}", func)?,
             ExportKind::Global(global) => write!(f, "{}", global)?,
             ExportKind::Memory(memory) => write!(f, "{}", memory)?,
-            ExportKind::ControlTag(control_tag) => write!(f,"{}",control_tag)?,
+            ExportKind::ControlTag(control_tag) => write!(f, "{}", control_tag)?,
         }
         Ok(())
     }
@@ -237,7 +276,7 @@ impl<'a> Module<'a> {
             start_func: None,
             debug: Debug::default(),
             debug_map: DebugMap::default(),
-            custom_sections:Default::default() ,
+            custom_sections: Default::default(),
             control_tags: Default::default(),
         }
     }
@@ -313,17 +352,20 @@ impl<'a> Module<'a> {
         }
     }
 
-    pub fn take_per_func_body<F: FnMut(&mut Self,&mut FunctionBody)>(&mut self, mut f: F) {
+    pub fn take_per_func_body<F: FnMut(&mut Self, &mut FunctionBody)>(&mut self, mut f: F) {
         for func_decl in self.funcs.iter().collect::<Vec<_>>() {
             let mut x = std::mem::take(&mut self.funcs[func_decl]);
-            if let Some(body) = x.body_mut(){
-                f(self,body);
+            if let Some(body) = x.body_mut() {
+                f(self, body);
             }
             self.funcs[func_decl] = x;
         }
     }
 
-    pub fn try_per_func_body<F: FnMut(&mut FunctionBody) -> Result<(),E>,E>(&mut self, mut f: F) -> Result<(),E>{
+    pub fn try_per_func_body<F: FnMut(&mut FunctionBody) -> Result<(), E>, E>(
+        &mut self,
+        mut f: F,
+    ) -> Result<(), E> {
         for func_decl in self.funcs.values_mut() {
             if let Some(body) = func_decl.body_mut() {
                 f(body)?;
@@ -332,15 +374,18 @@ impl<'a> Module<'a> {
         Ok(())
     }
 
-    pub fn try_take_per_func_body<F: FnMut(&mut Self,&mut FunctionBody) -> Result<(),E>,E>(&mut self, mut f: F) -> Result<(),E>{
+    pub fn try_take_per_func_body<F: FnMut(&mut Self, &mut FunctionBody) -> Result<(), E>, E>(
+        &mut self,
+        mut f: F,
+    ) -> Result<(), E> {
         for func_decl in self.funcs.iter().collect::<Vec<_>>() {
             let mut x = std::mem::take(&mut self.funcs[func_decl]);
             let mut y = None;
-            if let Some(body) = x.body_mut(){
-                y = Some(f(self,body));
+            if let Some(body) = x.body_mut() {
+                y = Some(f(self, body));
             }
             self.funcs[func_decl] = x;
-            if let Some(z) = y{
+            if let Some(z) = y {
                 z?;
             }
         }

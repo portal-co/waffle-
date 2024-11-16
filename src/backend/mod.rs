@@ -7,8 +7,8 @@ use crate::Operator;
 use anyhow::Result;
 use rayon::prelude::*;
 use std::borrow::Cow;
-use wasm_encoder::{CustomSection, TagType};
 use wasm_encoder::Encode;
+use wasm_encoder::{CustomSection, TagType};
 
 pub mod reducify;
 use reducify::Reducifier;
@@ -165,8 +165,7 @@ impl<'a> WasmFuncBackend<'a> {
                     for &inst in &self.body.blocks[*block].insts {
                         // If this value is "owned", do nothing: it will be lowered in
                         // the one place it's used.
-                        if ctx.trees.owner.contains_key(&inst) || ctx.trees.remat.contains(&inst)
-                        {
+                        if ctx.trees.owner.contains_key(&inst) || ctx.trees.remat.contains(&inst) {
                             continue;
                         }
                         if let &ValueDef::Operator(..) = &self.body.values[inst] {
@@ -191,21 +190,21 @@ impl<'a> WasmFuncBackend<'a> {
                 // }
                 WasmBlock::Return { values } => {
                     for &value in &values[..] {
-                        self.lower_value(ctx,value, func);
+                        self.lower_value(ctx, value, func);
                     }
                     func.instruction(&wasm_encoder::Instruction::Return);
                 }
                 WasmBlock::ReturnCall { func: f, values } => {
                     for &value in &values[..] {
-                        self.lower_value(ctx,value, func);
+                        self.lower_value(ctx, value, func);
                     }
                     func.instruction(&wasm_encoder::Instruction::ReturnCall(f.index() as u32));
                 }
                 WasmBlock::BlockParams { from, to, prefix } => {
                     debug_assert_eq!(from.len() + *prefix, to.len());
                     let mut iter = to.iter();
-                    for _ in 0..*prefix{
-                        let &(to_ty,to) = iter.next().unwrap();
+                    for _ in 0..*prefix {
+                        let &(to_ty, to) = iter.next().unwrap();
                         if ctx.locals.values[to].is_empty() {
                             continue;
                         }
@@ -248,7 +247,7 @@ impl<'a> WasmFuncBackend<'a> {
                 }
                 WasmBlock::ReturnCallRef { sig, values } => {
                     for &value in &values[..] {
-                        self.lower_value(ctx,value, func);
+                        self.lower_value(ctx, value, func);
                     }
                     func.instruction(&wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32));
                 }
@@ -1288,16 +1287,33 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut into_mod = wasm_encoder::Module::new();
 
     let mut types = wasm_encoder::TypeSection::new();
-    for sig_data in module.signatures.values() {
-        let params = sig_data
-            .params
-            .iter()
-            .map(|&ty| wasm_encoder::ValType::from(ty));
-        let returns = sig_data
-            .returns
-            .iter()
-            .map(|&ty| wasm_encoder::ValType::from(ty));
-        types.function(params, returns);
+    let recurses = module.signatures.iter().any(|s| s.recurses(module));
+    if recurses {
+        let mut v: Vec<wasm_encoder::SubType> = vec![];
+        for sig_data in module.signatures.values() {
+            // let params = sig_data
+            //     .params
+            //     .iter()
+            //     .map(|&ty| wasm_encoder::ValType::from(ty));
+            // let returns = sig_data
+            //     .returns
+            //     .iter()
+            //     .map(|&ty| wasm_encoder::ValType::from(ty));
+            v.push(sig_data.into());
+        }
+        types.rec(v);
+    } else {
+        for sig_data in module.signatures.values() {
+            // let params = sig_data
+            //     .params
+            //     .iter()
+            //     .map(|&ty| wasm_encoder::ValType::from(ty));
+            // let returns = sig_data
+            //     .returns
+            //     .iter()
+            //     .map(|&ty| wasm_encoder::ValType::from(ty));
+            types.subtype(&sig_data.into());
+        }
     }
     into_mod.section(&types);
 
@@ -1351,8 +1367,11 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             &ImportKind::ControlTag(control_tag) => {
                 num_tag_imports += 1;
                 let tag = &module.control_tags[control_tag];
-                wasm_encoder::EntityType::Tag(wasm_encoder::TagType { kind: wasm_encoder::TagKind::Exception, func_type_idx: tag.sig.index() as u32 })
-            },
+                wasm_encoder::EntityType::Tag(wasm_encoder::TagType {
+                    kind: wasm_encoder::TagKind::Exception,
+                    func_type_idx: tag.sig.index() as u32,
+                })
+            }
         };
         imports.import(&import.module[..], &import.name[..], entity);
     }
@@ -1401,8 +1420,8 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     into_mod.section(&memories);
 
     let mut tags = wasm_encoder::TagSection::new();
-    for tag_data in module.control_tags.values().skip(num_tag_imports){
-        tags.tag(TagType{
+    for tag_data in module.control_tags.values().skip(num_tag_imports) {
+        tags.tag(TagType {
             kind: wasm_encoder::TagKind::Exception,
             func_type_idx: tag_data.sig.index() as u32,
         });
@@ -1459,7 +1478,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     wasm_encoder::ExportKind::Tag,
                     control_tag.index() as u32,
                 );
-            },
+            }
         }
     }
     into_mod.section(&exports);
