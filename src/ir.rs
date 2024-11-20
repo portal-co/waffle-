@@ -1,7 +1,7 @@
 //! Intermediate representation for Wasm.
 
 use crate::{declare_entity, entity::EntityRef};
-
+#[non_exhaustive]
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
@@ -36,6 +36,7 @@ pub enum Type {
     /// A heap type.
     Heap(WithNullable<HeapType>),
 }
+#[non_exhaustive]
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
@@ -61,6 +62,7 @@ pub struct WithMutablility<T> {
     pub value: T,
     pub mutable: bool,
 }
+#[non_exhaustive]
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
