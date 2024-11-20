@@ -14,6 +14,7 @@ pub struct OptOptions {
     pub gvn: bool,
     pub cprop: bool,
     pub redundant_blockparams: bool,
+    pub inline_refs: bool,
 }
 
 impl std::default::Default for OptOptions {
@@ -22,6 +23,7 @@ impl std::default::Default for OptOptions {
             gvn: true,
             cprop: true,
             redundant_blockparams: true,
+            inline_refs: true,
         }
     }
 }
@@ -197,6 +199,32 @@ impl<'a> BasicOptPass<'a> {
                     _ => {}
                 }
 
+                //Try to inline references
+                if self.options.inline_refs {
+                    if let ValueDef::Operator(op, args, tys) = &value {
+                        if let Operator::CallRef { sig_index } = op {
+                            if let ValueDef::Operator(Operator::RefFunc { func_index }, _, _) =
+                                &body.values[body.arg_pool[*args][0]]
+                            {
+                                let n = body.arg_pool[*args][1..]
+                                    .iter()
+                                    .cloned()
+                                    .collect::<Vec<_>>();
+                                let n = body.arg_pool.from_iter(n.into_iter());
+                                value = ValueDef::Operator(
+                                    Operator::Call {
+                                        function_index: *func_index,
+                                    },
+                                    n,
+                                    *tys,
+                                );
+                                body.values[inst] = value.clone();
+                                self.changed = true;
+                            }
+                        }
+                    }
+                }
+
                 // Try to constant-propagate.
                 if self.options.cprop {
                     if let ValueDef::Operator(op, args, ..) = &value {
@@ -265,6 +293,19 @@ impl<'a> BasicOptPass<'a> {
                         continue;
                     }
                     self.map.insert(value, inst);
+                }
+            }
+        }
+        if self.options.inline_refs {
+            if let Terminator::ReturnCallRef { sig, args } = &body.blocks[block].terminator {
+                let mut args = args.clone();
+                let a = args.pop().unwrap();
+                if let ValueDef::Operator(Operator::RefFunc { func_index }, _, _) = &body.values[a]
+                {
+                    body.blocks[block].terminator = Terminator::ReturnCall {
+                        func: *func_index,
+                        args,
+                    }
                 }
             }
         }
