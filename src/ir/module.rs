@@ -3,7 +3,7 @@ use std::default;
 use std::iter::{empty, once};
 
 use super::{
-    ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, Table, Type,
+    ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, StorageType, Table, Type, WithMutablility
 };
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
@@ -64,6 +64,14 @@ pub enum SignatureData {
         /// which we assume to be present) may have zero or more primitive
         /// types as return values.
         returns: Vec<Type>,
+    },
+    Struct{
+        ///The fields of the struct
+        fields: Vec<WithMutablility<StorageType>>
+    },
+    Array{
+        ///The element type
+        ty: WithMutablility<StorageType>
     },
     #[default]
     None,
@@ -135,8 +143,8 @@ impl From<&wasmparser::SubType> for SignatureData {
                     .map(|&ty| ty.into())
                     .collect::<Vec<Type>>(),
             },
-            wasmparser::CompositeType::Array(array_type) => todo!(),
-            wasmparser::CompositeType::Struct(struct_type) => todo!(),
+            wasmparser::CompositeType::Array(array_type) => Self::Array { ty: array_type.0.clone().into() },
+            wasmparser::CompositeType::Struct(struct_type) => Self::Struct { fields: struct_type.fields.iter().map(|&ty|ty.into()).collect() },
         }
     }
 }
@@ -158,6 +166,16 @@ impl From<&SignatureData> for wasm_encoder::SubType {
                 )),
             },
             SignatureData::None => todo!(),
+            SignatureData::Struct { fields } => wasm_encoder::SubType {
+                is_final: true,
+                supertype_idx: None,
+                composite_type: wasm_encoder::CompositeType::Struct(wasm_encoder::StructType { fields: fields.iter().cloned().map(|a|a.into()).collect() }),
+            },
+            SignatureData::Array { ty } => wasm_encoder::SubType {
+                is_final: true,
+                supertype_idx: None,
+                composite_type: wasm_encoder::CompositeType::Array(wasm_encoder::ArrayType(ty.clone().into())),
+            },
         }
     }
 }

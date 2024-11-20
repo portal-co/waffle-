@@ -6,7 +6,6 @@ use crate::{MemoryArg, Operator, SignatureData};
 use anyhow::{Context, Result};
 use std::borrow::Cow;
 
-
 /// Given a module and an existing operand stack for context, provide
 /// the type(s) that a given operator requires as inputs.
 pub fn op_inputs(
@@ -19,13 +18,13 @@ pub fn op_inputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+            let SignatureData::Func { params, returns } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(params.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else{
+            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             let mut params = params.to_vec();
@@ -687,7 +686,7 @@ pub fn op_inputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else{
+            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             let mut params = params.to_vec();
@@ -1113,6 +1112,40 @@ pub fn op_inputs(
                 Cow::Borrowed(&[Type::I32, Type::I64, Type::I64])
             })
         } //=> visit_i64_atomic_rmw32_c
+        &Operator::StructNew { sig } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(
+                fields.iter().map(|a| a.value.clone().unpack()).collect(),
+            ))
+        }
+        &Operator::StructGet { sig, idx } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            })]))
+        }
+        &Operator::StructSet { sig, idx } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable {
+                    value: crate::HeapType::Sig { sig_index: sig },
+                    nullable: true,
+                }),
+                fields
+                    .get(idx)
+                    .context("in getting the field")?
+                    .clone()
+                    .value
+                    .unpack(),
+            ]))
+        }
     }
 }
 
@@ -1128,13 +1161,13 @@ pub fn op_outputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+            let SignatureData::Func { params, returns } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else{
+            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
@@ -1617,7 +1650,7 @@ pub fn op_outputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else{
+            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
@@ -1686,6 +1719,32 @@ pub fn op_outputs(
         Operator::I64AtomicRmw8CmpxchgU { memarg } => Ok(Cow::Borrowed(&[Type::I64])), // => visit_i64_atomic_rmw8_cmpxchg_u
         Operator::I64AtomicRmw16CmpxchgU { memarg } => Ok(Cow::Borrowed(&[Type::I64])), // => visit_i64_atomic_rmw16_cmpxchg_u
         Operator::I64AtomicRmw32CmpxchgU { memarg } => Ok(Cow::Borrowed(&[Type::I64])), //=> visit_i64_atomic_rmw32_c
+        &Operator::StructNew { sig } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            })]))
+        }
+        &Operator::StructGet { sig, idx } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![fields
+                .get(idx)
+                .context("in getting the field")?
+                .clone()
+                .value
+                .unpack()]))
+        }
+        &Operator::StructSet { sig, idx } => {
+            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Borrowed(&[]))
+        }
     }
 }
 
@@ -2237,7 +2296,10 @@ impl Operator {
             Operator::I32AtomicRmw16CmpxchgU { memarg } => &[AtomicStuff, WriteMem, ReadMem], // => visit_i32_atomic_rmw16_cmpxchg_u
             Operator::I64AtomicRmw8CmpxchgU { memarg } => &[AtomicStuff, WriteMem, ReadMem], // => visit_i64_atomic_rmw8_cmpxchg_u
             Operator::I64AtomicRmw16CmpxchgU { memarg } => &[AtomicStuff, WriteMem, ReadMem], // => visit_i64_atomic_rmw16_cmpxchg_u
-            Operator::I64AtomicRmw32CmpxchgU { memarg } => &[AtomicStuff, WriteMem, ReadMem], //=> visit_i64_atomic_rmw32_c
+            Operator::I64AtomicRmw32CmpxchgU { memarg } => &[AtomicStuff, WriteMem, ReadMem],
+            Operator::StructNew { sig } => &[],
+            Operator::StructGet { sig, idx } => &[ReadGlobal],
+            Operator::StructSet { sig, idx } => &[WriteGlobal], //=> visit_i64_atomic_rmw32_c
         }
     }
 
@@ -3004,6 +3066,16 @@ impl std::fmt::Display for Operator {
             Operator::I64AtomicRmw32CmpxchgU { memarg } => {
                 write!(f, "i32atomic_rmw32Cmpxchgu<{memarg}>")?
             } //=> visit_i64_atomic_rmw32_Cmpxchg_u
+
+            Operator::StructNew { sig } => {
+                write!(f,"struct_new<{sig}>")?
+            },
+            Operator::StructGet { sig, idx } => {
+                write!(f,"struct_get<{sig}@{idx}>")?
+            },
+            Operator::StructSet { sig, idx } => {
+                write!(f,"struct_set<{sig}@{idx}>")?
+            }, 
         }
 
         Ok(())

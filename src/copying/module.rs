@@ -1,6 +1,6 @@
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
-use crate::{HeapType, WithNullable};
+use crate::{HeapType, StorageType, WithNullable};
 use anyhow::Context;
 use arena_traits::IndexAlloc;
 use paste::paste;
@@ -332,6 +332,18 @@ impl<
                 },
                 SignatureData::None => {
 
+                },
+                SignatureData::Struct { fields } =>{
+                    for ty in fields.iter_mut(){
+                        if let StorageType::Val(v) = &mut ty.value{
+                            self.translate_type(v)?;
+                        }
+                    }
+                },
+                SignatureData::Array { ty } =>{
+                    if let StorageType::Val(v) = &mut ty.value{
+                        self.translate_type(v)?;
+                    }
                 },
             };
             self.dest.signatures[k] = d;

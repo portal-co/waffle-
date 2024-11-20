@@ -737,6 +737,20 @@ pub enum Operator {
     I64AtomicRmw8CmpxchgU { memarg: MemoryArg },// => visit_i64_atomic_rmw8_cmpxchg_u
     I64AtomicRmw16CmpxchgU { memarg: MemoryArg },// => visit_i64_atomic_rmw16_cmpxchg_u
     I64AtomicRmw32CmpxchgU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw32_c
+
+
+
+    StructNew{
+        sig: Signature
+    },
+    StructGet{
+        sig: Signature,
+        idx: usize
+    },
+    StructSet{
+        sig: Signature,
+        idx: usize,
+    }
 }
 
 #[test]
@@ -1507,6 +1521,10 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator:: I64AtomicRmw8CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw8CmpxchgU { memarg: memarg.into() }),
             &wasmparser::Operator:: I64AtomicRmw16CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw16CmpxchgU { memarg: memarg.into() }),
             &wasmparser::Operator:: I64AtomicRmw32CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw32CmpxchgU { memarg: memarg.into() }),
+
+            &wasmparser::Operator::StructNew { struct_type_index } => Ok(Operator::StructNew { sig: Signature::new(struct_type_index as usize) }),
+            &wasmparser::Operator::StructGet { struct_type_index, field_index } => Ok(Operator::StructGet { sig: Signature::new(struct_type_index as usize), idx: field_index as usize }),
+            &wasmparser::Operator::StructSet { struct_type_index, field_index } => Ok(Operator::StructSet { sig: Signature::new(struct_type_index as usize), idx: field_index as usize }),
             _ => Err(()),
         }
     }

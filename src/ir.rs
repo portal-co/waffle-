@@ -53,6 +53,33 @@ pub struct WithNullable<T> {
     pub value: T,
     pub nullable: bool,
 }
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+///Something, alsong with whether it can be mutated
+pub struct WithMutablility<T> {
+    pub value: T,
+    pub mutable: bool,
+}
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+///A storage type
+pub enum StorageType {
+    Val(Type),
+    I8,
+    I16,
+}
+
+impl StorageType{
+    pub fn unpack(self) -> Type{
+        match self{
+            StorageType::Val(a) => a,
+            StorageType::I8 => Type::I32,
+            StorageType::I16 => Type::I64,
+        }
+    }
+}
 
 impl From<wasmparser::ValType> for Type {
     fn from(ty: wasmparser::ValType) -> Self {
@@ -63,6 +90,18 @@ impl From<wasmparser::ValType> for Type {
             wasmparser::ValType::F64 => Type::F64,
             wasmparser::ValType::V128 => Type::V128,
             wasmparser::ValType::Ref(r) => Type::Heap(r.into()),
+        }
+    }
+}
+impl From<wasmparser::FieldType> for WithMutablility<StorageType> {
+    fn from(value: wasmparser::FieldType) -> Self {
+        WithMutablility {
+            value: match value.element_type {
+                wasmparser::StorageType::I8 => StorageType::I8,
+                wasmparser::StorageType::I16 => StorageType::I16,
+                wasmparser::StorageType::Val(val_type) => StorageType::Val(val_type.into()),
+            },
+            mutable: value.mutable,
         }
     }
 }
@@ -100,25 +139,22 @@ impl std::fmt::Display for Type {
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
             Type::V128 => write!(f, "v128"),
-            Type::Heap(h) => write!(f,"ref({} {})",if h.nullable{
-                "null"
-            }else{
-                "not_null"
-            },&h.value)
+            Type::Heap(h) => write!(
+                f,
+                "ref({} {})",
+                if h.nullable { "null" } else { "not_null" },
+                &h.value
+            ),
         }
     }
 }
 
-impl std::fmt::Display for HeapType{
+impl std::fmt::Display for HeapType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self{
+        match self {
             HeapType::FuncRef => write!(f, "funcref"),
             HeapType::ExternRef => write!(f, "externref"),
-            HeapType::Sig { sig_index } => write!(
-                f,
-                "sigref({})",
-                sig_index
-            ),
+            HeapType::Sig { sig_index } => write!(f, "sigref({})", sig_index),
         }
     }
 }
@@ -132,6 +168,19 @@ impl From<Type> for wasm_encoder::ValType {
             Type::F64 => wasm_encoder::ValType::F64,
             Type::V128 => wasm_encoder::ValType::V128,
             Type::Heap(h) => wasm_encoder::ValType::Ref(h.into()),
+        }
+    }
+}
+
+impl From<WithMutablility<StorageType>> for wasm_encoder::FieldType {
+    fn from(value: WithMutablility<StorageType>) -> Self {
+        wasm_encoder::FieldType {
+            element_type: match value.value {
+                StorageType::Val(t) => wasm_encoder::StorageType::Val(t.into()),
+                StorageType::I8 => wasm_encoder::StorageType::I8,
+                StorageType::I16 => wasm_encoder::StorageType::I16,
+            },
+            mutable: value.mutable,
         }
     }
 }

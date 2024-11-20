@@ -196,7 +196,10 @@ impl<'a> Display for ModuleDisplay<'a> {
                         .collect::<Vec<_>>();
                     format!("{} -> {}", arg_tys.join(", "), ret_tys.join(", "))
                 }
-                super::SignatureData::None => todo!(),
+                a => todo!(
+                    "in handling displaying {:?}",
+                    a
+                ),
             };
             sig_strs.insert(sig, sig_str.clone());
             writeln!(f, "  {}: {}", sig, sig_str)?;

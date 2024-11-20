@@ -1278,6 +1278,9 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64AtomicRmw32CmpxchgU { memarg } => Some(
                 wasm_encoder::Instruction::I64AtomicRmw32CmpxchgU(memarg.clone().into()),
             ),
+            Operator::StructNew { sig } => Some(wasm_encoder::Instruction::StructNew(sig.index() as u32)),
+            Operator::StructGet { sig, idx } => Some(wasm_encoder::Instruction::StructGet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
+            Operator::StructSet { sig, idx } => Some(wasm_encoder::Instruction::StructSet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
         };
 
         if let Some(inst) = inst {
