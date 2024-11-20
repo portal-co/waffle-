@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::iter::{empty, once};
 
-use super::{ControlTag, Func, FuncDecl, Global, Memory, ModuleDisplay, Signature, Table, Type};
+use super::{ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, Table, Type};
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
@@ -163,10 +163,10 @@ impl Signature {
 impl Type {
     pub fn sigs<'a>(&'a self) -> impl Iterator<Item = Signature> + 'a {
         match self {
-            Type::TypedFuncRef {
-                nullable,
-                sig_index,
-            } => Either::Right(once(*sig_index)),
+            Type::Heap(h) => match &h.value{
+                HeapType::Sig { sig_index } =>  Either::Right(once(*sig_index)),
+                _ => Either::Left(empty()),
+            },
             _ => Either::Left(empty()),
         }
     }

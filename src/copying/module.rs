@@ -1,5 +1,6 @@
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
+use crate::{HeapType, WithNullable};
 use anyhow::Context;
 use arena_traits::IndexAlloc;
 use paste::paste;
@@ -306,7 +307,11 @@ impl<
         return Ok(self.dest.tables.push(t));
     }
     pub fn translate_type(&mut self, ty: &mut Type) -> anyhow::Result<()> {
-        if let Type::TypedFuncRef { sig_index, .. } = ty {
+        if let Type::Heap(WithNullable {
+            value: HeapType::Sig { sig_index },
+            ..
+        }) = ty
+        {
             *sig_index = self.translate_sig(*sig_index)?;
         };
         Ok(())
@@ -443,9 +448,7 @@ impl<
                     b.blocks[k] = kv;
                 }
                 for x in b.type_pool.storage.iter_mut() {
-                    if let Type::TypedFuncRef { sig_index, .. } = x {
-                        *sig_index = self.translate_sig(*sig_index)?;
-                    }
+                    self.translate_type(x)?;
                 }
                 crate::td::fi(b, &mut self.dest)?;
                 // (self.state.instrument)(&mut self.dest,b)?;

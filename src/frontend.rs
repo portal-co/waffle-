@@ -135,7 +135,7 @@ fn handle_payload<'a>(
                     }
                     TypeRef::Table(ty) => {
                         let table = module.tables.push(TableData {
-                            ty: ty.element_type.into(),
+                            ty: Type::Heap(ty.element_type.into()),
                             initial: ty.initial,
                             max: ty.maximum,
                             func_elements: Some(vec![]),
@@ -189,7 +189,7 @@ fn handle_payload<'a>(
             for table in reader {
                 let table = table?;
                 module.tables.push(TableData {
-                    ty: table.ty.element_type.into(),
+                    ty: Type::Heap(table.ty.element_type.into()),
                     initial: table.ty.initial,
                     max: table.ty.maximum,
                     func_elements: Some(vec![]),

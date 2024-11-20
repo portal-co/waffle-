@@ -1382,7 +1382,7 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
                 mem: Memory::from(mem),
             }),
             &wasmparser::Operator::RefNull { hty } => Ok(Operator::RefNull {
-                ty: wasmparser::RefType::new(true, hty).unwrap().into(),
+                ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()),
             }),
             &wasmparser::Operator:: MemoryAtomicNotify { memarg } => Ok(Operator::MemoryAtomicNotify { memarg: memarg.into() }),
             &wasmparser::Operator:: MemoryAtomicWait32 { memarg } => Ok(Operator::MemoryAtomicWait32 { memarg: memarg.into() }),

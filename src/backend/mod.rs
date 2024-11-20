@@ -3,7 +3,7 @@
 use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
-use crate::Operator;
+use crate::{HeapType, Operator};
 use anyhow::Result;
 use rayon::prelude::*;
 use std::borrow::Cow;
@@ -1024,7 +1024,10 @@ impl<'a> WasmFuncBackend<'a> {
                 Some(wasm_encoder::Instruction::RefFunc(func_index.index() as u32))
             }
             Operator::RefNull { ty } => {
-                let h: wasm_encoder::RefType = ty.clone().into();
+                let Type::Heap(h) = ty else{
+                    todo!()
+                };
+                let h: wasm_encoder::RefType = h.clone().into();
                 Some(wasm_encoder::Instruction::RefNull(h.heap_type))
             }
             Operator::MemoryAtomicNotify { memarg } => Some(
@@ -1334,7 +1337,10 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 num_table_imports += 1;
                 let table = &module.tables[table];
                 wasm_encoder::EntityType::Table(wasm_encoder::TableType {
-                    element_type: wasm_encoder::RefType::from(table.ty),
+                    element_type: match table.ty{
+                        Type::Heap(h) => h.into(),
+                        _ => todo!()
+                    },
                     minimum: table
                         .func_elements
                         .as_ref()
@@ -1395,7 +1401,10 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut tables = wasm_encoder::TableSection::new();
     for table_data in module.tables.values().skip(num_table_imports) {
         tables.table(wasm_encoder::TableType {
-            element_type: wasm_encoder::RefType::from(table_data.ty),
+            element_type: match table_data.ty{
+                Type::Heap(h) => h.into(),
+                _ => todo!()
+            },
             minimum: table_data
                 .func_elements
                 .as_ref()
@@ -1495,26 +1504,28 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         if let Some(elts) = &table_data.func_elements {
             for (i, &elt) in elts.iter().enumerate() {
                 if elt.is_valid() {
-                    match table_data.ty {
-                        Type::FuncRef => {
+                    if let Type::Heap(h) = &table_data.ty{
+                    match &h.value {
+                        HeapType::FuncRef => {
                             elem.active(
                                 Some(table.index() as u32),
                                 &wasm_encoder::ConstExpr::i32_const(i as i32),
                                 wasm_encoder::Elements::Functions(&[elt.index() as u32]),
                             );
                         }
-                        Type::TypedFuncRef { .. } => {
+                        HeapType::Sig{ .. } => {
                             elem.active(
                                 Some(table.index() as u32),
                                 &wasm_encoder::ConstExpr::i32_const(i as i32),
                                 wasm_encoder::Elements::Expressions(
-                                    table_data.ty.into(),
+                                    h.clone().into(),
                                     &[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)],
                                 ),
                             );
                         }
                         _ => unreachable!(),
                     }
+                }
                 }
             }
         }

@@ -2,7 +2,9 @@
 
 use crate::{declare_entity, entity::EntityRef};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
 /// Types in waffle's IR.
 ///
 /// These types correspond to (a subset of) the primitive Wasm value
@@ -31,14 +33,27 @@ pub enum Type {
     /// specified by individual operators; from the point of view of
     /// IR scaffolding, SIMD vector values are bags of bits.
     V128,
-    /// A function reference.
+    /// A heap type.
+    Heap(WithNullable<HeapType>),
+}
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+///a `Type` that can be stored on the heap
+pub enum HeapType {
     FuncRef,
     ExternRef,
-    TypedFuncRef {
-        nullable: bool,
-        sig_index: Signature,
-    },
+    Sig { sig_index: Signature },
 }
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+///Something, alsong with whether it can be `null`
+pub struct WithNullable<T> {
+    pub value: T,
+    pub nullable: bool,
+}
+
 impl From<wasmparser::ValType> for Type {
     fn from(ty: wasmparser::ValType) -> Self {
         match ty {
@@ -47,24 +62,32 @@ impl From<wasmparser::ValType> for Type {
             wasmparser::ValType::F32 => Type::F32,
             wasmparser::ValType::F64 => Type::F64,
             wasmparser::ValType::V128 => Type::V128,
-            wasmparser::ValType::Ref(r) => r.into(),
+            wasmparser::ValType::Ref(r) => Type::Heap(r.into()),
         }
     }
 }
-impl From<wasmparser::RefType> for Type {
+impl From<wasmparser::RefType> for WithNullable<HeapType> {
     fn from(ty: wasmparser::RefType) -> Self {
         if ty.is_extern_ref() {
-            return Type::ExternRef;
+            return WithNullable {
+                nullable: ty.is_nullable(),
+                value: HeapType::ExternRef,
+            };
         }
         match ty.type_index() {
             Some(idx) => {
                 let nullable = ty.is_nullable();
-                Type::TypedFuncRef {
-                    nullable: nullable,
-                    sig_index: Signature::new(idx.as_module_index().unwrap() as usize),
+                WithNullable {
+                    nullable,
+                    value: HeapType::Sig {
+                        sig_index: Signature::new(idx.as_module_index().unwrap() as usize),
+                    },
                 }
             }
-            None => Type::FuncRef,
+            None => WithNullable {
+                value: HeapType::FuncRef,
+                nullable: ty.is_nullable(),
+            },
         }
     }
 }
@@ -77,15 +100,23 @@ impl std::fmt::Display for Type {
             Type::F32 => write!(f, "f32"),
             Type::F64 => write!(f, "f64"),
             Type::V128 => write!(f, "v128"),
-            Type::FuncRef => write!(f, "funcref"),
-            Type::ExternRef => write!(f, "externref"),
-            Type::TypedFuncRef {
-                nullable,
-                sig_index,
-            } => write!(
+            Type::Heap(h) => write!(f,"ref({} {})",if h.nullable{
+                "null"
+            }else{
+                "not_null"
+            },&h.value)
+        }
+    }
+}
+
+impl std::fmt::Display for HeapType{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            HeapType::FuncRef => write!(f, "funcref"),
+            HeapType::ExternRef => write!(f, "externref"),
+            HeapType::Sig { sig_index } => write!(
                 f,
-                "funcref({}, {})",
-                if *nullable { "null" } else { "not_null" },
+                "sigref({})",
                 sig_index
             ),
         }
@@ -100,20 +131,18 @@ impl From<Type> for wasm_encoder::ValType {
             Type::F32 => wasm_encoder::ValType::F32,
             Type::F64 => wasm_encoder::ValType::F64,
             Type::V128 => wasm_encoder::ValType::V128,
-            Type::FuncRef | Type::TypedFuncRef { .. } | Type::ExternRef => {
-                wasm_encoder::ValType::Ref(ty.into())
-            }
+            Type::Heap(h) => wasm_encoder::ValType::Ref(h.into()),
         }
     }
 }
 
-impl From<Type> for wasm_encoder::RefType {
-    fn from(ty: Type) -> wasm_encoder::RefType {
-        match ty {
-            Type::ExternRef => wasm_encoder::RefType::EXTERNREF,
-            Type::FuncRef => wasm_encoder::RefType::FUNCREF,
-            Type::TypedFuncRef{nullable,sig_index} => wasm_encoder::RefType {
-                nullable,
+impl From<WithNullable<HeapType>> for wasm_encoder::RefType {
+    fn from(ty: WithNullable<HeapType>) -> wasm_encoder::RefType {
+        match &ty.value {
+            HeapType::ExternRef => wasm_encoder::RefType::EXTERNREF,
+            HeapType::FuncRef => wasm_encoder::RefType::FUNCREF,
+            HeapType::Sig { sig_index } => wasm_encoder::RefType {
+                nullable: ty.nullable,
                 heap_type: wasm_encoder::HeapType::Concrete(sig_index.0),
             },
             _ => panic!("Cannot convert {:?} into reftype", ty),

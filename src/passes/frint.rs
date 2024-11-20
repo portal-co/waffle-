@@ -5,7 +5,7 @@ use arena_traits::IndexAlloc;
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
-    Operator, Type, ValueDef,
+    HeapType, Operator, Type, ValueDef, WithNullable,
 };
 #[derive(Default)]
 pub struct Frint {
@@ -22,7 +22,7 @@ impl Frint {
             .params
             .iter()
             .filter_map(|a| match &a.0 {
-                Type::FuncRef | Type::TypedFuncRef { .. } => Some(None),
+                Type::Heap(WithNullable { value: HeapType::FuncRef | HeapType::Sig { .. }, .. }) => Some(None),
                 _ => None,
             })
             .collect();
@@ -45,7 +45,7 @@ impl Frint {
                 .params
                 .iter()
                 .filter_map(|(k, v)| match k {
-                    Type::FuncRef | Type::TypedFuncRef { .. } => match p.next()? {
+                    Type::Heap(WithNullable { value: HeapType::FuncRef | HeapType::Sig { .. }, .. }) => match p.next()? {
                         Some(f) => Some((
                             *v,
                             dst.add_op(
@@ -116,8 +116,10 @@ impl Frint {
                     .iter()
                     .filter_map(|b| state.get(b))
                     .filter_map(|b| {
-                        if let Some(Type::FuncRef | Type::TypedFuncRef { .. }) =
-                            dst.values[*b].ty(&dst.type_pool)
+                        if let Some(Type::Heap(WithNullable {
+                            value: HeapType::FuncRef | HeapType::Sig { .. },
+                            ..
+                        })) = dst.values[*b].ty(&dst.type_pool)
                         {
                             match &dst.values[*b] {
                                 ValueDef::Operator(Operator::RefFunc { func_index }, _, _) => {

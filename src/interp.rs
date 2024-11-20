@@ -1268,7 +1268,7 @@ pub fn const_eval(
         (Operator::RefFunc { func_index }, []) => Some(ConstVal::Ref(Some(*func_index))),
         (
             Operator::RefNull {
-                ty: Type::FuncRef | Type::TypedFuncRef { .. },
+                ty: Type::Heap(_),
             },
             [],
         ) => Some(ConstVal::Ref(None)),

@@ -259,25 +259,31 @@ pub fn op_inputs(
         Operator::F64ReinterpretI64 => Ok(Cow::Borrowed(&[Type::I64])),
         Operator::I32ReinterpretF32 => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::I64ReinterpretF64 => Ok(Cow::Borrowed(&[Type::F64])),
-        Operator::TableGet { table_index } => if module.tables[*table_index].table64{
-            Ok(Cow::Borrowed(&[Type::I64]))
-        }else{
-            Ok(Cow::Borrowed(&[Type::I32]))
-        },
-        Operator::TableSet { table_index } => {
-            Ok(vec![if module.tables[*table_index].table64{
-                Type::I64
-            }else{
-                Type::I32
-            }, module.tables[*table_index].ty].into())
+        Operator::TableGet { table_index } => {
+            if module.tables[*table_index].table64 {
+                Ok(Cow::Borrowed(&[Type::I64]))
+            } else {
+                Ok(Cow::Borrowed(&[Type::I32]))
+            }
         }
-        Operator::TableGrow { table_index } => {
-            Ok(vec![if module.tables[*table_index].table64{
+        Operator::TableSet { table_index } => Ok(vec![
+            if module.tables[*table_index].table64 {
                 Type::I64
-            }else{
+            } else {
                 Type::I32
-            }, module.tables[*table_index].ty].into())
-        }
+            },
+            module.tables[*table_index].ty,
+        ]
+        .into()),
+        Operator::TableGrow { table_index } => Ok(vec![
+            if module.tables[*table_index].table64 {
+                Type::I64
+            } else {
+                Type::I32
+            },
+            module.tables[*table_index].ty,
+        ]
+        .into()),
         Operator::TableSize { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemorySize { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemoryGrow { mem } => Ok(if module.memories[*mem].memory64 {
@@ -675,10 +681,12 @@ pub fn op_inputs(
 
         Operator::CallRef { sig_index } => {
             let mut params = module.signatures[*sig_index].params.to_vec();
-            params.push(Type::TypedFuncRef {
+            params.push(Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig {
+                    sig_index: *sig_index,
+                },
                 nullable: true,
-                sig_index: *sig_index,
-            });
+            }));
             Ok(params.into())
         }
         Operator::RefIsNull => {
@@ -1318,11 +1326,13 @@ pub fn op_outputs(
         Operator::TableGet { table_index } => Ok(vec![module.tables[*table_index].ty].into()),
         Operator::TableSet { .. } => Ok(Cow::Borrowed(&[])),
         Operator::TableGrow { .. } => Ok(Cow::Borrowed(&[])),
-        Operator::TableSize { table_index } => Ok(Cow::Borrowed(if module.tables[*table_index].table64{
-            &[Type::I64]
-        }else{
-            &[Type::I32]
-        })),
+        Operator::TableSize { table_index } => {
+            Ok(Cow::Borrowed(if module.tables[*table_index].table64 {
+                &[Type::I64]
+            } else {
+                &[Type::I32]
+            }))
+        }
         Operator::MemorySize { mem } => Ok(if module.memories[*mem].memory64 {
             Cow::Borrowed(&[Type::I64])
         } else {
@@ -1596,10 +1606,10 @@ pub fn op_outputs(
         Operator::RefIsNull => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::RefFunc { func_index } => {
             let ty = module.funcs[*func_index].sig();
-            Ok(vec![Type::TypedFuncRef {
+            Ok(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: ty },
                 nullable: true,
-                sig_index: ty,
-            }]
+            })]
             .into())
         }
         Operator::RefNull { ty } => Ok(vec![ty.clone()].into()),
@@ -3233,72 +3243,72 @@ pub fn memory_arg(o: &Operator) -> Option<&MemoryArg> {
         Operator::V128Store32Lane { memory, .. } => Some(memory),
         Operator::V128Store64Lane { memory, .. } => Some(memory),
         Operator::MemoryAtomicNotify { memarg } => Some(memarg), //=> visit_memory_atomic_notify
-        Operator::MemoryAtomicWait32 { memarg }  => Some(memarg), //=> visit_memory_atomic_wait32
-        Operator::MemoryAtomicWait64 { memarg }  => Some(memarg), //=> visit_memory_atomic_wait64
-        Operator::I32AtomicLoad { memarg }  => Some(memarg), //=> visit_i32_atomic_load
-        Operator::I64AtomicLoad { memarg }  => Some(memarg), //=> visit_i64_atomic_load
-        Operator::I32AtomicLoad8U { memarg }  => Some(memarg), //=> visit_i32_atomic_load8_u
-        Operator::I32AtomicLoad16U { memarg }  => Some(memarg), //=> visit_i32_atomic_load16_u
-        Operator::I64AtomicLoad8U { memarg }  => Some(memarg), //=> visit_i64_atomic_load8_u
-        Operator::I64AtomicLoad16U { memarg }  => Some(memarg), //=> visit_i64_atomic_load16_u
-        Operator::I64AtomicLoad32U { memarg }  => Some(memarg), //=> visit_i64_atomic_load32_u
-        Operator::I32AtomicStore { memarg }  => Some(memarg), //=> visit_i32_atomic_store
-        Operator::I64AtomicStore { memarg }  => Some(memarg), //=> visit_i64_atomic_store
-        Operator::I32AtomicStore8 { memarg }  => Some(memarg), //=> visit_i32_atomic_store8
-        Operator::I32AtomicStore16 { memarg }  => Some(memarg), //=> visit_i32_atomic_store16
-        Operator::I64AtomicStore8 { memarg }  => Some(memarg), //=> visit_i64_atomic_store8
-        Operator::I64AtomicStore16 { memarg }  => Some(memarg), //=> visit_i64_atomic_store16
-        Operator::I64AtomicStore32 { memarg }  => Some(memarg), //=> visit_i64_atomic_store32
-        Operator::I32AtomicRmwAdd { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw_add
-        Operator::I64AtomicRmwAdd { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw_add
-        Operator::I32AtomicRmw8AddU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw8_add_u
-        Operator::I32AtomicRmw16AddU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw16_add_u
-        Operator::I64AtomicRmw8AddU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw8_add_u
-        Operator::I64AtomicRmw16AddU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw16_add_u
-        Operator::I64AtomicRmw32AddU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw32_add_u
-        Operator::I32AtomicRmwSub { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw_sub
-        Operator::I64AtomicRmwSub { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw_sub
-        Operator::I32AtomicRmw8SubU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw8_sub_u
-        Operator::I32AtomicRmw16SubU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw16_sub_u
-        Operator::I64AtomicRmw8SubU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw8_sub_u
-        Operator::I64AtomicRmw16SubU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw16_sub_u
-        Operator::I64AtomicRmw32SubU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw32_sub_u
-        Operator::I32AtomicRmwAnd { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw_and
-        Operator::I64AtomicRmwAnd { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw_and
-        Operator::I32AtomicRmw8AndU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw8_and_u
-        Operator::I32AtomicRmw16AndU { memarg }  => Some(memarg), //=> visit_i32_atomic_rmw16_and_u
-        Operator::I64AtomicRmw8AndU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw8_and_u
-        Operator::I64AtomicRmw16AndU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw16_and_u
-        Operator::I64AtomicRmw32AndU { memarg }  => Some(memarg), //=> visit_i64_atomic_rmw32_and_u
-        Operator::I32AtomicRmwOr { memarg } => Some(memarg), // => visit_i32_atomic_rmw_or
-        Operator::I64AtomicRmwOr { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw_or
-        Operator::I32AtomicRmw8OrU { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw8_or_u
-        Operator::I32AtomicRmw16OrU { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw16_or_u
-        Operator::I64AtomicRmw8OrU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw8_or_u
-        Operator::I64AtomicRmw16OrU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw16_or_u
-        Operator::I64AtomicRmw32OrU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw32_or_u
-        Operator::I32AtomicRmwXor { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw_xor
-        Operator::I64AtomicRmwXor { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw_xor
-        Operator::I32AtomicRmw8XorU { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw8_xor_u
-        Operator::I32AtomicRmw16XorU { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw16_xor_u
-        Operator::I64AtomicRmw8XorU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw8_xor_u
-        Operator::I64AtomicRmw16XorU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw16_xor_u
-        Operator::I64AtomicRmw32XorU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw32_xor_u
-        Operator::I32AtomicRmwXchg { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw_xchg
-        Operator::I64AtomicRmwXchg { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw_xchg
-        Operator::I32AtomicRmw8XchgU { memarg }=> Some(memarg),// => visit_i32_atomic_rmw8_xchg_u
-        Operator::I32AtomicRmw16XchgU { memarg }=> Some(memarg),// => visit_i32_atomic_rmw16_xchg_u
-        Operator::I64AtomicRmw8XchgU { memarg }=> Some(memarg),// => visit_i64_atomic_rmw8_xchg_u
-        Operator::I64AtomicRmw16XchgU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw16_xchg_u
-        Operator::I64AtomicRmw32XchgU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw32_xchg_u
-        Operator::I32AtomicRmwCmpxchg { memarg }  => Some(memarg),//=> visit_i32_atomic_rmw_cmpxchg
-        Operator::I64AtomicRmwCmpxchg { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw_cmpxchg
-        Operator::I32AtomicRmw8CmpxchgU { memarg }=> Some(memarg),// => visit_i32_atomic_rmw8_cmpxchg_u
-        Operator::I32AtomicRmw16CmpxchgU { memarg }=> Some(memarg),// => visit_i32_atomic_rmw16_cmpxchg_u
-        Operator::I64AtomicRmw8CmpxchgU { memarg }=> Some(memarg),// => visit_i64_atomic_rmw8_cmpxchg_u
-        Operator::I64AtomicRmw16CmpxchgU { memarg }=> Some(memarg),// => visit_i64_atomic_rmw16_cmpxchg_u
-        Operator::I64AtomicRmw32CmpxchgU { memarg }  => Some(memarg),//=> visit_i64_atomic_rmw32_c
-        
+        Operator::MemoryAtomicWait32 { memarg } => Some(memarg), //=> visit_memory_atomic_wait32
+        Operator::MemoryAtomicWait64 { memarg } => Some(memarg), //=> visit_memory_atomic_wait64
+        Operator::I32AtomicLoad { memarg } => Some(memarg),      //=> visit_i32_atomic_load
+        Operator::I64AtomicLoad { memarg } => Some(memarg),      //=> visit_i64_atomic_load
+        Operator::I32AtomicLoad8U { memarg } => Some(memarg),    //=> visit_i32_atomic_load8_u
+        Operator::I32AtomicLoad16U { memarg } => Some(memarg),   //=> visit_i32_atomic_load16_u
+        Operator::I64AtomicLoad8U { memarg } => Some(memarg),    //=> visit_i64_atomic_load8_u
+        Operator::I64AtomicLoad16U { memarg } => Some(memarg),   //=> visit_i64_atomic_load16_u
+        Operator::I64AtomicLoad32U { memarg } => Some(memarg),   //=> visit_i64_atomic_load32_u
+        Operator::I32AtomicStore { memarg } => Some(memarg),     //=> visit_i32_atomic_store
+        Operator::I64AtomicStore { memarg } => Some(memarg),     //=> visit_i64_atomic_store
+        Operator::I32AtomicStore8 { memarg } => Some(memarg),    //=> visit_i32_atomic_store8
+        Operator::I32AtomicStore16 { memarg } => Some(memarg),   //=> visit_i32_atomic_store16
+        Operator::I64AtomicStore8 { memarg } => Some(memarg),    //=> visit_i64_atomic_store8
+        Operator::I64AtomicStore16 { memarg } => Some(memarg),   //=> visit_i64_atomic_store16
+        Operator::I64AtomicStore32 { memarg } => Some(memarg),   //=> visit_i64_atomic_store32
+        Operator::I32AtomicRmwAdd { memarg } => Some(memarg),    //=> visit_i32_atomic_rmw_add
+        Operator::I64AtomicRmwAdd { memarg } => Some(memarg),    //=> visit_i64_atomic_rmw_add
+        Operator::I32AtomicRmw8AddU { memarg } => Some(memarg),  //=> visit_i32_atomic_rmw8_add_u
+        Operator::I32AtomicRmw16AddU { memarg } => Some(memarg), //=> visit_i32_atomic_rmw16_add_u
+        Operator::I64AtomicRmw8AddU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw8_add_u
+        Operator::I64AtomicRmw16AddU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw16_add_u
+        Operator::I64AtomicRmw32AddU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_add_u
+        Operator::I32AtomicRmwSub { memarg } => Some(memarg),    //=> visit_i32_atomic_rmw_sub
+        Operator::I64AtomicRmwSub { memarg } => Some(memarg),    //=> visit_i64_atomic_rmw_sub
+        Operator::I32AtomicRmw8SubU { memarg } => Some(memarg),  //=> visit_i32_atomic_rmw8_sub_u
+        Operator::I32AtomicRmw16SubU { memarg } => Some(memarg), //=> visit_i32_atomic_rmw16_sub_u
+        Operator::I64AtomicRmw8SubU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw8_sub_u
+        Operator::I64AtomicRmw16SubU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw16_sub_u
+        Operator::I64AtomicRmw32SubU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_sub_u
+        Operator::I32AtomicRmwAnd { memarg } => Some(memarg),    //=> visit_i32_atomic_rmw_and
+        Operator::I64AtomicRmwAnd { memarg } => Some(memarg),    //=> visit_i64_atomic_rmw_and
+        Operator::I32AtomicRmw8AndU { memarg } => Some(memarg),  //=> visit_i32_atomic_rmw8_and_u
+        Operator::I32AtomicRmw16AndU { memarg } => Some(memarg), //=> visit_i32_atomic_rmw16_and_u
+        Operator::I64AtomicRmw8AndU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw8_and_u
+        Operator::I64AtomicRmw16AndU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw16_and_u
+        Operator::I64AtomicRmw32AndU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_and_u
+        Operator::I32AtomicRmwOr { memarg } => Some(memarg),     // => visit_i32_atomic_rmw_or
+        Operator::I64AtomicRmwOr { memarg } => Some(memarg),     //=> visit_i64_atomic_rmw_or
+        Operator::I32AtomicRmw8OrU { memarg } => Some(memarg),   //=> visit_i32_atomic_rmw8_or_u
+        Operator::I32AtomicRmw16OrU { memarg } => Some(memarg),  //=> visit_i32_atomic_rmw16_or_u
+        Operator::I64AtomicRmw8OrU { memarg } => Some(memarg),   //=> visit_i64_atomic_rmw8_or_u
+        Operator::I64AtomicRmw16OrU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw16_or_u
+        Operator::I64AtomicRmw32OrU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw32_or_u
+        Operator::I32AtomicRmwXor { memarg } => Some(memarg),    //=> visit_i32_atomic_rmw_xor
+        Operator::I64AtomicRmwXor { memarg } => Some(memarg),    //=> visit_i64_atomic_rmw_xor
+        Operator::I32AtomicRmw8XorU { memarg } => Some(memarg),  //=> visit_i32_atomic_rmw8_xor_u
+        Operator::I32AtomicRmw16XorU { memarg } => Some(memarg), //=> visit_i32_atomic_rmw16_xor_u
+        Operator::I64AtomicRmw8XorU { memarg } => Some(memarg),  //=> visit_i64_atomic_rmw8_xor_u
+        Operator::I64AtomicRmw16XorU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw16_xor_u
+        Operator::I64AtomicRmw32XorU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_xor_u
+        Operator::I32AtomicRmwXchg { memarg } => Some(memarg),   //=> visit_i32_atomic_rmw_xchg
+        Operator::I64AtomicRmwXchg { memarg } => Some(memarg),   //=> visit_i64_atomic_rmw_xchg
+        Operator::I32AtomicRmw8XchgU { memarg } => Some(memarg), // => visit_i32_atomic_rmw8_xchg_u
+        Operator::I32AtomicRmw16XchgU { memarg } => Some(memarg), // => visit_i32_atomic_rmw16_xchg_u
+        Operator::I64AtomicRmw8XchgU { memarg } => Some(memarg),  // => visit_i64_atomic_rmw8_xchg_u
+        Operator::I64AtomicRmw16XchgU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw16_xchg_u
+        Operator::I64AtomicRmw32XchgU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_xchg_u
+        Operator::I32AtomicRmwCmpxchg { memarg } => Some(memarg), //=> visit_i32_atomic_rmw_cmpxchg
+        Operator::I64AtomicRmwCmpxchg { memarg } => Some(memarg), //=> visit_i64_atomic_rmw_cmpxchg
+        Operator::I32AtomicRmw8CmpxchgU { memarg } => Some(memarg), // => visit_i32_atomic_rmw8_cmpxchg_u
+        Operator::I32AtomicRmw16CmpxchgU { memarg } => Some(memarg), // => visit_i32_atomic_rmw16_cmpxchg_u
+        Operator::I64AtomicRmw8CmpxchgU { memarg } => Some(memarg), // => visit_i64_atomic_rmw8_cmpxchg_u
+        Operator::I64AtomicRmw16CmpxchgU { memarg } => Some(memarg), // => visit_i64_atomic_rmw16_cmpxchg_u
+        Operator::I64AtomicRmw32CmpxchgU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_c
+
         _ => None,
     }
 }
