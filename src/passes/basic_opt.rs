@@ -8,7 +8,7 @@ use crate::pool::ListRef;
 use crate::scoped_map::ScopedMap;
 use crate::Operator;
 use smallvec::{smallvec, SmallVec};
-
+#[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct OptOptions {
     pub gvn: bool,
