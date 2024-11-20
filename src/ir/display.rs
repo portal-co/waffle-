@@ -184,17 +184,20 @@ impl<'a> Display for ModuleDisplay<'a> {
         }
         let mut sig_strs = HashMap::new();
         for (sig, sig_data) in self.module.signatures.entries() {
-            let arg_tys = sig_data
-                .params
-                .iter()
-                .map(|&ty| format!("{}", ty))
-                .collect::<Vec<_>>();
-            let ret_tys = sig_data
-                .returns
-                .iter()
-                .map(|&ty| format!("{}", ty))
-                .collect::<Vec<_>>();
-            let sig_str = format!("{} -> {}", arg_tys.join(", "), ret_tys.join(", "));
+            let sig_str = match sig_data {
+                super::SignatureData::Func { params, returns } => {
+                    let arg_tys = params
+                        .iter()
+                        .map(|&ty| format!("{}", ty))
+                        .collect::<Vec<_>>();
+                    let ret_tys = returns
+                        .iter()
+                        .map(|&ty| format!("{}", ty))
+                        .collect::<Vec<_>>();
+                    format!("{} -> {}", arg_tys.join(", "), ret_tys.join(", "))
+                }
+                super::SignatureData::None => todo!(),
+            };
             sig_strs.insert(sig, sig_str.clone());
             writeln!(f, "  {}: {}", sig, sig_str)?;
         }

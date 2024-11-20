@@ -97,7 +97,7 @@ pub fn tcore2(m: &mut Module, mut filter: impl FnMut(Func) -> bool) -> anyhow::R
     m.expand_all_funcs()?;
     let mut b = BTreeMap::new();
     for (f, d) in m.funcs.entries() {
-        if !filter(f){
+        if !filter(f) {
             continue;
         }
         if let Some(d) = d.body() {
@@ -222,7 +222,12 @@ pub fn gen_trampoline(
     if let Some(d) = c.get(&cache_key) {
         return Ok(*d);
     }
-    n.params.push(Type::I32);
+    {
+        let SignatureData::Func { params, returns } = &mut n else {
+            anyhow::bail!("invalid signature")
+        };
+        params.push(Type::I32);
+    }
     let nd = m.signatures.push(n.clone());
     let mut b = FunctionBody::new(&m, nd);
     // let sw = b.add_blockparam(b.entry, Type::I32);

@@ -1,6 +1,6 @@
 use crate::*;
 pub fn add_start(m: &mut Module, tf: Func) {
-    let s = SignatureData {
+    let s = SignatureData::Func {
         params: vec![],
         returns: vec![],
     };
@@ -8,7 +8,10 @@ pub fn add_start(m: &mut Module, tf: Func) {
     let mut f = FunctionBody::new(&m, s);
     let vz = f.arg_pool.from_iter(std::iter::empty());
     let t = m.funcs[tf].sig();
-    let t = m.signatures[t].clone().returns;
+    let SignatureData::Func { params, returns } = m.signatures[t].clone() else{
+        todo!()
+    };
+    let t = returns;
     let tz = f.type_pool.from_iter(t.into_iter());
     let v = f.add_value(ValueDef::Operator(
         Operator::Call { function_index: tf },

@@ -321,15 +321,19 @@ impl<
             if let Some(k) = self.state.sig_cache.get(&s) {
                 return Ok(*k);
             }
-            let k = self.dest.signatures.alloc(SignatureData {
-                params: vec![],
-                returns: vec![],
-            });
+            let k = self.dest.signatures.alloc(SignatureData::None);
             self.state.sig_cache.insert(s, k);
             let mut d = self.src.signatures[s].clone();
-            for x in d.params.iter_mut().chain(d.returns.iter_mut()) {
-                self.translate_type(x)?;
-            }
+            match &mut d{
+                SignatureData::Func { params, returns } => {
+                    for x in params.iter_mut().chain(returns.iter_mut()) {
+                        self.translate_type(x)?;
+                    }
+                },
+                SignatureData::None => {
+
+                },
+            };
             self.dest.signatures[k] = d;
         }
     }

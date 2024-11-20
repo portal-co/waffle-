@@ -454,7 +454,7 @@ mod test {
         let _ = env_logger::try_init();
 
         let mut module = Module::empty();
-        let sig = module.signatures.push(SignatureData {
+        let sig = module.signatures.push(SignatureData::Func {
             params: vec![Type::I32, Type::I64, Type::F64],
             returns: vec![Type::I64],
         });

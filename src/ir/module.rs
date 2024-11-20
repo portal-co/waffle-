@@ -1,7 +1,10 @@
 use std::collections::BTreeMap;
+use std::default;
 use std::iter::{empty, once};
 
-use super::{ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, Table, Type};
+use super::{
+    ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, Table, Type,
+};
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
@@ -51,15 +54,19 @@ pub struct ControlTagData {
     ///The signature used when invoking this tag
     pub sig: Signature,
 }
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SignatureData {
-    /// Parameters: a Wasm function may have zero or more primitive
-    /// types as parameters.
-    pub params: Vec<Type>,
-    /// Returns: a Wasm function (when using the multivalue extension,
-    /// which we assume to be present) may have zero or more primitive
-    /// types as return values.
-    pub returns: Vec<Type>,
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub enum SignatureData {
+    Func {
+        /// Parameters: a Wasm function may have zero or more primitive
+        /// types as parameters.
+        params: Vec<Type>,
+        /// Returns: a Wasm function (when using the multivalue extension,
+        /// which we assume to be present) may have zero or more primitive
+        /// types as return values.
+        returns: Vec<Type>,
+    },
+    #[default]
+    None,
 }
 
 /// The size of a single Wasm page, used in memory definitions.
@@ -113,37 +120,44 @@ pub struct GlobalData {
     pub mutable: bool,
 }
 
-impl From<&wasmparser::FuncType> for SignatureData {
-    fn from(fty: &wasmparser::FuncType) -> Self {
-        Self {
-            params: fty
-                .params()
-                .iter()
-                .map(|&ty| ty.into())
-                .collect::<Vec<Type>>(),
-            returns: fty
-                .results()
-                .iter()
-                .map(|&ty| ty.into())
-                .collect::<Vec<Type>>(),
+impl From<&wasmparser::SubType> for SignatureData {
+    fn from(fty: &wasmparser::SubType) -> Self {
+        match &fty.composite_type {
+            wasmparser::CompositeType::Func(func_type) => Self::Func {
+                params: func_type
+                    .params()
+                    .iter()
+                    .map(|&ty| ty.into())
+                    .collect::<Vec<Type>>(),
+                returns: func_type
+                    .results()
+                    .iter()
+                    .map(|&ty| ty.into())
+                    .collect::<Vec<Type>>(),
+            },
+            wasmparser::CompositeType::Array(array_type) => todo!(),
+            wasmparser::CompositeType::Struct(struct_type) => todo!(),
         }
     }
 }
-impl From<wasmparser::FuncType> for SignatureData {
-    fn from(fty: wasmparser::FuncType) -> Self {
+impl From<wasmparser::SubType> for SignatureData {
+    fn from(fty: wasmparser::SubType) -> Self {
         (&fty).into()
     }
 }
 
 impl From<&SignatureData> for wasm_encoder::SubType {
     fn from(value: &SignatureData) -> Self {
-        wasm_encoder::SubType {
-            is_final: true,
-            supertype_idx: None,
-            composite_type: wasm_encoder::CompositeType::Func(wasm_encoder::FuncType::new(
-                value.params.iter().cloned().map(|a| a.into()),
-                value.returns.iter().cloned().map(|a| a.into()),
-            )),
+        match value {
+            SignatureData::Func { params, returns } => wasm_encoder::SubType {
+                is_final: true,
+                supertype_idx: None,
+                composite_type: wasm_encoder::CompositeType::Func(wasm_encoder::FuncType::new(
+                    params.iter().cloned().map(|a| a.into()),
+                    returns.iter().cloned().map(|a| a.into()),
+                )),
+            },
+            SignatureData::None => todo!(),
         }
     }
 }
@@ -151,11 +165,12 @@ impl From<&SignatureData> for wasm_encoder::SubType {
 impl Signature {
     pub fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
-            SignatureData { params, returns } => params
+            SignatureData::Func { params, returns } => params
                 .iter()
                 .chain(returns.iter())
                 .flat_map(|a| a.sigs())
                 .any(|sig| sig.index() >= self.index()),
+            _ => false,
         };
     }
 }
@@ -163,8 +178,8 @@ impl Signature {
 impl Type {
     pub fn sigs<'a>(&'a self) -> impl Iterator<Item = Signature> + 'a {
         match self {
-            Type::Heap(h) => match &h.value{
-                HeapType::Sig { sig_index } =>  Either::Right(once(*sig_index)),
+            Type::Heap(h) => match &h.value {
+                HeapType::Sig { sig_index } => Either::Right(once(*sig_index)),
                 _ => Either::Left(empty()),
             },
             _ => Either::Left(empty()),

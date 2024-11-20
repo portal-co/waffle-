@@ -10,7 +10,7 @@ use crate::{
 pub fn fuse_iter(m: &mut Module, x: impl Iterator<Item = (usize, u8)>, mem: Memory) {
     let null = new_sig(
         m,
-        SignatureData {
+        SignatureData::Func {
             params: vec![],
             returns: vec![],
         },
@@ -62,7 +62,7 @@ pub fn metafuse_iter(m: &mut Module, x: &[(usize, u8)], mem: Memory) {
 pub fn metafuse(m: &mut Module, mem: Memory, dat: MemoryData) {
     let null = new_sig(
         m,
-        SignatureData {
+        SignatureData::Func {
             params: vec![],
             returns: vec![],
         },

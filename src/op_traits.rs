@@ -2,9 +2,10 @@
 
 use crate::entity::EntityRef;
 use crate::ir::{Module, Type, Value};
-use crate::{MemoryArg, Operator};
+use crate::{MemoryArg, Operator, SignatureData};
 use anyhow::{Context, Result};
 use std::borrow::Cow;
+
 
 /// Given a module and an existing operand stack for context, provide
 /// the type(s) that a given operator requires as inputs.
@@ -18,10 +19,16 @@ pub fn op_inputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            Ok(Vec::from(module.signatures[sig].params.clone()).into())
+            let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Vec::from(params.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            let mut params = module.signatures[sig_index].params.to_vec();
+            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else{
+                anyhow::bail!("invalid signature")
+            };
+            let mut params = params.to_vec();
             params.push(Type::I32);
             Ok(params.into())
         }
@@ -680,7 +687,10 @@ pub fn op_inputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            let mut params = module.signatures[*sig_index].params.to_vec();
+            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else{
+                anyhow::bail!("invalid signature")
+            };
+            let mut params = params.to_vec();
             params.push(Type::Heap(crate::WithNullable {
                 value: crate::HeapType::Sig {
                     sig_index: *sig_index,
@@ -1118,10 +1128,16 @@ pub fn op_outputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            Ok(Vec::from(module.signatures[sig].returns.clone()).into())
+            let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Vec::from(returns.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            Ok(Vec::from(module.signatures[sig_index].returns.clone()).into())
+            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else{
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Vec::from(returns.clone()).into())
         }
 
         &Operator::Select => {
@@ -1601,7 +1617,10 @@ pub fn op_outputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            Ok(Vec::from(module.signatures[*sig_index].returns.clone()).into())
+            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else{
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Vec::from(returns.clone()).into())
         }
         Operator::RefIsNull => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::RefFunc { func_index } => {

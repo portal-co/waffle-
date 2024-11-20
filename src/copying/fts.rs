@@ -198,7 +198,7 @@ impl Fts {
             }
             let s = new_sig(
                 module,
-                SignatureData {
+                SignatureData::Func {
                     params: src.blocks[k].params.iter().map(|a| a.0).collect(),
                     returns: src.rets.clone(),
                 },

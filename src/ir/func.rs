@@ -1,4 +1,4 @@
-use super::{Block, FunctionBodyDisplay, Local, Module, Signature, Type, Value, ValueDef};
+use super::{Block, FunctionBodyDisplay, Local, Module, Signature, SignatureData, Type, Value, ValueDef};
 use crate::backend::WasmFuncBackend;
 use crate::cfg::CFGInfo;
 use crate::entity::{EntityRef, EntityVec, PerEntity};
@@ -181,9 +181,12 @@ impl FunctionBody {
     /// the function parameters in the signature, but no
     /// contents. `module` is necessary to look up the signature.
     pub fn new(module: &Module, sig: Signature) -> FunctionBody {
-        let locals = EntityVec::from(module.signatures[sig].params.clone());
+        let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+            todo!()
+        };
+        let locals = EntityVec::from(params.clone());
         let n_params = locals.len();
-        let rets = module.signatures[sig].returns.clone();
+        let rets = returns.clone();
         let mut blocks = EntityVec::default();
         let entry = blocks.push(BlockDef::default());
         let mut values = EntityVec::default();

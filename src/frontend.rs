@@ -99,14 +99,14 @@ fn handle_payload<'a>(
         Payload::TypeSection(reader) => {
             for rec_group in reader {
                 for ty in rec_group?.into_types() {
-                    match &ty.composite_type {
-                        wasmparser::CompositeType::Func(fty) => {
-                            module.signatures.push(fty.into());
-                        }
-                        _ => bail!(FrontendError::UnsupportedFeature(
-                            "non-function type in type section".into()
-                        )),
-                    }
+                    // match &ty.composite_type {
+                    //     wasmparser::CompositeType::Func(fty) => {
+                            module.signatures.push((&ty).into());
+                    //     }
+                    //     _ => bail!(FrontendError::UnsupportedFeature(
+                    //         "non-function type in type section".into()
+                    //     )),
+                    // }
                 }
             }
         }
@@ -473,11 +473,15 @@ pub(crate) fn parse_body<'a>(
 
     let mut debug_locs = DebugLocReader::new(module, body.range().start as u32);
 
-    for &param in &module.signatures[my_sig].params[..] {
+    let SignatureData::Func { params, returns } = &module.signatures[my_sig] else{
+        anyhow::bail!("invalid sig")
+    };
+
+    for &param in &params[..] {
         ret.locals.push(param.into());
     }
-    ret.n_params = module.signatures[my_sig].params.len();
-    for &r in &module.signatures[my_sig].returns[..] {
+    ret.n_params = params.len();
+    for &r in &returns[..] {
         ret.rets.push(r.into());
     }
 
@@ -502,7 +506,7 @@ pub(crate) fn parse_body<'a>(
     builder.locals.seal_block_preds(entry, &mut builder.body);
     builder.locals.start_block(entry);
 
-    for (arg_idx, &arg_ty) in module.signatures[my_sig].params.iter().enumerate() {
+    for (arg_idx, &arg_ty) in params.iter().enumerate() {
         let local_idx = Local::new(arg_idx);
         builder.body.add_blockparam(entry, arg_ty);
         let value = builder.body.blocks[entry].params.last().unwrap().1;
@@ -511,7 +515,7 @@ pub(crate) fn parse_body<'a>(
         builder.locals.set(local_idx, value);
     }
 
-    let n_args = module.signatures[my_sig].params.len();
+    let n_args = params.len();
     for (offset, local_ty) in locals.values().enumerate() {
         let local_idx = Local::new(n_args + offset);
         builder.locals.declare(local_idx, *local_ty);
@@ -936,8 +940,12 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             locals: LocalTracker::default(),
         };
 
+        let SignatureData::Func { params, returns } = &module.signatures[my_sig] else{
+            todo!()
+        };
+
         // Push initial implicit Block.
-        let results = module.signatures[my_sig].returns.to_vec();
+        let results = returns.to_vec();
         let out = ret.body.add_block();
         ret.add_block_params(out, &results[..]);
         ret.ctrl_stack.push(Frame::Block {
@@ -1505,13 +1513,19 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
 
             wasmparser::Operator::Return => {
-                let retvals = self.pop_n(self.module.signatures[self.my_sig].returns.len());
+                let SignatureData::Func { params, returns } = &self.module.signatures[self.my_sig] else{
+                    anyhow::bail!("invalid signature")
+                };
+                let retvals = self.pop_n(returns.len());
                 self.emit_ret(&retvals[..]);
                 self.reachable = false;
             }
             wasmparser::Operator::ReturnCall { function_index } => {
                 let sig = self.module.funcs[Func::new(*function_index as usize)].sig();
-                let retvals = self.pop_n(self.module.signatures[sig].params.len());
+                let SignatureData::Func { params, returns } = &self.module.signatures[sig] else{
+                    anyhow::bail!("invalid signature")
+                };
+                let retvals = self.pop_n(params.len());
                 self.emit_term(Terminator::ReturnCall {
                     func: Func::new(*function_index as usize),
                     args: retvals,
@@ -1522,9 +1536,11 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 table_index,
             } => {
+                let SignatureData::Func { params, returns } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                    anyhow::bail!("invalid signature")
+                };
                 let retvals = self.pop_n(
-                    self.module.signatures[Signature::new(*type_index as usize)]
-                        .params
+                    params
                         .len(),
                 );
                 self.emit_term(Terminator::ReturnCallIndirect {
@@ -1538,9 +1554,11 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 // table_index,
             } => {
+                let SignatureData::Func { params, returns } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                    anyhow::bail!("invalid signature")
+                };
                 let retvals = self.pop_n(
-                    self.module.signatures[Signature::new(*type_index as usize)]
-                        .params
+                    params
                         .len(),
                 );
                 self.emit_term(Terminator::ReturnCallRef {
@@ -1585,8 +1603,11 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 match &frame {
                     None => {
                         if self.reachable {
+                            let SignatureData::Func { params, returns } = &self.module.signatures[self.my_sig] else{
+                                anyhow::bail!("invalid signature")
+                            };
                             let retvals =
-                                self.pop_n(self.module.signatures[self.my_sig].returns.len());
+                                self.pop_n(returns.len());
                             self.emit_ret(&retvals[..]);
                         } else {
                             self.emit_unreachable();
@@ -1842,9 +1863,12 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             BlockType::Type(ret_ty) => (vec![], vec![ret_ty.into()]),
             BlockType::FuncType(sig_idx) => {
                 let sig = &self.module.signatures[Signature::from(sig_idx)];
+                let SignatureData::Func { params, returns } = &sig else{
+                    todo!()
+                };
                 (
-                    Vec::from(sig.params.clone()),
-                    Vec::from(sig.returns.clone()),
+                    Vec::from(params.clone()),
+                    Vec::from(returns.clone()),
                 )
             }
         }
