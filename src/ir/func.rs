@@ -649,7 +649,7 @@ impl std::fmt::Display for BlockTarget {
         write!(f, "{}({})", self.block, args.join(", "))
     }
 }
-
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Terminator {
     Br {

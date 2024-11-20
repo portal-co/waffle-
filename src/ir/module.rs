@@ -54,6 +54,7 @@ pub struct ControlTagData {
     ///The signature used when invoking this tag
     pub sig: Signature,
 }
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum SignatureData {
     Func {

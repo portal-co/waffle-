@@ -39,7 +39,7 @@ impl std::fmt::Display for MemoryArg {
         )
     }
 }
-
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 /// An operator in the IR, consuming arguments and producing results
 /// when executed.
@@ -750,7 +750,9 @@ pub enum Operator {
     StructSet{
         sig: Signature,
         idx: usize,
-    }
+    },
+
+
 }
 
 #[test]
