@@ -1146,6 +1146,48 @@ pub fn op_inputs(
                     .unpack(),
             ]))
         }
+        &Operator::ArrayNew { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![
+                ty.value.clone().unpack(),
+                Type::I32
+            ]))
+        },
+        &Operator::ArrayNewFixed { sig, num } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned((0..num).map(|a|ty.value.clone().unpack()).collect()))
+        },
+        &Operator::ArrayGet { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true })]))
+        },
+        &Operator::ArraySet { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true }),ty.value.clone().unpack()]))
+        },
+        &Operator::ArrayFill { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true }),Type::I32,ty.value.clone().unpack(),Type::I32]))
+        },
+        &Operator::ArrayCopy { dest, src } => {
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: dest }, nullable: true }),
+                Type::I32,
+                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: src }, nullable: true }),
+                Type::I32,
+                Type::I32,
+            ]))
+        }
     }
 }
 
@@ -1745,6 +1787,43 @@ pub fn op_outputs(
             };
             Ok(Cow::Borrowed(&[]))
         }
+        &Operator::ArrayNew { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: false })
+            ]))
+        },
+        &Operator::ArrayNewFixed { sig, num } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: false })
+            ]))
+        },
+        &Operator::ArrayGet { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Owned(vec![ty.value.clone().unpack()]))
+        },
+        &Operator::ArraySet { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Borrowed(&[]))
+        },
+        &Operator::ArrayFill { sig } => {
+            let SignatureData::Array { ty } = &module.signatures[sig] else {
+                anyhow::bail!("invalid signature")
+            };
+            Ok(Cow::Borrowed(&[]))
+        },
+        &Operator::ArrayCopy { dest, src } => {
+            Ok(Cow::Borrowed(&[]))
+        }
     }
 }
 
@@ -2300,7 +2379,14 @@ impl Operator {
             Operator::StructNew { sig } => &[],
             Operator::StructGet { sig, idx } => &[ReadGlobal],
             Operator::StructSet { sig, idx } => &[WriteGlobal], //=> visit_i64_atomic_rmw32_c
+            Operator::ArrayNew { sig } => &[],
+            Operator::ArrayNewFixed { sig, num } => &[],
+            Operator::ArrayGet { sig } => &[ReadGlobal],
+            Operator::ArraySet { sig } => &[WriteGlobal],
+            Operator::ArrayFill { sig } => &[WriteGlobal],
+            Operator::ArrayCopy { dest, src } =>&[ReadGlobal,WriteGlobal],
         }
+
     }
 
     /// Is the operator pure (has no side-effects)?
@@ -3076,6 +3162,24 @@ impl std::fmt::Display for Operator {
             Operator::StructSet { sig, idx } => {
                 write!(f,"struct_set<{sig}@{idx}>")?
             }, 
+            Operator::ArrayNew { sig } => {
+                write!(f,"array_new<{sig}>")?
+            },
+            Operator::ArrayNewFixed { sig, num } => {
+                write!(f,"array_new_fixed<{sig};{num}>")?
+            },
+            Operator::ArrayGet { sig } => {
+                write!(f,"array_get<{sig}>")?
+            },
+            Operator::ArraySet { sig } => {
+                write!(f,"array_set<{sig}>")?
+            }, 
+            Operator::ArrayFill { sig } => {
+                write!(f,"array_fill<{sig}>")?
+            }, 
+            Operator::ArrayCopy { dest, src } => {
+                write!(f,"array_copy<{dest}-{src}>")?
+            }
         }
 
         Ok(())

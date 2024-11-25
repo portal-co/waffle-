@@ -1281,6 +1281,12 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::StructNew { sig } => Some(wasm_encoder::Instruction::StructNew(sig.index() as u32)),
             Operator::StructGet { sig, idx } => Some(wasm_encoder::Instruction::StructGet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
             Operator::StructSet { sig, idx } => Some(wasm_encoder::Instruction::StructSet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
+            Operator::ArrayNew { sig } => Some(wasm_encoder::Instruction::ArrayNew(sig.index() as u32)),
+            Operator::ArrayNewFixed { sig, num } => Some(wasm_encoder::Instruction::ArrayNewFixed { array_type_index: sig.index() as u32, array_size: *num as u32 }),
+            Operator::ArrayGet { sig } => Some(wasm_encoder::Instruction::ArrayGet(sig.index() as u32)),
+            Operator::ArraySet { sig } => Some(wasm_encoder::Instruction::ArraySet(sig.index() as u32)),
+            Operator::ArrayFill { sig } =>Some(wasm_encoder::Instruction::ArrayFill(sig.index() as u32)),
+            Operator::ArrayCopy { dest, src } => Some(wasm_encoder::Instruction::ArrayCopy { array_type_index_dst: dest.index() as u32, array_type_index_src: src.index() as u32 }),
         };
 
         if let Some(inst) = inst {

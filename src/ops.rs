@@ -25,10 +25,9 @@ pub use wasmparser::{Ieee32, Ieee64};
 
 pub struct MemoryArg {
     pub align: u32,
-    pub offset: u64 ,
+    pub offset: u64,
     pub memory: Memory,
 }
-
 
 impl std::fmt::Display for MemoryArg {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -670,89 +669,238 @@ pub enum Operator {
     MemoryFill {
         mem: Memory,
     },
-    MemoryAtomicNotify { memarg: MemoryArg } , //=> visit_memory_atomic_notify
-    MemoryAtomicWait32 { memarg: MemoryArg } , //=> visit_memory_atomic_wait32
-    MemoryAtomicWait64 { memarg: MemoryArg } , //=> visit_memory_atomic_wait64
+    MemoryAtomicNotify {
+        memarg: MemoryArg,
+    }, //=> visit_memory_atomic_notify
+    MemoryAtomicWait32 {
+        memarg: MemoryArg,
+    }, //=> visit_memory_atomic_wait32
+    MemoryAtomicWait64 {
+        memarg: MemoryArg,
+    }, //=> visit_memory_atomic_wait64
     AtomicFence, // => visit_atomic_fence
-    I32AtomicLoad { memarg: MemoryArg } , //=> visit_i32_atomic_load
-    I64AtomicLoad { memarg: MemoryArg } , //=> visit_i64_atomic_load
-    I32AtomicLoad8U { memarg: MemoryArg } , //=> visit_i32_atomic_load8_u
-    I32AtomicLoad16U { memarg: MemoryArg } , //=> visit_i32_atomic_load16_u
-    I64AtomicLoad8U { memarg: MemoryArg } , //=> visit_i64_atomic_load8_u
-    I64AtomicLoad16U { memarg: MemoryArg } , //=> visit_i64_atomic_load16_u
-    I64AtomicLoad32U { memarg: MemoryArg } , //=> visit_i64_atomic_load32_u
-    I32AtomicStore { memarg: MemoryArg } , //=> visit_i32_atomic_store
-    I64AtomicStore { memarg: MemoryArg } , //=> visit_i64_atomic_store
-    I32AtomicStore8 { memarg: MemoryArg } , //=> visit_i32_atomic_store8
-    I32AtomicStore16 { memarg: MemoryArg } , //=> visit_i32_atomic_store16
-    I64AtomicStore8 { memarg: MemoryArg } , //=> visit_i64_atomic_store8
-    I64AtomicStore16 { memarg: MemoryArg } , //=> visit_i64_atomic_store16
-    I64AtomicStore32 { memarg: MemoryArg } , //=> visit_i64_atomic_store32
-    I32AtomicRmwAdd { memarg: MemoryArg } , //=> visit_i32_atomic_rmw_add
-    I64AtomicRmwAdd { memarg: MemoryArg } , //=> visit_i64_atomic_rmw_add
-    I32AtomicRmw8AddU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw8_add_u
-    I32AtomicRmw16AddU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw16_add_u
-    I64AtomicRmw8AddU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw8_add_u
-    I64AtomicRmw16AddU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw16_add_u
-    I64AtomicRmw32AddU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw32_add_u
-    I32AtomicRmwSub { memarg: MemoryArg } , //=> visit_i32_atomic_rmw_sub
-    I64AtomicRmwSub { memarg: MemoryArg } , //=> visit_i64_atomic_rmw_sub
-    I32AtomicRmw8SubU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw8_sub_u
-    I32AtomicRmw16SubU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw16_sub_u
-    I64AtomicRmw8SubU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw8_sub_u
-    I64AtomicRmw16SubU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw16_sub_u
-    I64AtomicRmw32SubU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw32_sub_u
-    I32AtomicRmwAnd { memarg: MemoryArg } , //=> visit_i32_atomic_rmw_and
-    I64AtomicRmwAnd { memarg: MemoryArg } , //=> visit_i64_atomic_rmw_and
-    I32AtomicRmw8AndU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw8_and_u
-    I32AtomicRmw16AndU { memarg: MemoryArg } , //=> visit_i32_atomic_rmw16_and_u
-    I64AtomicRmw8AndU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw8_and_u
-    I64AtomicRmw16AndU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw16_and_u
-    I64AtomicRmw32AndU { memarg: MemoryArg } , //=> visit_i64_atomic_rmw32_and_u
-    I32AtomicRmwOr { memarg: MemoryArg }, // => visit_i32_atomic_rmw_or
-    I64AtomicRmwOr { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw_or
-    I32AtomicRmw8OrU { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw8_or_u
-    I32AtomicRmw16OrU { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw16_or_u
-    I64AtomicRmw8OrU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw8_or_u
-    I64AtomicRmw16OrU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw16_or_u
-    I64AtomicRmw32OrU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw32_or_u
-    I32AtomicRmwXor { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw_xor
-    I64AtomicRmwXor { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw_xor
-    I32AtomicRmw8XorU { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw8_xor_u
-    I32AtomicRmw16XorU { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw16_xor_u
-    I64AtomicRmw8XorU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw8_xor_u
-    I64AtomicRmw16XorU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw16_xor_u
-    I64AtomicRmw32XorU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw32_xor_u
-    I32AtomicRmwXchg { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw_xchg
-    I64AtomicRmwXchg { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw_xchg
-    I32AtomicRmw8XchgU { memarg: MemoryArg },// => visit_i32_atomic_rmw8_xchg_u
-    I32AtomicRmw16XchgU { memarg: MemoryArg },// => visit_i32_atomic_rmw16_xchg_u
-    I64AtomicRmw8XchgU { memarg: MemoryArg },// => visit_i64_atomic_rmw8_xchg_u
-    I64AtomicRmw16XchgU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw16_xchg_u
-    I64AtomicRmw32XchgU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw32_xchg_u
-    I32AtomicRmwCmpxchg { memarg: MemoryArg } ,//=> visit_i32_atomic_rmw_cmpxchg
-    I64AtomicRmwCmpxchg { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw_cmpxchg
-    I32AtomicRmw8CmpxchgU { memarg: MemoryArg },// => visit_i32_atomic_rmw8_cmpxchg_u
-    I32AtomicRmw16CmpxchgU { memarg: MemoryArg },// => visit_i32_atomic_rmw16_cmpxchg_u
-    I64AtomicRmw8CmpxchgU { memarg: MemoryArg },// => visit_i64_atomic_rmw8_cmpxchg_u
-    I64AtomicRmw16CmpxchgU { memarg: MemoryArg },// => visit_i64_atomic_rmw16_cmpxchg_u
-    I64AtomicRmw32CmpxchgU { memarg: MemoryArg } ,//=> visit_i64_atomic_rmw32_c
+    I32AtomicLoad {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_load
+    I64AtomicLoad {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_load
+    I32AtomicLoad8U {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_load8_u
+    I32AtomicLoad16U {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_load16_u
+    I64AtomicLoad8U {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_load8_u
+    I64AtomicLoad16U {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_load16_u
+    I64AtomicLoad32U {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_load32_u
+    I32AtomicStore {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_store
+    I64AtomicStore {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_store
+    I32AtomicStore8 {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_store8
+    I32AtomicStore16 {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_store16
+    I64AtomicStore8 {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_store8
+    I64AtomicStore16 {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_store16
+    I64AtomicStore32 {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_store32
+    I32AtomicRmwAdd {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_add
+    I64AtomicRmwAdd {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_add
+    I32AtomicRmw8AddU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw8_add_u
+    I32AtomicRmw16AddU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw16_add_u
+    I64AtomicRmw8AddU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw8_add_u
+    I64AtomicRmw16AddU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_add_u
+    I64AtomicRmw32AddU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_add_u
+    I32AtomicRmwSub {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_sub
+    I64AtomicRmwSub {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_sub
+    I32AtomicRmw8SubU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw8_sub_u
+    I32AtomicRmw16SubU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw16_sub_u
+    I64AtomicRmw8SubU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw8_sub_u
+    I64AtomicRmw16SubU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_sub_u
+    I64AtomicRmw32SubU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_sub_u
+    I32AtomicRmwAnd {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_and
+    I64AtomicRmwAnd {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_and
+    I32AtomicRmw8AndU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw8_and_u
+    I32AtomicRmw16AndU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw16_and_u
+    I64AtomicRmw8AndU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw8_and_u
+    I64AtomicRmw16AndU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_and_u
+    I64AtomicRmw32AndU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_and_u
+    I32AtomicRmwOr {
+        memarg: MemoryArg,
+    }, // => visit_i32_atomic_rmw_or
+    I64AtomicRmwOr {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_or
+    I32AtomicRmw8OrU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw8_or_u
+    I32AtomicRmw16OrU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw16_or_u
+    I64AtomicRmw8OrU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw8_or_u
+    I64AtomicRmw16OrU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_or_u
+    I64AtomicRmw32OrU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_or_u
+    I32AtomicRmwXor {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_xor
+    I64AtomicRmwXor {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_xor
+    I32AtomicRmw8XorU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw8_xor_u
+    I32AtomicRmw16XorU {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw16_xor_u
+    I64AtomicRmw8XorU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw8_xor_u
+    I64AtomicRmw16XorU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_xor_u
+    I64AtomicRmw32XorU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_xor_u
+    I32AtomicRmwXchg {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_xchg
+    I64AtomicRmwXchg {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_xchg
+    I32AtomicRmw8XchgU {
+        memarg: MemoryArg,
+    }, // => visit_i32_atomic_rmw8_xchg_u
+    I32AtomicRmw16XchgU {
+        memarg: MemoryArg,
+    }, // => visit_i32_atomic_rmw16_xchg_u
+    I64AtomicRmw8XchgU {
+        memarg: MemoryArg,
+    }, // => visit_i64_atomic_rmw8_xchg_u
+    I64AtomicRmw16XchgU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw16_xchg_u
+    I64AtomicRmw32XchgU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_xchg_u
+    I32AtomicRmwCmpxchg {
+        memarg: MemoryArg,
+    }, //=> visit_i32_atomic_rmw_cmpxchg
+    I64AtomicRmwCmpxchg {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw_cmpxchg
+    I32AtomicRmw8CmpxchgU {
+        memarg: MemoryArg,
+    }, // => visit_i32_atomic_rmw8_cmpxchg_u
+    I32AtomicRmw16CmpxchgU {
+        memarg: MemoryArg,
+    }, // => visit_i32_atomic_rmw16_cmpxchg_u
+    I64AtomicRmw8CmpxchgU {
+        memarg: MemoryArg,
+    }, // => visit_i64_atomic_rmw8_cmpxchg_u
+    I64AtomicRmw16CmpxchgU {
+        memarg: MemoryArg,
+    }, // => visit_i64_atomic_rmw16_cmpxchg_u
+    I64AtomicRmw32CmpxchgU {
+        memarg: MemoryArg,
+    }, //=> visit_i64_atomic_rmw32_c
 
-
-
-    StructNew{
-        sig: Signature
-    },
-    StructGet{
+    StructNew {
         sig: Signature,
-        idx: usize
     },
-    StructSet{
+    StructGet {
+        sig: Signature,
+        idx: usize,
+    },
+    StructSet {
         sig: Signature,
         idx: usize,
     },
 
-
+    ArrayNew {
+        sig: Signature,
+    },
+    ArrayNewFixed {
+        sig: Signature,
+        num: usize,
+    },
+    ArrayGet {
+        sig: Signature,
+    },
+    ArraySet {
+        sig: Signature,
+    },
+    ArrayFill {
+        sig: Signature,
+    },
+    ArrayCopy {
+        dest: Signature,
+        src: Signature,
+    },
 }
 
 #[test]
@@ -1400,17 +1548,43 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::RefNull { hty } => Ok(Operator::RefNull {
                 ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()),
             }),
-            &wasmparser::Operator:: MemoryAtomicNotify { memarg } => Ok(Operator::MemoryAtomicNotify { memarg: memarg.into() }),
-            &wasmparser::Operator:: MemoryAtomicWait32 { memarg } => Ok(Operator::MemoryAtomicWait32 { memarg: memarg.into() }),
-            &wasmparser::Operator:: MemoryAtomicWait64 { memarg } => Ok(Operator::MemoryAtomicWait64 { memarg: memarg.into() }),
-            &wasmparser::Operator:: AtomicFence => Ok(Operator::AtomicFence),
-            &wasmparser::Operator:: I32AtomicLoad { memarg } => Ok(Operator::I32AtomicLoad { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicLoad { memarg } => Ok(Operator::I64AtomicLoad { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicLoad8U { memarg } => Ok(Operator::I32AtomicLoad8U { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicLoad16U { memarg } => Ok(Operator::I32AtomicLoad16U { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicLoad8U { memarg } => Ok(Operator::I64AtomicLoad8U { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicLoad16U { memarg } => Ok(Operator::I64AtomicLoad16U { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicLoad32U { memarg } => Ok(Operator::I64AtomicLoad32U { memarg: memarg.into() }),
+            &wasmparser::Operator::MemoryAtomicNotify { memarg } => {
+                Ok(Operator::MemoryAtomicNotify {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::MemoryAtomicWait32 { memarg } => {
+                Ok(Operator::MemoryAtomicWait32 {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::MemoryAtomicWait64 { memarg } => {
+                Ok(Operator::MemoryAtomicWait64 {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::AtomicFence => Ok(Operator::AtomicFence),
+            &wasmparser::Operator::I32AtomicLoad { memarg } => Ok(Operator::I32AtomicLoad {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicLoad { memarg } => Ok(Operator::I64AtomicLoad {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicLoad8U { memarg } => Ok(Operator::I32AtomicLoad8U {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicLoad16U { memarg } => Ok(Operator::I32AtomicLoad16U {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicLoad8U { memarg } => Ok(Operator::I64AtomicLoad8U {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicLoad16U { memarg } => Ok(Operator::I64AtomicLoad16U {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicLoad32U { memarg } => Ok(Operator::I64AtomicLoad32U {
+                memarg: memarg.into(),
+            }),
             // &wasmparser::Operator:: I32AtomicStore { memarg } => visit_i32_atomic_store
             // &wasmparser::Operator:: I64AtomicStore { memarg } => visit_i64_atomic_store
             // &wasmparser::Operator:: I32AtomicStore8 { memarg } => visit_i32_atomic_store8
@@ -1418,13 +1592,27 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicStore8 { memarg } => visit_i64_atomic_store8
             // &wasmparser::Operator:: I64AtomicStore16 { memarg } => visit_i64_atomic_store16
             // &wasmparser::Operator:: I64AtomicStore32 { memarg } => visit_i64_atomic_store32
-            &wasmparser::Operator:: I32AtomicStore { memarg } => Ok(Operator::I32AtomicStore { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicStore { memarg } => Ok(Operator::I64AtomicStore { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicStore8 { memarg } => Ok(Operator::I32AtomicStore8 { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicStore16 { memarg } => Ok(Operator::I32AtomicStore16 { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicStore8 { memarg } => Ok(Operator::I64AtomicStore8 { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicStore16 { memarg } => Ok(Operator::I64AtomicStore16 { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicStore32 { memarg } => Ok(Operator::I64AtomicStore32 { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicStore { memarg } => Ok(Operator::I32AtomicStore {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicStore { memarg } => Ok(Operator::I64AtomicStore {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicStore8 { memarg } => Ok(Operator::I32AtomicStore8 {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicStore16 { memarg } => Ok(Operator::I32AtomicStore16 {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicStore8 { memarg } => Ok(Operator::I64AtomicStore8 {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicStore16 { memarg } => Ok(Operator::I64AtomicStore16 {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicStore32 { memarg } => Ok(Operator::I64AtomicStore32 {
+                memarg: memarg.into(),
+            }),
             // &wasmparser::Operator:: I32AtomicRmwAdd { memarg } => visit_i32_atomic_rmw_add
             // &wasmparser::Operator:: I64AtomicRmwAdd { memarg } => visit_i64_atomic_rmw_add
             // &wasmparser::Operator:: I32AtomicRmw8AddU { memarg } => visit_i32_atomic_rmw8_add_u
@@ -1432,13 +1620,37 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8AddU { memarg } => visit_i64_atomic_rmw8_add_u
             // &wasmparser::Operator:: I64AtomicRmw16AddU { memarg } => visit_i64_atomic_rmw16_add_u
             // &wasmparser::Operator:: I64AtomicRmw32AddU { memarg } => visit_i64_atomic_rmw32_add_u
-            &wasmparser::Operator:: I32AtomicRmwAdd { memarg } => Ok(Operator::I32AtomicRmwAdd { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwAdd { memarg } => Ok(Operator::I64AtomicRmwAdd { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8AddU { memarg } => Ok(Operator::I32AtomicRmw8AddU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16AddU { memarg } => Ok(Operator::I32AtomicRmw16AddU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8AddU { memarg } => Ok(Operator::I64AtomicRmw8AddU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16AddU { memarg } => Ok(Operator::I64AtomicRmw16AddU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32AddU { memarg } => Ok(Operator::I64AtomicRmw32AddU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwAdd { memarg } => Ok(Operator::I32AtomicRmwAdd {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwAdd { memarg } => Ok(Operator::I64AtomicRmwAdd {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8AddU { memarg } => {
+                Ok(Operator::I32AtomicRmw8AddU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16AddU { memarg } => {
+                Ok(Operator::I32AtomicRmw16AddU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8AddU { memarg } => {
+                Ok(Operator::I64AtomicRmw8AddU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16AddU { memarg } => {
+                Ok(Operator::I64AtomicRmw16AddU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32AddU { memarg } => {
+                Ok(Operator::I64AtomicRmw32AddU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwSub { memarg } => visit_i32_atomic_rmw_sub
             // &wasmparser::Operator:: I64AtomicRmwSub { memarg } => visit_i64_atomic_rmw_sub
             // &wasmparser::Operator:: I32AtomicRmw8SubU { memarg } => visit_i32_atomic_rmw8_sub_u
@@ -1446,13 +1658,37 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8SubU { memarg } => visit_i64_atomic_rmw8_sub_u
             // &wasmparser::Operator:: I64AtomicRmw16SubU { memarg } => visit_i64_atomic_rmw16_sub_u
             // &wasmparser::Operator:: I64AtomicRmw32SubU { memarg } => visit_i64_atomic_rmw32_sub_u
-            &wasmparser::Operator:: I32AtomicRmwSub { memarg } => Ok(Operator::I32AtomicRmwSub { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwSub { memarg } => Ok(Operator::I64AtomicRmwSub { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8SubU { memarg } => Ok(Operator::I32AtomicRmw8SubU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16SubU { memarg } => Ok(Operator::I32AtomicRmw16SubU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8SubU { memarg } => Ok(Operator::I64AtomicRmw8SubU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16SubU { memarg } => Ok(Operator::I64AtomicRmw16SubU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32SubU { memarg } => Ok(Operator::I64AtomicRmw32SubU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwSub { memarg } => Ok(Operator::I32AtomicRmwSub {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwSub { memarg } => Ok(Operator::I64AtomicRmwSub {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8SubU { memarg } => {
+                Ok(Operator::I32AtomicRmw8SubU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16SubU { memarg } => {
+                Ok(Operator::I32AtomicRmw16SubU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8SubU { memarg } => {
+                Ok(Operator::I64AtomicRmw8SubU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16SubU { memarg } => {
+                Ok(Operator::I64AtomicRmw16SubU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32SubU { memarg } => {
+                Ok(Operator::I64AtomicRmw32SubU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwAnd { memarg } => visit_i32_atomic_rmw_and
             // &wasmparser::Operator:: I64AtomicRmwAnd { memarg } => visit_i64_atomic_rmw_and
             // &wasmparser::Operator:: I32AtomicRmw8AndU { memarg } => visit_i32_atomic_rmw8_and_u
@@ -1460,13 +1696,37 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8AndU { memarg } => visit_i64_atomic_rmw8_and_u
             // &wasmparser::Operator:: I64AtomicRmw16AndU { memarg } => visit_i64_atomic_rmw16_and_u
             // &wasmparser::Operator:: I64AtomicRmw32AndU { memarg } => visit_i64_atomic_rmw32_and_u
-            &wasmparser::Operator:: I32AtomicRmwAnd { memarg } => Ok(Operator::I32AtomicRmwAnd { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwAnd { memarg } => Ok(Operator::I64AtomicRmwAnd { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8AndU { memarg } => Ok(Operator::I32AtomicRmw8AndU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16AndU { memarg } => Ok(Operator::I32AtomicRmw16AndU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8AndU { memarg } => Ok(Operator::I64AtomicRmw8AndU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16AndU { memarg } => Ok(Operator::I64AtomicRmw16AndU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32AndU { memarg } => Ok(Operator::I64AtomicRmw32AndU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwAnd { memarg } => Ok(Operator::I32AtomicRmwAnd {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwAnd { memarg } => Ok(Operator::I64AtomicRmwAnd {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8AndU { memarg } => {
+                Ok(Operator::I32AtomicRmw8AndU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16AndU { memarg } => {
+                Ok(Operator::I32AtomicRmw16AndU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8AndU { memarg } => {
+                Ok(Operator::I64AtomicRmw8AndU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16AndU { memarg } => {
+                Ok(Operator::I64AtomicRmw16AndU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32AndU { memarg } => {
+                Ok(Operator::I64AtomicRmw32AndU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwOr { memarg } => visit_i32_atomic_rmw_or
             // &wasmparser::Operator:: I64AtomicRmwOr { memarg } => visit_i64_atomic_rmw_or
             // &wasmparser::Operator:: I32AtomicRmw8OrU { memarg } => visit_i32_atomic_rmw8_or_u
@@ -1474,13 +1734,33 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8OrU { memarg } => visit_i64_atomic_rmw8_or_u
             // &wasmparser::Operator:: I64AtomicRmw16OrU { memarg } => visit_i64_atomic_rmw16_or_u
             // &wasmparser::Operator:: I64AtomicRmw32OrU { memarg } => visit_i64_atomic_rmw32_or_u
-            &wasmparser::Operator:: I32AtomicRmwOr { memarg } => Ok(Operator::I32AtomicRmwOr { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwOr { memarg } => Ok(Operator::I64AtomicRmwOr { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8OrU { memarg } => Ok(Operator::I32AtomicRmw8OrU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16OrU { memarg } => Ok(Operator::I32AtomicRmw16OrU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8OrU { memarg } => Ok(Operator::I64AtomicRmw8OrU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16OrU { memarg } => Ok(Operator::I64AtomicRmw16OrU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32OrU { memarg } => Ok(Operator::I64AtomicRmw32OrU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwOr { memarg } => Ok(Operator::I32AtomicRmwOr {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwOr { memarg } => Ok(Operator::I64AtomicRmwOr {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8OrU { memarg } => Ok(Operator::I32AtomicRmw8OrU {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw16OrU { memarg } => {
+                Ok(Operator::I32AtomicRmw16OrU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8OrU { memarg } => Ok(Operator::I64AtomicRmw8OrU {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmw16OrU { memarg } => {
+                Ok(Operator::I64AtomicRmw16OrU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32OrU { memarg } => {
+                Ok(Operator::I64AtomicRmw32OrU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwXor { memarg } => visit_i32_atomic_rmw_xor
             // &wasmparser::Operator:: I64AtomicRmwXor { memarg } => visit_i64_atomic_rmw_xor
             // &wasmparser::Operator:: I32AtomicRmw8XorU { memarg } => visit_i32_atomic_rmw8_xor_u
@@ -1488,13 +1768,37 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8XorU { memarg } => visit_i64_atomic_rmw8_xor_u
             // &wasmparser::Operator:: I64AtomicRmw16XorU { memarg } => visit_i64_atomic_rmw16_xor_u
             // &wasmparser::Operator:: I64AtomicRmw32XorU { memarg } => visit_i64_atomic_rmw32_xor_u
-            &wasmparser::Operator:: I32AtomicRmwXor { memarg } => Ok(Operator::I32AtomicRmwXor { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwXor { memarg } => Ok(Operator::I64AtomicRmwXor { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8XorU { memarg } => Ok(Operator::I32AtomicRmw8XorU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16XorU { memarg } => Ok(Operator::I32AtomicRmw16XorU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8XorU { memarg } => Ok(Operator::I64AtomicRmw8XorU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16XorU { memarg } => Ok(Operator::I64AtomicRmw16XorU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32XorU { memarg } => Ok(Operator::I64AtomicRmw32XorU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwXor { memarg } => Ok(Operator::I32AtomicRmwXor {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwXor { memarg } => Ok(Operator::I64AtomicRmwXor {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8XorU { memarg } => {
+                Ok(Operator::I32AtomicRmw8XorU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16XorU { memarg } => {
+                Ok(Operator::I32AtomicRmw16XorU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8XorU { memarg } => {
+                Ok(Operator::I64AtomicRmw8XorU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16XorU { memarg } => {
+                Ok(Operator::I64AtomicRmw16XorU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32XorU { memarg } => {
+                Ok(Operator::I64AtomicRmw32XorU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwXchg { memarg } => visit_i32_atomic_rmw_xchg
             // &wasmparser::Operator:: I64AtomicRmwXchg { memarg } => visit_i64_atomic_rmw_xchg
             // &wasmparser::Operator:: I32AtomicRmw8XchgU { memarg } => visit_i32_atomic_rmw8_xchg_u
@@ -1502,13 +1806,37 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8XchgU { memarg } => visit_i64_atomic_rmw8_xchg_u
             // &wasmparser::Operator:: I64AtomicRmw16XchgU { memarg } => visit_i64_atomic_rmw16_xchg_u
             // &wasmparser::Operator:: I64AtomicRmw32XchgU { memarg } => visit_i64_atomic_rmw32_xchg_u
-            &wasmparser::Operator:: I32AtomicRmwXchg { memarg } => Ok(Operator::I32AtomicRmwXchg { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwXchg { memarg } => Ok(Operator::I64AtomicRmwXchg { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8XchgU { memarg } => Ok(Operator::I32AtomicRmw8XchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16XchgU { memarg } => Ok(Operator::I32AtomicRmw16XchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8XchgU { memarg } => Ok(Operator::I64AtomicRmw8XchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16XchgU { memarg } => Ok(Operator::I64AtomicRmw16XchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32XchgU { memarg } => Ok(Operator::I64AtomicRmw32XchgU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwXchg { memarg } => Ok(Operator::I32AtomicRmwXchg {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I64AtomicRmwXchg { memarg } => Ok(Operator::I64AtomicRmwXchg {
+                memarg: memarg.into(),
+            }),
+            &wasmparser::Operator::I32AtomicRmw8XchgU { memarg } => {
+                Ok(Operator::I32AtomicRmw8XchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16XchgU { memarg } => {
+                Ok(Operator::I32AtomicRmw16XchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8XchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw8XchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16XchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw16XchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32XchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw32XchgU {
+                    memarg: memarg.into(),
+                })
+            }
             // &wasmparser::Operator:: I32AtomicRmwCmpxchg { memarg } => visit_i32_atomic_rmw_cmpxchg
             // &wasmparser::Operator:: I64AtomicRmwCmpxchg { memarg } => visit_i64_atomic_rmw_cmpxchg
             // &wasmparser::Operator:: I32AtomicRmw8CmpxchgU { memarg } => visit_i32_atomic_rmw8_cmpxchg_u
@@ -1516,17 +1844,85 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             // &wasmparser::Operator:: I64AtomicRmw8CmpxchgU { memarg } => visit_i64_atomic_rmw8_cmpxchg_u
             // &wasmparser::Operator:: I64AtomicRmw16CmpxchgU { memarg } => visit_i64_atomic_rmw16_cmpxchg_u
             // &wasmparser::Operator:: I64AtomicRmw32CmpxchgU { memarg } => visit_i64_atomic_rmw32_cmpxchg_u
-            &wasmparser::Operator:: I32AtomicRmwCmpxchg { memarg } => Ok(Operator::I32AtomicRmwCmpxchg { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmwCmpxchg { memarg } => Ok(Operator::I64AtomicRmwCmpxchg { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw8CmpxchgU { memarg } => Ok(Operator::I32AtomicRmw8CmpxchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I32AtomicRmw16CmpxchgU { memarg } => Ok(Operator::I32AtomicRmw16CmpxchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw8CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw8CmpxchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw16CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw16CmpxchgU { memarg: memarg.into() }),
-            &wasmparser::Operator:: I64AtomicRmw32CmpxchgU { memarg } => Ok(Operator::I64AtomicRmw32CmpxchgU { memarg: memarg.into() }),
+            &wasmparser::Operator::I32AtomicRmwCmpxchg { memarg } => {
+                Ok(Operator::I32AtomicRmwCmpxchg {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmwCmpxchg { memarg } => {
+                Ok(Operator::I64AtomicRmwCmpxchg {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw8CmpxchgU { memarg } => {
+                Ok(Operator::I32AtomicRmw8CmpxchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I32AtomicRmw16CmpxchgU { memarg } => {
+                Ok(Operator::I32AtomicRmw16CmpxchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw8CmpxchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw8CmpxchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw16CmpxchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw16CmpxchgU {
+                    memarg: memarg.into(),
+                })
+            }
+            &wasmparser::Operator::I64AtomicRmw32CmpxchgU { memarg } => {
+                Ok(Operator::I64AtomicRmw32CmpxchgU {
+                    memarg: memarg.into(),
+                })
+            }
 
-            &wasmparser::Operator::StructNew { struct_type_index } => Ok(Operator::StructNew { sig: Signature::new(struct_type_index as usize) }),
-            &wasmparser::Operator::StructGet { struct_type_index, field_index } => Ok(Operator::StructGet { sig: Signature::new(struct_type_index as usize), idx: field_index as usize }),
-            &wasmparser::Operator::StructSet { struct_type_index, field_index } => Ok(Operator::StructSet { sig: Signature::new(struct_type_index as usize), idx: field_index as usize }),
+            &wasmparser::Operator::StructNew { struct_type_index } => Ok(Operator::StructNew {
+                sig: Signature::new(struct_type_index as usize),
+            }),
+            &wasmparser::Operator::StructGet {
+                struct_type_index,
+                field_index,
+            } => Ok(Operator::StructGet {
+                sig: Signature::new(struct_type_index as usize),
+                idx: field_index as usize,
+            }),
+            &wasmparser::Operator::StructSet {
+                struct_type_index,
+                field_index,
+            } => Ok(Operator::StructSet {
+                sig: Signature::new(struct_type_index as usize),
+                idx: field_index as usize,
+            }),
+            &wasmparser::Operator::ArrayNew { array_type_index } => Ok(Operator::ArrayNew {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArrayNewFixed {
+                array_type_index,
+                array_size,
+            } => Ok(Operator::ArrayNewFixed {
+                sig: Signature::new(array_type_index as usize),
+                num: array_size as usize,
+            }),
+            &wasmparser::Operator::ArrayGet { array_type_index } => Ok(Operator::ArrayGet {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArraySet { array_type_index } => Ok(Operator::ArraySet {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArrayFill { array_type_index } => Ok(Operator::ArrayFill {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArrayCopy {
+                array_type_index_dst,
+                array_type_index_src,
+            } => Ok(Operator::ArrayCopy {
+                dest: Signature::new(array_type_index_dst as usize),
+                src: Signature::new(array_type_index_src as usize),
+            }),
             _ => Err(()),
         }
     }
@@ -1551,4 +1947,3 @@ impl std::convert::From<MemoryArg> for wasm_encoder::MemArg {
         }
     }
 }
-
