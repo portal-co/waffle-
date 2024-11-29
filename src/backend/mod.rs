@@ -1287,6 +1287,7 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::ArraySet { sig } => Some(wasm_encoder::Instruction::ArraySet(sig.index() as u32)),
             Operator::ArrayFill { sig } =>Some(wasm_encoder::Instruction::ArrayFill(sig.index() as u32)),
             Operator::ArrayCopy { dest, src } => Some(wasm_encoder::Instruction::ArrayCopy { array_type_index_dst: dest.index() as u32, array_type_index_src: src.index() as u32 }),
+            Operator::ArrayLen => Some(wasm_encoder::Instruction::ArrayLen),
         };
 
         if let Some(inst) = inst {

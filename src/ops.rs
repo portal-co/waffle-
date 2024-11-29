@@ -901,6 +901,7 @@ pub enum Operator {
         dest: Signature,
         src: Signature,
     },
+    ArrayLen,
 }
 
 #[test]
@@ -1923,6 +1924,7 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
                 dest: Signature::new(array_type_index_dst as usize),
                 src: Signature::new(array_type_index_src as usize),
             }),
+            &wasmparser::Operator::ArrayLen => Ok(Operator::ArrayLen),
             _ => Err(()),
         }
     }

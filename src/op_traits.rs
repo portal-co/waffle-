@@ -1150,44 +1150,68 @@ pub fn op_inputs(
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![
-                ty.value.clone().unpack(),
-                Type::I32
-            ]))
-        },
+            Ok(Cow::Owned(vec![ty.value.clone().unpack(), Type::I32]))
+        }
         &Operator::ArrayNewFixed { sig, num } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned((0..num).map(|a|ty.value.clone().unpack()).collect()))
-        },
+            Ok(Cow::Owned(
+                (0..num).map(|a| ty.value.clone().unpack()).collect(),
+            ))
+        }
         &Operator::ArrayGet { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true })]))
-        },
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            })]))
+        }
         &Operator::ArraySet { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true }),ty.value.clone().unpack()]))
-        },
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable {
+                    value: crate::HeapType::Sig { sig_index: sig },
+                    nullable: true,
+                }),
+                ty.value.clone().unpack(),
+            ]))
+        }
         &Operator::ArrayFill { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: true }),Type::I32,ty.value.clone().unpack(),Type::I32]))
-        },
-        &Operator::ArrayCopy { dest, src } => {
             Ok(Cow::Owned(vec![
-                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: dest }, nullable: true }),
+                Type::Heap(crate::WithNullable {
+                    value: crate::HeapType::Sig { sig_index: sig },
+                    nullable: true,
+                }),
                 Type::I32,
-                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: src }, nullable: true }),
-                Type::I32,
+                ty.value.clone().unpack(),
                 Type::I32,
             ]))
         }
+        &Operator::ArrayCopy { dest, src } => Ok(Cow::Owned(vec![
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: dest },
+                nullable: true,
+            }),
+            Type::I32,
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: src },
+                nullable: true,
+            }),
+            Type::I32,
+            Type::I32,
+        ])),
+        &Operator::ArrayLen => Ok(Cow::Borrowed(&[Type::Heap(crate::WithNullable {
+            value: crate::HeapType::Array,
+            nullable: true,
+        })])),
     }
 }
 
@@ -1791,39 +1815,40 @@ pub fn op_outputs(
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![
-                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: false })
-            ]))
-        },
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            })]))
+        }
         &Operator::ArrayNewFixed { sig, num } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![
-                Type::Heap(crate::WithNullable { value: crate::HeapType::Sig { sig_index: sig }, nullable: false })
-            ]))
-        },
+            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            })]))
+        }
         &Operator::ArrayGet { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![ty.value.clone().unpack()]))
-        },
+        }
         &Operator::ArraySet { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Borrowed(&[]))
-        },
+        }
         &Operator::ArrayFill { sig } => {
             let SignatureData::Array { ty } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Borrowed(&[]))
-        },
-        &Operator::ArrayCopy { dest, src } => {
-            Ok(Cow::Borrowed(&[]))
         }
+        &Operator::ArrayCopy { dest, src } => Ok(Cow::Borrowed(&[])),
+        Operator::ArrayLen => Ok(Cow::Borrowed(&[Type::I32]))
     }
 }
 
@@ -2384,9 +2409,9 @@ impl Operator {
             Operator::ArrayGet { sig } => &[ReadGlobal],
             Operator::ArraySet { sig } => &[WriteGlobal],
             Operator::ArrayFill { sig } => &[WriteGlobal],
-            Operator::ArrayCopy { dest, src } =>&[ReadGlobal,WriteGlobal],
+            Operator::ArrayCopy { dest, src } => &[ReadGlobal, WriteGlobal],
+            Operator::ArrayLen => &[ReadGlobal],
         }
-
     }
 
     /// Is the operator pure (has no side-effects)?
@@ -3153,33 +3178,16 @@ impl std::fmt::Display for Operator {
                 write!(f, "i32atomic_rmw32Cmpxchgu<{memarg}>")?
             } //=> visit_i64_atomic_rmw32_Cmpxchg_u
 
-            Operator::StructNew { sig } => {
-                write!(f,"struct_new<{sig}>")?
-            },
-            Operator::StructGet { sig, idx } => {
-                write!(f,"struct_get<{sig}@{idx}>")?
-            },
-            Operator::StructSet { sig, idx } => {
-                write!(f,"struct_set<{sig}@{idx}>")?
-            }, 
-            Operator::ArrayNew { sig } => {
-                write!(f,"array_new<{sig}>")?
-            },
-            Operator::ArrayNewFixed { sig, num } => {
-                write!(f,"array_new_fixed<{sig};{num}>")?
-            },
-            Operator::ArrayGet { sig } => {
-                write!(f,"array_get<{sig}>")?
-            },
-            Operator::ArraySet { sig } => {
-                write!(f,"array_set<{sig}>")?
-            }, 
-            Operator::ArrayFill { sig } => {
-                write!(f,"array_fill<{sig}>")?
-            }, 
-            Operator::ArrayCopy { dest, src } => {
-                write!(f,"array_copy<{dest}-{src}>")?
-            }
+            Operator::StructNew { sig } => write!(f, "struct_new<{sig}>")?,
+            Operator::StructGet { sig, idx } => write!(f, "struct_get<{sig}@{idx}>")?,
+            Operator::StructSet { sig, idx } => write!(f, "struct_set<{sig}@{idx}>")?,
+            Operator::ArrayNew { sig } => write!(f, "array_new<{sig}>")?,
+            Operator::ArrayNewFixed { sig, num } => write!(f, "array_new_fixed<{sig};{num}>")?,
+            Operator::ArrayGet { sig } => write!(f, "array_get<{sig}>")?,
+            Operator::ArraySet { sig } => write!(f, "array_set<{sig}>")?,
+            Operator::ArrayFill { sig } => write!(f, "array_fill<{sig}>")?,
+            Operator::ArrayCopy { dest, src } => write!(f, "array_copy<{dest}-{src}>")?,
+            Operator::ArrayLen => write!(f,"array_len")?,
         }
 
         Ok(())

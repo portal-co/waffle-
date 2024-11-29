@@ -136,6 +136,9 @@ impl Subtypes for HeapType {
             (HeapType::FuncRef, HeapType::Sig { sig_index }) => {
                 matches!(&module.signatures[*sig_index], SignatureData::Func { .. })
             }
+            (HeapType::Array, HeapType::Sig { sig_index }) => {
+                matches!(&module.signatures[*sig_index], SignatureData::Array { .. })
+            }
             _ => false,
         }
     }
@@ -185,6 +188,7 @@ pub enum HeapType {
     FuncRef,
     ExternRef,
     Sig { sig_index: Signature },
+    Array
 }
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -255,6 +259,12 @@ impl From<wasmparser::RefType> for WithNullable<HeapType> {
                 value: HeapType::ExternRef,
             };
         }
+        if ty.is_array_ref() {
+            return WithNullable {
+                nullable: ty.is_nullable(),
+                value: HeapType::Array,
+            };
+        }
         match ty.type_index() {
             Some(idx) => {
                 let nullable = ty.is_nullable();
@@ -297,6 +307,7 @@ impl std::fmt::Display for HeapType {
             HeapType::FuncRef => write!(f, "funcref"),
             HeapType::ExternRef => write!(f, "externref"),
             HeapType::Sig { sig_index } => write!(f, "sigref({})", sig_index),
+            HeapType::Array => write!(f,"arrayref"),
         }
     }
 }
@@ -336,6 +347,7 @@ impl From<WithNullable<HeapType>> for wasm_encoder::RefType {
                 nullable: ty.nullable,
                 heap_type: wasm_encoder::HeapType::Concrete(sig_index.0),
             },
+            HeapType::Array => wasm_encoder::RefType::ARRAYREF,
             _ => panic!("Cannot convert {:?} into reftype", ty),
         }
     }
