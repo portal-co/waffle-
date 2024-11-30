@@ -1212,6 +1212,8 @@ pub fn op_inputs(
             value: crate::HeapType::Array,
             nullable: true,
         })])),
+        &Operator::RefTest { ty } => Ok(Cow::Owned(vec![op_stack.context("in getting the op stack")?[0].0])),
+        &Operator::RefCast { ty }=> Ok(Cow::Owned(vec![op_stack.context("in getting the op stack")?[0].0])),
     }
 }
 
@@ -1848,7 +1850,9 @@ pub fn op_outputs(
             Ok(Cow::Borrowed(&[]))
         }
         &Operator::ArrayCopy { dest, src } => Ok(Cow::Borrowed(&[])),
-        Operator::ArrayLen => Ok(Cow::Borrowed(&[Type::I32]))
+        Operator::ArrayLen => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::RefTest { ty } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::RefCast { ty }=> Ok(Cow::Owned(vec![ty])),
     }
 }
 
@@ -2411,6 +2415,8 @@ impl Operator {
             Operator::ArrayFill { sig } => &[WriteGlobal],
             Operator::ArrayCopy { dest, src } => &[ReadGlobal, WriteGlobal],
             Operator::ArrayLen => &[ReadGlobal],
+            Operator::RefTest { ty } => &[],
+            Operator::RefCast { ty } => &[Trap],
         }
     }
 
@@ -3188,6 +3194,8 @@ impl std::fmt::Display for Operator {
             Operator::ArrayFill { sig } => write!(f, "array_fill<{sig}>")?,
             Operator::ArrayCopy { dest, src } => write!(f, "array_copy<{dest}-{src}>")?,
             Operator::ArrayLen => write!(f,"array_len")?,
+            Operator::RefTest { ty } => write!(f,"ref_test<{ty}>")?,
+            Operator::RefCast { ty } => write!(f,"ref_cast<{ty}>")?,
         }
 
         Ok(())

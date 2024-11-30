@@ -3,7 +3,7 @@
 use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
-use crate::{HeapType, Operator};
+use crate::{HeapType, Operator, WithNullable};
 use anyhow::Result;
 use rayon::prelude::*;
 use std::borrow::Cow;
@@ -1288,6 +1288,34 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::ArrayFill { sig } =>Some(wasm_encoder::Instruction::ArrayFill(sig.index() as u32)),
             Operator::ArrayCopy { dest, src } => Some(wasm_encoder::Instruction::ArrayCopy { array_type_index_dst: dest.index() as u32, array_type_index_src: src.index() as u32 }),
             Operator::ArrayLen => Some(wasm_encoder::Instruction::ArrayLen),
+            Operator::RefCast { ty } => Some(match ty{
+                Type::Heap(h) => if h.nullable{
+                    wasm_encoder::Instruction::RefCastNullable({
+                        let t: wasm_encoder::RefType = h.clone().into();
+                        t.heap_type
+                    })
+                }else{
+                    wasm_encoder::Instruction::RefCastNonNull({
+                        let t: wasm_encoder::RefType = h.clone().into();
+                        t.heap_type
+                    })
+                }
+                _ => todo!()
+            }),
+            Operator::RefTest { ty } => Some(match ty{
+                Type::Heap(h) => if h.nullable{
+                    wasm_encoder::Instruction::RefTestNullable({
+                        let t: wasm_encoder::RefType = h.clone().into();
+                        t.heap_type
+                    })
+                }else{
+                    wasm_encoder::Instruction::RefTestNonNull({
+                        let t: wasm_encoder::RefType = h.clone().into();
+                        t.heap_type
+                    })
+                }
+                _ => todo!()
+            })
         };
 
         if let Some(inst) = inst {
