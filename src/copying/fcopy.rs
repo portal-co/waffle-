@@ -348,16 +348,36 @@ pub fn clone_fn(
     }
     return Ok(FunCloneRes { all });
 }
+pub fn obf_fn_body(
+    m: &mut Module,
+    b: &mut FunctionBody,
+    obf: &mut impl Obfuscate,
+) -> anyhow::Result<()> {
+    // let s = m.funcs[f].sig();
+    // if let Some(b) = m.funcs[f].body() {
+    // let b = b.clone();
+    let s = new_sig(
+        m,
+        obf.sig(SignatureData::Func {
+            params: b.blocks[b.entry].params.iter().map(|a| a.0).collect(),
+            returns: b.rets.clone(),
+        })?,
+    );
+    let mut n = FunctionBody::new(&m, s);
+    let r = clone_fn(&mut n, &b, obf, m)?;
+    n.entry = *r.all.get(&b.entry).unwrap();
+    crate::td::fi(&mut n, m)?;
+    *b = n;
+    //     *m.funcs[f].body_mut().unwrap() = n;
+    // }
+    return Ok(());
+}
 pub fn obf_fn(m: &mut Module, f: Func, obf: &mut impl Obfuscate) -> anyhow::Result<()> {
-    let s = m.funcs[f].sig();
+    // let s = m.funcs[f].sig();
     if let Some(b) = m.funcs[f].body() {
-        let b = b.clone();
-        let s = new_sig(m, obf.sig(m.signatures[s].clone())?);
-        let mut n = FunctionBody::new(&m, s);
-        let r = clone_fn(&mut n, &b, obf, m)?;
-        n.entry = *r.all.get(&b.entry).unwrap();
-        crate::td::fi(&mut n, m)?;
-        *m.funcs[f].body_mut().unwrap() = n;
+        let mut b = b.clone();
+        obf_fn_body(m, &mut b, obf)?;
+        *m.funcs[f].body_mut().unwrap() = b;
     }
     return Ok(());
 }
