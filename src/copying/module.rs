@@ -75,7 +75,7 @@ pub struct State<I> {
     pub importmap: I,
     pub tables: BTreeSet<Table>,
     pub invasive: bool,
-    pub(crate) tm: crate::td::TM,
+    // pub(crate) tm: crate::td::TM,
 }
 
 impl<I> State<I> {
@@ -271,15 +271,15 @@ impl<
                 ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?)
             }
         };
-        if let Some((j, k)) = i.as_ref() {
-            crate::td::tm(
-                // &mut self.dest,
-                j.as_str(),
-                k.as_str(),
-                &mut c,
-                &mut *self,
-            )?;
-        };
+        // if let Some((j, k)) = i.as_ref() {
+        //     crate::td::tm(
+        //         // &mut self.dest,
+        //         j.as_str(),
+        //         k.as_str(),
+        //         &mut c,
+        //         &mut *self,
+        //     )?;
+        // };
         self.state.cache.insert(IKW(a.clone()), c.clone());
         if let Some(j) = i {
             self.dest.imports.push(crate::Import {
@@ -466,7 +466,7 @@ impl<
                 for x in b.type_pool.storage.iter_mut() {
                     self.translate_type(x)?;
                 }
-                crate::td::fi(b, &mut self.dest)?;
+                // crate::td::fi(b, &mut self.dest)?;
                 // (self.state.instrument)(&mut self.dest,b)?;
             }
             match &mut f {

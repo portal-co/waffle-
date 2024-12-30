@@ -366,7 +366,7 @@ pub fn obf_fn_body(
     let mut n = FunctionBody::new(&m, s);
     let r = clone_fn(&mut n, &b, obf, m)?;
     n.entry = *r.all.get(&b.entry).unwrap();
-    crate::td::fi(&mut n, m)?;
+    // crate::td::fi(&mut n, m)?;
     *b = n;
     //     *m.funcs[f].body_mut().unwrap() = n;
     // }
