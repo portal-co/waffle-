@@ -63,7 +63,7 @@ pub enum InterpResult {
 }
 
 /// A constant concrete value during interpretation.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum ConstVal {
     I32(u32),
     I64(u64),
