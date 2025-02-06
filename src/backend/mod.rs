@@ -1024,9 +1024,7 @@ impl<'a> WasmFuncBackend<'a> {
                 Some(wasm_encoder::Instruction::RefFunc(func_index.index() as u32))
             }
             Operator::RefNull { ty } => {
-                let Type::Heap(h) = ty else{
-                    todo!()
-                };
+                let Type::Heap(h) = ty else { todo!() };
                 let h: wasm_encoder::RefType = h.clone().into();
                 Some(wasm_encoder::Instruction::RefNull(h.heap_type))
             }
@@ -1278,44 +1276,72 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64AtomicRmw32CmpxchgU { memarg } => Some(
                 wasm_encoder::Instruction::I64AtomicRmw32CmpxchgU(memarg.clone().into()),
             ),
-            Operator::StructNew { sig } => Some(wasm_encoder::Instruction::StructNew(sig.index() as u32)),
-            Operator::StructGet { sig, idx } => Some(wasm_encoder::Instruction::StructGet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
-            Operator::StructSet { sig, idx } => Some(wasm_encoder::Instruction::StructSet { struct_type_index: sig.index() as u32, field_index: *idx as u32 }),
-            Operator::ArrayNew { sig } => Some(wasm_encoder::Instruction::ArrayNew(sig.index() as u32)),
-            Operator::ArrayNewFixed { sig, num } => Some(wasm_encoder::Instruction::ArrayNewFixed { array_type_index: sig.index() as u32, array_size: *num as u32 }),
-            Operator::ArrayGet { sig } => Some(wasm_encoder::Instruction::ArrayGet(sig.index() as u32)),
-            Operator::ArraySet { sig } => Some(wasm_encoder::Instruction::ArraySet(sig.index() as u32)),
-            Operator::ArrayFill { sig } =>Some(wasm_encoder::Instruction::ArrayFill(sig.index() as u32)),
-            Operator::ArrayCopy { dest, src } => Some(wasm_encoder::Instruction::ArrayCopy { array_type_index_dst: dest.index() as u32, array_type_index_src: src.index() as u32 }),
-            Operator::ArrayLen => Some(wasm_encoder::Instruction::ArrayLen),
-            Operator::RefCast { ty } => Some(match ty{
-                Type::Heap(h) => if h.nullable{
-                    wasm_encoder::Instruction::RefCastNullable({
-                        let t: wasm_encoder::RefType = h.clone().into();
-                        t.heap_type
-                    })
-                }else{
-                    wasm_encoder::Instruction::RefCastNonNull({
-                        let t: wasm_encoder::RefType = h.clone().into();
-                        t.heap_type
-                    })
-                }
-                _ => todo!()
+            Operator::StructNew { sig } => {
+                Some(wasm_encoder::Instruction::StructNew(sig.index() as u32))
+            }
+            Operator::StructGet { sig, idx } => Some(wasm_encoder::Instruction::StructGet {
+                struct_type_index: sig.index() as u32,
+                field_index: *idx as u32,
             }),
-            Operator::RefTest { ty } => Some(match ty{
-                Type::Heap(h) => if h.nullable{
-                    wasm_encoder::Instruction::RefTestNullable({
-                        let t: wasm_encoder::RefType = h.clone().into();
-                        t.heap_type
-                    })
-                }else{
-                    wasm_encoder::Instruction::RefTestNonNull({
-                        let t: wasm_encoder::RefType = h.clone().into();
-                        t.heap_type
-                    })
+            Operator::StructSet { sig, idx } => Some(wasm_encoder::Instruction::StructSet {
+                struct_type_index: sig.index() as u32,
+                field_index: *idx as u32,
+            }),
+            Operator::ArrayNew { sig } => {
+                Some(wasm_encoder::Instruction::ArrayNew(sig.index() as u32))
+            }
+            Operator::ArrayNewFixed { sig, num } => {
+                Some(wasm_encoder::Instruction::ArrayNewFixed {
+                    array_type_index: sig.index() as u32,
+                    array_size: *num as u32,
+                })
+            }
+            Operator::ArrayGet { sig } => {
+                Some(wasm_encoder::Instruction::ArrayGet(sig.index() as u32))
+            }
+            Operator::ArraySet { sig } => {
+                Some(wasm_encoder::Instruction::ArraySet(sig.index() as u32))
+            }
+            Operator::ArrayFill { sig } => {
+                Some(wasm_encoder::Instruction::ArrayFill(sig.index() as u32))
+            }
+            Operator::ArrayCopy { dest, src } => Some(wasm_encoder::Instruction::ArrayCopy {
+                array_type_index_dst: dest.index() as u32,
+                array_type_index_src: src.index() as u32,
+            }),
+            Operator::ArrayLen => Some(wasm_encoder::Instruction::ArrayLen),
+            Operator::RefCast { ty } => Some(match ty {
+                Type::Heap(h) => {
+                    if h.nullable {
+                        wasm_encoder::Instruction::RefCastNullable({
+                            let t: wasm_encoder::RefType = h.clone().into();
+                            t.heap_type
+                        })
+                    } else {
+                        wasm_encoder::Instruction::RefCastNonNull({
+                            let t: wasm_encoder::RefType = h.clone().into();
+                            t.heap_type
+                        })
+                    }
                 }
-                _ => todo!()
-            })
+                _ => todo!(),
+            }),
+            Operator::RefTest { ty } => Some(match ty {
+                Type::Heap(h) => {
+                    if h.nullable {
+                        wasm_encoder::Instruction::RefTestNullable({
+                            let t: wasm_encoder::RefType = h.clone().into();
+                            t.heap_type
+                        })
+                    } else {
+                        wasm_encoder::Instruction::RefTestNonNull({
+                            let t: wasm_encoder::RefType = h.clone().into();
+                            t.heap_type
+                        })
+                    }
+                }
+                _ => todo!(),
+            }),
         };
 
         if let Some(inst) = inst {
@@ -1375,9 +1401,9 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 num_table_imports += 1;
                 let table = &module.tables[table];
                 wasm_encoder::EntityType::Table(wasm_encoder::TableType {
-                    element_type: match table.ty{
+                    element_type: match table.ty {
                         Type::Heap(h) => h.into(),
-                        _ => todo!()
+                        _ => todo!(),
                     },
                     minimum: table
                         .func_elements
@@ -1439,9 +1465,9 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut tables = wasm_encoder::TableSection::new();
     for table_data in module.tables.values().skip(num_table_imports) {
         tables.table(wasm_encoder::TableType {
-            element_type: match table_data.ty{
+            element_type: match table_data.ty {
                 Type::Heap(h) => h.into(),
-                _ => todo!()
+                _ => todo!(),
             },
             minimum: table_data
                 .func_elements
@@ -1465,15 +1491,16 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         });
     }
     into_mod.section(&memories);
-
-    let mut tags = wasm_encoder::TagSection::new();
-    for tag_data in module.control_tags.values().skip(num_tag_imports) {
-        tags.tag(TagType {
-            kind: wasm_encoder::TagKind::Exception,
-            func_type_idx: tag_data.sig.index() as u32,
-        });
+    if module.control_tags.len() != 0 {
+        let mut tags = wasm_encoder::TagSection::new();
+        for tag_data in module.control_tags.values().skip(num_tag_imports) {
+            tags.tag(TagType {
+                kind: wasm_encoder::TagKind::Exception,
+                func_type_idx: tag_data.sig.index() as u32,
+            });
+        }
+        into_mod.section(&tags);
     }
-    into_mod.section(&tags);
 
     let mut globals = wasm_encoder::GlobalSection::new();
     for global_data in module.globals.values().skip(num_global_imports) {
@@ -1542,28 +1569,28 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         if let Some(elts) = &table_data.func_elements {
             for (i, &elt) in elts.iter().enumerate() {
                 if elt.is_valid() {
-                    if let Type::Heap(h) = &table_data.ty{
-                    match &h.value {
-                        HeapType::FuncRef => {
-                            elem.active(
-                                Some(table.index() as u32),
-                                &wasm_encoder::ConstExpr::i32_const(i as i32),
-                                wasm_encoder::Elements::Functions(&[elt.index() as u32]),
-                            );
+                    if let Type::Heap(h) = &table_data.ty {
+                        match &h.value {
+                            HeapType::FuncRef => {
+                                elem.active(
+                                    Some(table.index() as u32),
+                                    &wasm_encoder::ConstExpr::i32_const(i as i32),
+                                    wasm_encoder::Elements::Functions(&[elt.index() as u32]),
+                                );
+                            }
+                            HeapType::Sig { .. } => {
+                                elem.active(
+                                    Some(table.index() as u32),
+                                    &wasm_encoder::ConstExpr::i32_const(i as i32),
+                                    wasm_encoder::Elements::Expressions(
+                                        h.clone().into(),
+                                        &[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)],
+                                    ),
+                                );
+                            }
+                            _ => unreachable!(),
                         }
-                        HeapType::Sig{ .. } => {
-                            elem.active(
-                                Some(table.index() as u32),
-                                &wasm_encoder::ConstExpr::i32_const(i as i32),
-                                wasm_encoder::Elements::Expressions(
-                                    h.clone().into(),
-                                    &[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)],
-                                ),
-                            );
-                        }
-                        _ => unreachable!(),
                     }
-                }
                 }
             }
         }
