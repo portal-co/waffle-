@@ -7,11 +7,11 @@ use crate::{HeapType, Operator, WithNullable};
 use anyhow::Result;
 // use rayon::prelude::*;
 use alloc::borrow::Cow;
-use wasm_encoder::Encode;
-use wasm_encoder::{CustomSection, TagType};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use wasm_encoder::Encode;
+use wasm_encoder::{CustomSection, TagType};
 
 pub mod reducify;
 use reducify::Reducifier;
@@ -105,160 +105,158 @@ impl<'a> WasmFuncBackend<'a> {
         block: &WasmBlock<'_>,
         func: &mut wasm_encoder::Function,
     ) {
-        stacker::maybe_grow(32 * 1024, 1024 * 1024, move || {
-            match block {
-                WasmBlock::Block { body, .. } => {
-                    func.instruction(&wasm_encoder::Instruction::Block(
-                        wasm_encoder::BlockType::Empty,
-                    ));
-                    for sub_block in &body[..] {
+        match block {
+            WasmBlock::Block { body, .. } => {
+                func.instruction(&wasm_encoder::Instruction::Block(
+                    wasm_encoder::BlockType::Empty,
+                ));
+                for sub_block in &body[..] {
+                    self.lower_block(ctx, sub_block, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::End);
+            }
+            WasmBlock::Loop { body, .. } => {
+                func.instruction(&wasm_encoder::Instruction::Loop(
+                    wasm_encoder::BlockType::Empty,
+                ));
+                for sub_block in &body[..] {
+                    self.lower_block(ctx, sub_block, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::End);
+            }
+            WasmBlock::Br { target } => {
+                func.instruction(&wasm_encoder::Instruction::Br(target.index()));
+            }
+            WasmBlock::If {
+                cond,
+                if_true,
+                if_false,
+            } => {
+                self.lower_value(ctx, *cond, func);
+                func.instruction(&wasm_encoder::Instruction::If(
+                    wasm_encoder::BlockType::Empty,
+                ));
+                for sub_block in &if_true[..] {
+                    self.lower_block(ctx, sub_block, func);
+                }
+                if if_false.len() > 0 {
+                    func.instruction(&wasm_encoder::Instruction::Else);
+                    for sub_block in &if_false[..] {
                         self.lower_block(ctx, sub_block, func);
                     }
-                    func.instruction(&wasm_encoder::Instruction::End);
                 }
-                WasmBlock::Loop { body, .. } => {
-                    func.instruction(&wasm_encoder::Instruction::Loop(
-                        wasm_encoder::BlockType::Empty,
-                    ));
-                    for sub_block in &body[..] {
-                        self.lower_block(ctx, sub_block, func);
+                func.instruction(&wasm_encoder::Instruction::End);
+            }
+            WasmBlock::Select {
+                selector,
+                targets,
+                default,
+            } => {
+                self.lower_value(ctx, *selector, func);
+                func.instruction(&wasm_encoder::Instruction::BrTable(
+                    Cow::Owned(
+                        targets
+                            .iter()
+                            .map(|label| label.index())
+                            .collect::<Vec<_>>(),
+                    ),
+                    default.index(),
+                ));
+            }
+            WasmBlock::Leaf { block } => {
+                for &inst in &self.body.blocks[*block].insts {
+                    // If this value is "owned", do nothing: it will be lowered in
+                    // the one place it's used.
+                    if ctx.trees.owner.contains_key(&inst) || ctx.trees.remat.contains(&inst) {
+                        continue;
                     }
-                    func.instruction(&wasm_encoder::Instruction::End);
-                }
-                WasmBlock::Br { target } => {
-                    func.instruction(&wasm_encoder::Instruction::Br(target.index()));
-                }
-                WasmBlock::If {
-                    cond,
-                    if_true,
-                    if_false,
-                } => {
-                    self.lower_value(ctx, *cond, func);
-                    func.instruction(&wasm_encoder::Instruction::If(
-                        wasm_encoder::BlockType::Empty,
-                    ));
-                    for sub_block in &if_true[..] {
-                        self.lower_block(ctx, sub_block, func);
+                    if let &ValueDef::Operator(..) = &self.body.values[inst] {
+                        self.lower_inst(ctx, inst, /* root = */ true, func);
                     }
-                    if if_false.len() > 0 {
-                        func.instruction(&wasm_encoder::Instruction::Else);
-                        for sub_block in &if_false[..] {
-                            self.lower_block(ctx, sub_block, func);
-                        }
-                    }
-                    func.instruction(&wasm_encoder::Instruction::End);
-                }
-                WasmBlock::Select {
-                    selector,
-                    targets,
-                    default,
-                } => {
-                    self.lower_value(ctx, *selector, func);
-                    func.instruction(&wasm_encoder::Instruction::BrTable(
-                        Cow::Owned(
-                            targets
-                                .iter()
-                                .map(|label| label.index())
-                                .collect::<Vec<_>>(),
-                        ),
-                        default.index(),
-                    ));
-                }
-                WasmBlock::Leaf { block } => {
-                    for &inst in &self.body.blocks[*block].insts {
-                        // If this value is "owned", do nothing: it will be lowered in
-                        // the one place it's used.
-                        if ctx.trees.owner.contains_key(&inst) || ctx.trees.remat.contains(&inst) {
-                            continue;
-                        }
-                        if let &ValueDef::Operator(..) = &self.body.values[inst] {
-                            self.lower_inst(ctx, inst, /* root = */ true, func);
-                        }
-                    }
-                }
-                // WasmBlock::BlockParams { from, to } => {
-                //     debug_assert_eq!(from.len(), to.len());
-                //     for (&from, &(_, to)) in from.iter().zip(to.iter()) {
-                //         if self.locals.values[to].is_empty() {
-                //             continue;
-                //         }
-                //         self.lower_value(from, func);
-                //     }
-                //     for &(_, to) in to.iter().rev() {
-                //         if self.locals.values[to].is_empty() {
-                //             continue;
-                //         }
-                //         self.lower_set_value(to, func);
-                //     }
-                // }
-                WasmBlock::Return { values } => {
-                    for &value in &values[..] {
-                        self.lower_value(ctx, value, func);
-                    }
-                    func.instruction(&wasm_encoder::Instruction::Return);
-                }
-                WasmBlock::ReturnCall { func: f, values } => {
-                    for &value in &values[..] {
-                        self.lower_value(ctx, value, func);
-                    }
-                    func.instruction(&wasm_encoder::Instruction::ReturnCall(f.index() as u32));
-                }
-                WasmBlock::BlockParams { from, to, prefix } => {
-                    debug_assert_eq!(from.len() + *prefix, to.len());
-                    let mut iter = to.iter();
-                    for _ in 0..*prefix {
-                        let &(to_ty, to) = iter.next().unwrap();
-                        if ctx.locals.values[to].is_empty() {
-                            continue;
-                        }
-                        if ctx.locals.values[to].len() == 1 {
-                            assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
-                        }
-                        self.lower_set_value(ctx, to, func);
-                    }
-                    for (&from, &(to_ty, to)) in from.iter().zip(iter) {
-                        if ctx.locals.values[to].is_empty() {
-                            continue;
-                        }
-                        let from_ty = self.body.values[self.body.resolve_alias(from)]
-                            .ty(&self.body.type_pool)
-                            .unwrap();
-                        assert_eq!(from_ty, to_ty);
-                        if ctx.locals.values[from].len() == 1 {
-                            assert_eq!(from_ty, ctx.locals.locals[ctx.locals.values[from][0]]);
-                        }
-                        self.lower_value(ctx, from, func);
-                    }
-                    for &(to_ty, to) in to.iter().skip(*prefix).rev() {
-                        if ctx.locals.values[to].is_empty() {
-                            continue;
-                        }
-                        if ctx.locals.values[to].len() == 1 {
-                            assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
-                        }
-                        self.lower_set_value(ctx, to, func);
-                    }
-                }
-                WasmBlock::ReturnCallIndirect { sig, table, values } => {
-                    for &value in &values[..] {
-                        self.lower_value(ctx, value, func);
-                    }
-                    func.instruction(&wasm_encoder::Instruction::ReturnCallIndirect {
-                        type_index: sig.index() as u32,
-                        table_index: table.index() as u32,
-                    });
-                }
-                WasmBlock::ReturnCallRef { sig, values } => {
-                    for &value in &values[..] {
-                        self.lower_value(ctx, value, func);
-                    }
-                    func.instruction(&wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32));
-                }
-                WasmBlock::Unreachable => {
-                    func.instruction(&wasm_encoder::Instruction::Unreachable);
                 }
             }
-        })
+            // WasmBlock::BlockParams { from, to } => {
+            //     debug_assert_eq!(from.len(), to.len());
+            //     for (&from, &(_, to)) in from.iter().zip(to.iter()) {
+            //         if self.locals.values[to].is_empty() {
+            //             continue;
+            //         }
+            //         self.lower_value(from, func);
+            //     }
+            //     for &(_, to) in to.iter().rev() {
+            //         if self.locals.values[to].is_empty() {
+            //             continue;
+            //         }
+            //         self.lower_set_value(to, func);
+            //     }
+            // }
+            WasmBlock::Return { values } => {
+                for &value in &values[..] {
+                    self.lower_value(ctx, value, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::Return);
+            }
+            WasmBlock::ReturnCall { func: f, values } => {
+                for &value in &values[..] {
+                    self.lower_value(ctx, value, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::ReturnCall(f.index() as u32));
+            }
+            WasmBlock::BlockParams { from, to, prefix } => {
+                debug_assert_eq!(from.len() + *prefix, to.len());
+                let mut iter = to.iter();
+                for _ in 0..*prefix {
+                    let &(to_ty, to) = iter.next().unwrap();
+                    if ctx.locals.values[to].is_empty() {
+                        continue;
+                    }
+                    if ctx.locals.values[to].len() == 1 {
+                        assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
+                    }
+                    self.lower_set_value(ctx, to, func);
+                }
+                for (&from, &(to_ty, to)) in from.iter().zip(iter) {
+                    if ctx.locals.values[to].is_empty() {
+                        continue;
+                    }
+                    let from_ty = self.body.values[self.body.resolve_alias(from)]
+                        .ty(&self.body.type_pool)
+                        .unwrap();
+                    assert_eq!(from_ty, to_ty);
+                    if ctx.locals.values[from].len() == 1 {
+                        assert_eq!(from_ty, ctx.locals.locals[ctx.locals.values[from][0]]);
+                    }
+                    self.lower_value(ctx, from, func);
+                }
+                for &(to_ty, to) in to.iter().skip(*prefix).rev() {
+                    if ctx.locals.values[to].is_empty() {
+                        continue;
+                    }
+                    if ctx.locals.values[to].len() == 1 {
+                        assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
+                    }
+                    self.lower_set_value(ctx, to, func);
+                }
+            }
+            WasmBlock::ReturnCallIndirect { sig, table, values } => {
+                for &value in &values[..] {
+                    self.lower_value(ctx, value, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::ReturnCallIndirect {
+                    type_index: sig.index() as u32,
+                    table_index: table.index() as u32,
+                });
+            }
+            WasmBlock::ReturnCallRef { sig, values } => {
+                for &value in &values[..] {
+                    self.lower_value(ctx, value, func);
+                }
+                func.instruction(&wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32));
+            }
+            WasmBlock::Unreachable => {
+                func.instruction(&wasm_encoder::Instruction::Unreachable);
+            }
+        }
     }
 
     fn lower_value(
@@ -1580,7 +1578,9 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                                 elem.active(
                                     Some(table.index() as u32),
                                     &wasm_encoder::ConstExpr::i32_const(i as i32),
-                                    wasm_encoder::Elements::Functions(Cow::Borrowed(&[elt.index() as u32])),
+                                    wasm_encoder::Elements::Functions(Cow::Borrowed(&[
+                                        elt.index() as u32,
+                                    ])),
                                 );
                             }
                             HeapType::Sig { .. } => {
@@ -1589,7 +1589,9 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                                     &wasm_encoder::ConstExpr::i32_const(i as i32),
                                     wasm_encoder::Elements::Expressions(
                                         h.clone().into(),
-                                        Cow::Borrowed(&[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)]),
+                                        Cow::Borrowed(&[wasm_encoder::ConstExpr::ref_func(
+                                            elt.index() as u32,
+                                        )]),
                                     ),
                                 );
                             }
