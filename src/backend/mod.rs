@@ -5,7 +5,7 @@ use crate::entity::EntityRef;
 use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
 use crate::{HeapType, Operator, WithNullable};
 use anyhow::Result;
-use rayon::prelude::*;
+// use rayon::prelude::*;
 use alloc::borrow::Cow;
 use wasm_encoder::Encode;
 use wasm_encoder::{CustomSection, TagType};
@@ -1609,7 +1609,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         .entries()
         .skip(num_func_imports)
         .collect::<Vec<_>>()
-        .par_iter()
+        .iter()
         .map(|(func, func_decl)| -> Result<_> {
             match func_decl {
                 FuncDecl::Lazy(_, _name, reader) => {
