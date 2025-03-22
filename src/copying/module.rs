@@ -356,7 +356,7 @@ impl<
         }
     }
     pub fn internal_translate_func(&mut self, f: Func) -> anyhow::Result<Func> {
-        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || {
+        {
             if f == Func::invalid() {
                 return Ok(f);
             }
@@ -488,7 +488,7 @@ impl<
             }
             self.dest.funcs[a] = f;
             return Ok(a);
-        });
+        };
     }
     translator!(Memory);
     translator!(Table);
