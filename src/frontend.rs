@@ -9,10 +9,14 @@ use crate::op_traits::{op_inputs, op_outputs};
 use crate::ops::Operator;
 use addr2line::gimli;
 use anyhow::{bail, Result};
-use fxhash::{FxHashMap, FxHashSet};
+use hashbrown::{HashMap as FxHashMap,HashSet as  FxHashSet};
 use log::trace;
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 use wasmparser::{BlockType, DataKind, ExternalKind, KnownCustom, Name, Parser, Payload, TypeRef};
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 
 /// Options to control the Wasm-to-bytecode translation process.
 #[derive(Clone, Copy, Debug, Default)]
@@ -30,7 +34,7 @@ pub(crate) fn wasm_to_ir<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Resu
     let mut dwarf = gimli::Dwarf::default();
     let mut extra_sections = ExtraSections::default();
     for payload in parser.parse_all(bytes) {
-        let payload = payload?;
+        let payload = payload.map_err(|e|anyhow::Error::from(e))?;
         handle_payload(
             &mut module,
             payload,
@@ -430,7 +434,7 @@ impl<'a> DebugLocReader<'a> {
             .debug_map
             .tuples
             .binary_search_by(|&(start, len, _)| {
-                use std::cmp::Ordering::*;
+                use core::cmp::Ordering::*;
                 if start > func_address {
                     Greater
                 } else if (start + len) <= func_address {
@@ -590,7 +594,7 @@ impl LocalTracker {
         }
         log::trace!("finish_block: block {}", self.cur_block);
         if reachable {
-            let mapping = std::mem::take(&mut self.in_cur_block);
+            let mapping = core::mem::take(&mut self.in_cur_block);
             log::trace!(" -> mapping: {:?}", mapping);
             let old_mapping = self.block_end.insert(self.cur_block, mapping);
             assert!(

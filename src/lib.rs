@@ -13,6 +13,9 @@
 //! also be built from scratch with `Module::empty()`.
 
 #![allow(dead_code)]
+#![no_std]
+#[macro_use]
+extern crate alloc;
 
 // Re-export wasmparser for easier use of the right version by our embedders.
 pub use wasmparser;

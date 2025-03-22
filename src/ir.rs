@@ -1,6 +1,6 @@
 //! Intermediate representation for Wasm.
 
-use std::collections::BTreeSet;
+use alloc::collections::BTreeSet;
 
 use crate::{declare_entity, entity::EntityRef};
 
@@ -283,8 +283,8 @@ impl From<wasmparser::RefType> for WithNullable<HeapType> {
     }
 }
 
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Type {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Type::I32 => write!(f, "i32"),
             Type::I64 => write!(f, "i64"),
@@ -301,8 +301,8 @@ impl std::fmt::Display for Type {
     }
 }
 
-impl std::fmt::Display for HeapType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for HeapType {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             HeapType::FuncRef => write!(f, "funcref"),
             HeapType::ExternRef => write!(f, "externref"),

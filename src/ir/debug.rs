@@ -3,8 +3,12 @@
 use crate::declare_entity;
 use crate::entity::EntityVec;
 use addr2line::gimli;
-use std::collections::hash_map::Entry as HashEntry;
-use std::collections::HashMap;
+use alloc::borrow::ToOwned;
+use alloc::string::String;
+use hashbrown::hash_map::Entry as HashEntry;
+use hashbrown::HashMap;
+use alloc::vec::Vec;
+use alloc::vec;
 
 declare_entity!(SourceFile, "file");
 declare_entity!(SourceLoc, "loc");

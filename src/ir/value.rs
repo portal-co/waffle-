@@ -53,7 +53,7 @@ impl ValueDef {
             &ValueDef::Operator(_, _, tys) => &types[tys],
             &ValueDef::BlockParam(_, _, ref ty)
             | &ValueDef::PickOutput(_, _, ref ty)
-            | &ValueDef::Placeholder(ref ty) => std::slice::from_ref(ty),
+            | &ValueDef::Placeholder(ref ty) => core::slice::from_ref(ty),
             _ => &[],
         }
     }

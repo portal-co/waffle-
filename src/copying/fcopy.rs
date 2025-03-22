@@ -1,4 +1,6 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::String;
+use hashbrown::{HashMap};
 
 // use libc::key_t;
 
@@ -9,6 +11,8 @@ use crate::{
 };
 
 use crate::util::new_sig;
+use alloc::vec::Vec;
+use alloc::vec;
 pub trait Obfuscate {
     fn boot(&mut self, b: Block, f: &mut FunctionBody) -> anyhow::Result<Block> {
         return Ok(b);
@@ -208,7 +212,7 @@ pub fn clone_value_in(
         basis,
         f,
         |a| {
-            *a = match m.get(&a) {
+            *a = match m.get(a) {
                 None => {
                     // if basis.value_blocks[*a] == Block::invalid() {
                     //     *a = n;
@@ -284,7 +288,7 @@ pub fn clone_block(
         f,
         &mut d.terminator,
         |a| {
-            *a = match m.get(&a) {
+            *a = match m.get(a) {
                 None => a.clone(),
                 Some(b) => b.clone(),
             }

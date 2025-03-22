@@ -6,7 +6,7 @@ pub fn add_start(m: &mut Module, tf: Func) {
     };
     let s = new_sig(m, s);
     let mut f = FunctionBody::new(&m, s);
-    let vz = f.arg_pool.from_iter(std::iter::empty());
+    let vz = f.arg_pool.from_iter(core::iter::empty());
     let t = m.funcs[tf].sig();
     let SignatureData::Func { params, returns } = m.signatures[t].clone() else{
         todo!()

@@ -4,8 +4,10 @@
 use crate::entity::EntityRef;
 use crate::ir::{FunctionBody, Value, ValueDef};
 use crate::Operator;
-use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::convert::TryFrom;
+use hashbrown::{HashMap,HashSet};
+use core::convert::TryFrom;
+use alloc::vec::Vec;
+use alloc::vec;
 
 /// One "argument slot" of an operator defining a value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -39,7 +41,7 @@ impl Trees {
         let mut owner = HashMap::default();
         let mut owned = HashMap::default();
         let mut remat = HashSet::default();
-        let mut multi_use = HashSet::default();
+        let mut multi_use: HashSet<Value> = HashSet::default();
 
         for block_def in body.blocks.values() {
             let mut last_non_pure = None;

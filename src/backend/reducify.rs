@@ -150,10 +150,12 @@
 
 use crate::entity::EntityRef;
 use crate::{cfg::CFGInfo, cfg::RPOIndex, entity::PerEntity, Block, FunctionBody, Value, ValueDef};
-use fxhash::{FxHashMap, FxHashSet};
+use alloc::borrow::Cow;
+use alloc::collections::VecDeque;
+use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet, HashSet};
 use smallvec::SmallVec;
-use std::borrow::Cow;
-use std::collections::{HashSet, VecDeque};
+use alloc::vec::Vec;
+use alloc::vec;
 
 pub struct Reducifier<'a> {
     body: &'a FunctionBody,
@@ -444,6 +446,8 @@ impl<'a> Reducifier<'a> {
 
 #[cfg(test)]
 mod test {
+    use alloc::string::ToString;
+
     use super::*;
     use crate::{
         entity::EntityRef, BlockTarget, FuncDecl, Module, Operator, SignatureData, Terminator, Type,

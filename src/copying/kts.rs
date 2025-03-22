@@ -1,7 +1,9 @@
-use std::{collections::BTreeMap, default};
+use alloc::collections::BTreeMap;
+use core::default;
 
 use anyhow::Context;
-use arena_traits::IndexAlloc;
+use alloc::vec::Vec;
+use alloc::vec;
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, FunctionBody, Operator,
@@ -18,7 +20,7 @@ impl Kts {
         src: &FunctionBody,
         k: Block,
     ) -> anyhow::Result<Block> {
-        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
+        loop {
             if let Some(l) = self.blocks.get(&k) {
                 return Ok(*l);
             }
@@ -64,7 +66,7 @@ impl Kts {
                             .get(value)
                             .cloned()
                             .context("in getting the referenced value")?;
-                        let new_value = dst.values.alloc(ValueDef::PickOutput(value, *a, *b));
+                        let new_value = dst.values.push(ValueDef::PickOutput(value, *a, *b));
                         dst.append_to_block(new, new_value);
                         new_value
                     }
@@ -157,6 +159,6 @@ impl Kts {
                 crate::Terminator::None => crate::Terminator::None,
             };
             dst.set_terminator(new, t);
-        });
+        }
     }
 }

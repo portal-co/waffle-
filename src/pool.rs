@@ -15,10 +15,13 @@
 //! actual slice. This container is instantiated several times in the
 //! `FunctionBody`, namely for the `arg_pool` and `type_pool`.
 
-use std::convert::TryFrom;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
+use core::convert::TryFrom;
+use core::fmt::Debug;
+use core::marker::PhantomData;
+use core::ops::{Index, IndexMut};
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 /// A "storage pool" backing many `ListRef`s of the given type.
@@ -60,24 +63,24 @@ impl<T: Clone + Debug> ListPool<T> {
     }
     /// Convenience method: create a list from a single item.
     pub fn single(&mut self, value: T) -> ListRef<T> {
-        self.from_iter(std::iter::once(value))
+        self.from_iter(core::iter::once(value))
     }
     /// Convenience methodS: create a list from exactly two items.
     pub fn double(&mut self, a: T, b: T) -> ListRef<T> {
-        self.from_iter(std::iter::once(a).chain(std::iter::once(b)))
+        self.from_iter(core::iter::once(a).chain(core::iter::once(b)))
     }
     /// Convenience method: create a list from exactly three items.
     pub fn triple(&mut self, a: T, b: T, c: T) -> ListRef<T> {
         self.from_iter(
-            std::iter::once(a)
-                .chain(std::iter::once(b))
-                .chain(std::iter::once(c)),
+            core::iter::once(a)
+                .chain(core::iter::once(b))
+                .chain(core::iter::once(c)),
         )
     }
     /// Allocate a list of the given size with `size` copies of the
     /// value `initial`.
     pub fn allocate(&mut self, size: usize, initial: T) -> ListRef<T> {
-        self.from_iter(std::iter::repeat(initial).take(size))
+        self.from_iter(core::iter::repeat(initial).take(size))
     }
     /// Perform a deep-clone of a list: copy it to a new list and
     /// return the handle of that list.

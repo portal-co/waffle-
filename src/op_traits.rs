@@ -4,7 +4,10 @@ use crate::entity::EntityRef;
 use crate::ir::{Module, Type, Value};
 use crate::{MemoryArg, Operator, SignatureData};
 use anyhow::{Context, Result};
-use std::borrow::Cow;
+use alloc::borrow::Cow;
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// Given a module and an existing operand stack for context, provide
 /// the type(s) that a given operator requires as inputs.
@@ -2578,8 +2581,8 @@ impl Operator {
     }
 }
 
-impl std::fmt::Display for Operator {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Operator {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             &Operator::Unreachable => write!(f, "unreachable")?,
             &Operator::Nop => write!(f, "nop")?,

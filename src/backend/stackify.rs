@@ -13,8 +13,10 @@ use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{Block, BlockTarget, FunctionBody, Terminator, Type, Value};
 use crate::{Func, Signature, Table};
-use std::collections::HashSet;
-use std::convert::TryFrom;
+use hashbrown::HashSet;
+use core::convert::TryFrom;
+use alloc::vec::Vec;
+use alloc::vec;
 
 #[derive(Clone, Debug)]
 pub enum WasmBlock<'a> {
@@ -253,11 +255,11 @@ impl<'a, 'b> Context<'a, 'b> {
         let mut merge_node_children = self
             .cfg
             .dom_children(block)
-            .filter(|child| self.merge_nodes.contains(&child))
+            .filter(|child| self.merge_nodes.contains(child))
             .collect::<Vec<_>>();
         // Sort merge nodes so highest RPO number comes first.
         merge_node_children
-            .sort_unstable_by_key(|&block| std::cmp::Reverse(self.cfg.rpo_pos[block]));
+            .sort_unstable_by_key(|&block| core::cmp::Reverse(self.cfg.rpo_pos[block]));
 
         let is_loop_header = self.loop_headers.contains(&block);
 
@@ -361,7 +363,7 @@ impl<'a, 'b> Context<'a, 'b> {
         }];
 
         let mut extra = targets.len() + 1;
-        for target in targets.iter().chain(std::iter::once(default)) {
+        for target in targets.iter().chain(core::iter::once(default)) {
             extra -= 1;
             let outer_body = vec![
                 WasmBlock::Block {

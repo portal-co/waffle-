@@ -1,9 +1,13 @@
 use crate::util::{add_start, new_sig};
-use std::{collections::BTreeMap, iter::empty};
 use crate::{
     Block, ExportKind, Func, FuncDecl, FunctionBody, Import, ImportKind, Memory, MemoryArg,
     MemoryData, Module, Operator, Signature, SignatureData, Table, Type, Value, ValueDef,
 };
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::iter::empty;
 
 // use super::reload::{ImportedCfg, ImportedMemoriesToFunc};
 
@@ -109,7 +113,7 @@ pub fn metafuse_all(m: &mut Module, cfg: &mut impl Cfg) {
         let page_size_log2 = mem.1.page_size_log2;
         b.insert(
             mem.0,
-            std::mem::replace(
+            core::mem::replace(
                 mem.1,
                 MemoryData {
                     initial_pages: 0,
@@ -141,14 +145,14 @@ impl Cfg for All {
     }
 }
 
-pub struct ImportsOnly{}
-impl Cfg for ImportsOnly{
+pub struct ImportsOnly {}
+impl Cfg for ImportsOnly {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool {
         for i in module.imports.iter().map(|a| a.clone()).collect::<Vec<_>>() {
             // if self.cfg.do_lower(&i.module, &i.name) {
-                if i.kind == ImportKind::Memory(mem) {
-                    return true;
-                }
+            if i.kind == ImportKind::Memory(mem) {
+                return true;
+            }
             // }
         }
         false

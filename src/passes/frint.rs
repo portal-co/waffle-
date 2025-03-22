@@ -1,7 +1,11 @@
-use std::{collections::BTreeMap, default};
+use alloc::collections::BTreeMap;
+use core::default;
 
 use anyhow::Context;
 use arena_traits::IndexAlloc;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
@@ -22,7 +26,10 @@ impl Frint {
             .params
             .iter()
             .filter_map(|a| match &a.0 {
-                Type::Heap(WithNullable { value: HeapType::FuncRef | HeapType::Sig { .. }, .. }) => Some(None),
+                Type::Heap(WithNullable {
+                    value: HeapType::FuncRef | HeapType::Sig { .. },
+                    ..
+                }) => Some(None),
                 _ => None,
             })
             .collect();
@@ -35,7 +42,7 @@ impl Frint {
         k: Block,
         params: Vec<Option<Func>>,
     ) -> anyhow::Result<Block> {
-        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
+         loop {
             if let Some(l) = self.blocks.get(&(k, params.clone())) {
                 return Ok(*l);
             }
@@ -45,7 +52,10 @@ impl Frint {
                 .params
                 .iter()
                 .filter_map(|(k, v)| match k {
-                    Type::Heap(WithNullable { value: HeapType::FuncRef | HeapType::Sig { .. }, .. }) => match p.next()? {
+                    Type::Heap(WithNullable {
+                        value: HeapType::FuncRef | HeapType::Sig { .. },
+                        ..
+                    }) => match p.next()? {
                         Some(f) => Some((
                             *v,
                             dst.add_op(
@@ -210,6 +220,6 @@ impl Frint {
                 crate::Terminator::None => crate::Terminator::None,
             };
             dst.set_terminator(new, t);
-        });
+        }
     }
 }

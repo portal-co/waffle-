@@ -1,8 +1,5 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    default,
-    iter::once,
-};
+use alloc::collections::{BTreeMap, BTreeSet};
+use core::{default, iter::once};
 
 use anyhow::Context;
 use arena_traits::IndexAlloc;
@@ -12,6 +9,9 @@ use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, Block, BlockTarget, Func,
     FuncDecl, FunctionBody, Module, Operator, SignatureData, ValueDef,
 };
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::string::ToString;
 #[derive(Default)]
 pub struct Fts {
     pub blocks: BTreeMap<Block, Func>,
@@ -26,7 +26,7 @@ impl Fts {
         k: Block,
         stack: &BTreeSet<Block>,
     ) -> anyhow::Result<Block> {
-        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
+        loop {
             if let Some(k) = f.get(&k) {
                 return Ok(*k);
             }
@@ -184,7 +184,7 @@ impl Fts {
                 crate::Terminator::None => crate::Terminator::None,
             };
             dst.set_terminator(new, t);
-        });
+        }
     }
     pub fn translate(
         &mut self,
@@ -192,7 +192,8 @@ impl Fts {
         src: &FunctionBody,
         k: Block,
     ) -> anyhow::Result<Func> {
-        return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
+        // return stacker::maybe_grow(32 * 1024, 1024 * 1024, move || loop {
+        loop {
             if let Some(l) = self.blocks.get(&k) {
                 return Ok(*l);
             }
@@ -350,7 +351,7 @@ impl Fts {
             };
             dst.set_terminator(new, t);
             module.funcs[new_f] = FuncDecl::Body(s, k.to_string(), dst);
-        });
+        }
     }
 }
 pub fn run_once(f: &mut FunctionBody, module: &mut Module) -> anyhow::Result<()> {

@@ -5,10 +5,13 @@ use crate::ir::*;
 use crate::ops::Operator;
 use smallvec::{smallvec, SmallVec};
 
-use std::collections::HashMap;
-use std::sync::Arc;
+use hashbrown::HashMap;
+use alloc::sync::Arc;
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 
-mod wasi;
+// mod wasi;
 
 /// How large do we allow a Wasm memory to be when interpreting? Limit
 /// the size somewhat (apply an implementation limit) so we do not
@@ -1286,19 +1289,19 @@ pub(crate) fn read_u8(mem: &InterpMemory, addr: u32) -> u8 {
 }
 
 pub(crate) fn read_u16(mem: &InterpMemory, addr: u32) -> u16 {
-    use std::convert::TryInto;
+    use core::convert::TryInto;
     let addr = addr as usize;
     u16::from_le_bytes(mem.data[addr..(addr + 2)].try_into().unwrap())
 }
 
 pub(crate) fn read_u32(mem: &InterpMemory, addr: u32) -> u32 {
-    use std::convert::TryInto;
+    use core::convert::TryInto;
     let addr = addr as usize;
     u32::from_le_bytes(mem.data[addr..(addr + 4)].try_into().unwrap())
 }
 
 pub(crate) fn read_u64(mem: &InterpMemory, addr: u32) -> u64 {
-    use std::convert::TryInto;
+    use core::convert::TryInto;
     let addr = addr as usize;
     u64::from_le_bytes(mem.data[addr..(addr + 8)].try_into().unwrap())
 }

@@ -1,7 +1,8 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    mem::take,
-};
+use alloc::borrow::ToOwned;
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::mem::take;
 
 use anyhow::{Context, Ok};
 // use fcopy::obf_mod;

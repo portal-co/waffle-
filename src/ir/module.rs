@@ -1,13 +1,17 @@
-use std::collections::BTreeMap;
-use std::default;
-use std::iter::{empty, once};
+use alloc::collections::BTreeMap;
+use alloc::string::String;
+use core::default;
+use core::iter::{empty, once};
 
 use super::{
-    ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, StorageType, Table, Type, WithMutablility
+    ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, StorageType,
+    Table, Type, WithMutablility,
 };
 use crate::entity::{EntityRef, EntityVec};
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
+use alloc::vec;
+use alloc::vec::Vec;
 use anyhow::Result;
 use either::Either;
 use indexmap::IndexMap;
@@ -66,13 +70,13 @@ pub enum SignatureData {
         /// types as return values.
         returns: Vec<Type>,
     },
-    Struct{
+    Struct {
         ///The fields of the struct
-        fields: Vec<WithMutablility<StorageType>>
+        fields: Vec<WithMutablility<StorageType>>,
     },
-    Array{
+    Array {
         ///The element type
-        ty: WithMutablility<StorageType>
+        ty: WithMutablility<StorageType>,
     },
     #[default]
     None,
@@ -131,8 +135,8 @@ pub struct GlobalData {
 
 impl From<&wasmparser::SubType> for SignatureData {
     fn from(fty: &wasmparser::SubType) -> Self {
-        match &fty.composite_type {
-            wasmparser::CompositeType::Func(func_type) => Self::Func {
+        match &fty.composite_type.inner {
+            wasmparser::CompositeInnerType::Func(func_type) => Self::Func {
                 params: func_type
                     .params()
                     .iter()
@@ -144,8 +148,13 @@ impl From<&wasmparser::SubType> for SignatureData {
                     .map(|&ty| ty.into())
                     .collect::<Vec<Type>>(),
             },
-            wasmparser::CompositeType::Array(array_type) => Self::Array { ty: array_type.0.clone().into() },
-            wasmparser::CompositeType::Struct(struct_type) => Self::Struct { fields: struct_type.fields.iter().map(|&ty|ty.into()).collect() },
+            wasmparser::CompositeInnerType::Array(array_type) => Self::Array {
+                ty: array_type.0.clone().into(),
+            },
+            wasmparser::CompositeInnerType::Struct(struct_type) => Self::Struct {
+                fields: struct_type.fields.iter().map(|&ty| ty.into()).collect(),
+            },
+            _ => todo!(),
         }
     }
 }
@@ -161,21 +170,34 @@ impl From<&SignatureData> for wasm_encoder::SubType {
             SignatureData::Func { params, returns } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
-                composite_type: wasm_encoder::CompositeType::Func(wasm_encoder::FuncType::new(
-                    params.iter().cloned().map(|a| a.into()),
-                    returns.iter().cloned().map(|a| a.into()),
-                )),
+                composite_type: wasm_encoder::CompositeType {
+                    inner: wasm_encoder::CompositeInnerType::Func(wasm_encoder::FuncType::new(
+                        params.iter().cloned().map(|a| a.into()),
+                        returns.iter().cloned().map(|a| a.into()),
+                    )),
+                    shared: false,
+                },
             },
             SignatureData::None => todo!(),
             SignatureData::Struct { fields } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
-                composite_type: wasm_encoder::CompositeType::Struct(wasm_encoder::StructType { fields: fields.iter().cloned().map(|a|a.into()).collect() }),
+                composite_type: wasm_encoder::CompositeType {
+                    inner: wasm_encoder::CompositeInnerType::Struct(wasm_encoder::StructType {
+                        fields: fields.iter().cloned().map(|a| a.into()).collect(),
+                    }),
+                    shared: false,
+                },
             },
             SignatureData::Array { ty } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
-                composite_type: wasm_encoder::CompositeType::Array(wasm_encoder::ArrayType(ty.clone().into())),
+                composite_type: wasm_encoder::CompositeType {
+                    inner: wasm_encoder::CompositeInnerType::Array(wasm_encoder::ArrayType(
+                        ty.clone().into(),
+                    )),
+                    shared: false,
+                },
             },
         }
     }
@@ -231,8 +253,8 @@ pub enum ImportKind {
     ControlTag(ControlTag),
 }
 
-impl std::fmt::Display for ImportKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for ImportKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             ImportKind::Table(table) => write!(f, "{}", table)?,
             ImportKind::Func(func) => write!(f, "{}", func)?,
@@ -266,8 +288,8 @@ pub enum ExportKind {
     ControlTag(ControlTag),
 }
 
-impl std::fmt::Display for ExportKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for ExportKind {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             ExportKind::Table(table) => write!(f, "{}", table)?,
             ExportKind::Func(func) => write!(f, "{}", func)?,
@@ -388,7 +410,7 @@ impl<'a> Module<'a> {
 
     pub fn take_per_func_body<F: FnMut(&mut Self, &mut FunctionBody)>(&mut self, mut f: F) {
         for func_decl in self.funcs.iter().collect::<Vec<_>>() {
-            let mut x = std::mem::take(&mut self.funcs[func_decl]);
+            let mut x = core::mem::take(&mut self.funcs[func_decl]);
             if let Some(body) = x.body_mut() {
                 f(self, body);
             }
@@ -413,7 +435,7 @@ impl<'a> Module<'a> {
         mut f: F,
     ) -> Result<(), E> {
         for func_decl in self.funcs.iter().collect::<Vec<_>>() {
-            let mut x = std::mem::take(&mut self.funcs[func_decl]);
+            let mut x = core::mem::take(&mut self.funcs[func_decl]);
             let mut y = None;
             if let Some(body) = x.body_mut() {
                 y = Some(f(self, body));

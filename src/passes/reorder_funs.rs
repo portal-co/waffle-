@@ -1,6 +1,8 @@
-use std::collections::BTreeMap;
-use std::convert::Infallible;
-
+use alloc::collections::BTreeMap;
+use core::convert::Infallible;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 use crate::{
     entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, ImportKind, Memory, Module,
     Operator, Terminator, ValueDef,

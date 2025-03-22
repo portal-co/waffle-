@@ -7,12 +7,16 @@ use crate::ir::SourceLoc;
 use crate::passes::basic_opt::OptOptions;
 use crate::pool::{ListPool, ListRef};
 use crate::{Func, Operator, Table};
+use alloc::string::String;
 use anyhow::Result;
 use either::Either;
-use fxhash::FxHashMap;
+use hashbrown::{HashMap as FxHashMap};
 use ssa_traits::{Term, Val};
-use std::collections::HashSet;
-use std::iter::{empty, once};
+use hashbrown::HashSet;
+use core::iter::{empty, once};
+use alloc::vec::Vec;
+use alloc::vec;
+use alloc::borrow::ToOwned;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 ///
@@ -639,8 +643,8 @@ pub struct BlockTarget {
     pub args: Vec<Value>,
 }
 
-impl std::fmt::Display for BlockTarget {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for BlockTarget {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let args = self
             .args
             .iter()
@@ -685,14 +689,14 @@ pub enum Terminator {
     None,
 }
 
-impl std::default::Default for Terminator {
+impl core::default::Default for Terminator {
     fn default() -> Self {
         Terminator::None
     }
 }
 
-impl std::fmt::Display for Terminator {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for Terminator {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             Terminator::None => write!(f, "no_terminator")?,
             Terminator::Br { target } => write!(f, "br {}", target)?,

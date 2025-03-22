@@ -7,8 +7,12 @@ use either::Either;
 use lending_iterator::prelude::*;
 use ssa_traits::Val;
 use ssa_traits_03 as ssa_traits;
-use std::iter::{empty, once};
-use std::ops::{Deref, DerefMut};
+use core::iter::{empty, once};
+use core::ops::{Deref, DerefMut};
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 
 impl cfg_traits::Func for FunctionBody {
     type Block = Block;
@@ -129,7 +133,7 @@ impl ssa_traits::op::OpValue<FunctionBody, Operator> for ValueDef {
     fn disasm(
         self,
         f: &mut FunctionBody,
-    ) -> std::result::Result<(Operator, Self::Capture, Self::Spit), Self::Residue> {
+    ) -> core::result::Result<(Operator, Self::Capture, Self::Spit), Self::Residue> {
         match self {
             ValueDef::Operator(a, b, c) => Ok((a, b, f.type_pool[c].to_owned())),
             s => Err(s),
@@ -154,7 +158,7 @@ impl ssa_traits::op::OpValue<FunctionBody, u32> for ValueDef {
     fn disasm(
         self,
         f: &mut FunctionBody,
-    ) -> std::result::Result<(u32, Self::Capture, Self::Spit), Self::Residue> {
+    ) -> core::result::Result<(u32, Self::Capture, Self::Spit), Self::Residue> {
         match self {
             ValueDef::PickOutput(a, b, c) => Ok((b, Val(a), c)),
             s => Err(s),
@@ -224,20 +228,20 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for BlockTarget {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        Box::new(std::iter::once(self))
+        Box::new(core::iter::once(self))
     }
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
+    ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
-        Box::new(std::iter::once(self))
+        Box::new(core::iter::once(self))
     }
 }
 impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
@@ -262,7 +266,7 @@ impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for Terminator {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> Box<(dyn std::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
@@ -289,7 +293,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn std::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
+    ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {

@@ -5,9 +5,12 @@ use crate::backend::treeify::Trees;
 use crate::cfg::CFGInfo;
 use crate::entity::{EntityVec, PerEntity};
 use crate::ir::{Block, FunctionBody, Local, Type, Value, ValueDef};
+use alloc::collections::BTreeMap;
+use hashbrown::{HashMap, HashSet};
 use smallvec::{smallvec, SmallVec};
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::ops::Range;
+use core::ops::Range;
+use alloc::vec::Vec;
+use alloc::vec;
 
 #[derive(Clone, Debug, Default)]
 pub struct Localifier {
@@ -204,8 +207,8 @@ impl<'a> Context<'a> {
                     *self.point..(*self.point + 1)
                 };
                 let existing_range = self.ranges.entry(value).or_insert(range.clone());
-                existing_range.start = std::cmp::min(existing_range.start, range.start);
-                existing_range.end = std::cmp::max(existing_range.end, range.end);
+                existing_range.start = core::cmp::min(existing_range.start, range.start);
+                existing_range.end = core::cmp::max(existing_range.end, range.end);
             }
         }
 
@@ -237,7 +240,7 @@ impl<'a> Context<'a> {
 
     fn allocate(&mut self) {
         // Sort values by ranges' starting points, then value to break ties.
-        let mut ranges: Vec<(Value, std::ops::Range<usize>)> =
+        let mut ranges: Vec<(Value, core::ops::Range<usize>)> =
             self.ranges.iter().map(|(k, v)| (*k, v.clone())).collect();
         ranges.sort_unstable_by_key(|(val, range)| (range.start, *val));
 

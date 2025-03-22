@@ -2,18 +2,18 @@
 name = "portal-pc-waffle"
 version = "0.3.8"
 description = "Wasm Analysis Framework For Lightweight Experiments"
-authors = ["Chris Fallin <chris@cfallin.org>"]
+authors = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
 license = "Apache-2.0 WITH LLVM-exception"
 edition = "2018"
 
 [dependencies]
-wasmparser = "0.212"
-wasm-encoder = "0.212"
-anyhow = "1.0"
+wasmparser = { version = "0.227", default-features = false, features = ["simd"] }
+wasm-encoder = { version = "0.227", default-features = false }
+anyhow = { version = "^1.0", default-features = false }
 structopt = "0.3"
 log = "0.4"
 env_logger = "0.11"
-fxhash = "0.2"
+
 smallvec = "1.13"
 rayon = "1.10"
 lazy_static = "1.4"
@@ -22,8 +22,8 @@ addr2line = "0.21"
 
 # For fuzzing only. Versions must match those in fuzz/Cargo.toml.
 libfuzzer-sys = { version = "0.4", optional = true }
-indexmap = "2.2.2"
-stacker = "0.1.15"
+indexmap = { version = "2.2.2", default-features = false }
+stacker = { version = "0.1.15", optional = true }
 wasm-smith = { version = "0.202", optional = true }
 paste = "1.0.15"
 serde = { version = "1.0.204", features = ["derive"] }
@@ -37,6 +37,7 @@ cfg-traits = "0.2.0"
 cfg-traits-03 = {version="0.3.0-alpha.0",package="cfg-traits"}
 ssa-traits-03 = {version="0.3.0-alpha.0",package="ssa-traits"}
 lending-iterator = "0.1.7"
+hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
 
 [dev-dependencies]
 wat = "1.212.0"
@@ -44,6 +45,7 @@ wat = "1.212.0"
 [features]
 default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
+stacker = ["dep:stacker"]
 
 [lib]
 name = "waffle"

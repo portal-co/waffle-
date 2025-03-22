@@ -1,18 +1,24 @@
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
 use crate::{HeapType, StorageType, WithNullable};
+use alloc::boxed::Box;
+use alloc::string::String;
 use anyhow::Context;
 use arena_traits::IndexAlloc;
 use paste::paste;
-use std::mem::{replace, take};
-use std::{
-    backtrace,
-    borrow::Cow,
-    collections::{BTreeMap, BTreeSet, HashMap},
+use core::mem::{replace, take};
+use alloc::
+    // backtrace,
+    collections::{BTreeMap, BTreeSet}
+;
+use hashbrown::HashMap;
+use core::{
     hash::Hash,
     iter::empty,
     ops::{Deref, DerefMut},
 };
+use alloc::vec::Vec;
+use alloc::vec;
 pub fn x2i(x: ExportKind) -> ImportKind {
     match x {
         ExportKind::Table(a) => ImportKind::Table(a),
@@ -41,7 +47,7 @@ use super::kts::Kts;
 #[derive(Eq, PartialEq, Clone)]
 pub struct IKW(pub ImportKind);
 impl Hash for IKW {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         match &self.0 {
             ImportKind::Table(a) => {
                 state.write_usize(0);

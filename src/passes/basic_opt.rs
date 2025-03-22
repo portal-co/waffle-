@@ -8,6 +8,9 @@ use crate::pool::ListRef;
 use crate::scoped_map::ScopedMap;
 use crate::Operator;
 use smallvec::{smallvec, SmallVec};
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::borrow::ToOwned;
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct OptOptions {
@@ -17,7 +20,7 @@ pub struct OptOptions {
     pub inline_refs: bool,
 }
 
-impl std::default::Default for OptOptions {
+impl core::default::Default for OptOptions {
     fn default() -> Self {
         OptOptions {
             gvn: true,

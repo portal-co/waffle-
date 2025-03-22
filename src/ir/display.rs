@@ -2,8 +2,11 @@
 
 use super::{FuncDecl, FunctionBody, Module, SourceLoc, ValueDef};
 use crate::entity::EntityRef;
-use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use hashbrown::HashMap;
+use core::fmt::{Display, Formatter, Result as FmtResult};
+use alloc::vec::Vec;
+use alloc::vec;
+use alloc::borrow::ToOwned;
 
 /// A wrapper around a `FunctionBody` together with some auxiliary
 /// information to perform a pretty-print of that function.
@@ -254,7 +257,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                         func,
                         name,
                         sig,
-                        sig_strs.get(&sig).unwrap()
+                        sig_strs.get(sig).unwrap()
                     )?;
                     writeln!(f, "{}", body.display("    ", Some(self.module)))?;
                 }
@@ -265,7 +268,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                         func,
                         name,
                         sig,
-                        sig_strs.get(&sig).unwrap()
+                        sig_strs.get(sig).unwrap()
                     )?;
                     writeln!(f, "  # raw bytes (length {})", reader.range().len())?;
                 }
@@ -276,7 +279,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                         func,
                         name,
                         sig,
-                        sig_strs.get(&sig).unwrap()
+                        sig_strs.get(sig).unwrap()
                     )?;
                     writeln!(f, "  # already compiled")?;
                 }
@@ -287,7 +290,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                         func,
                         name,
                         sig,
-                        sig_strs.get(&sig).unwrap()
+                        sig_strs.get(sig).unwrap()
                     )?;
                 }
                 FuncDecl::None => {

@@ -1,4 +1,11 @@
-use std::{collections::BTreeMap, convert::Infallible, iter::{empty, once}};
+use alloc::borrow::ToOwned;
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::{collections::BTreeMap, string::String};
+use core::{
+    convert::Infallible,
+    iter::{empty, once},
+};
 
 use anyhow::Context;
 // use libc::name_t;
@@ -118,28 +125,30 @@ impl Fuse {
         for k in f.blocks.iter().collect::<Vec<_>>() {
             // eprintln!("dbg: {v}");
             // let k = f.value_blocks[v];
-            for v in std::mem::take(&mut f.blocks[k].insts) {
+            for v in core::mem::take(&mut f.blocks[k].insts) {
                 let mut w = f.values[v].clone();
                 // let vi = v;
                 if let ValueDef::Operator(a, b, c) = &mut w {
                     let mut bp = f.arg_pool[*b].to_vec();
                     fn g(
-                        a: impl for<'a> FnMut(&mut Module,&mut FunctionBody, Memory, &'a mut crate::Value),
-                    ) -> impl for<'a> FnMut(&mut Module,&mut FunctionBody, Memory, &'a mut crate::Value)
+                        a: impl for<'a> FnMut(
+                            &mut Module,
+                            &mut FunctionBody,
+                            Memory,
+                            &'a mut crate::Value,
+                        ),
+                    ) -> impl for<'a> FnMut(&mut Module, &mut FunctionBody, Memory, &'a mut crate::Value)
                     {
                         return a;
                     }
-                    let mut p = g(|m: &mut Module,f, mem, v| {
+                    let mut p = g(|m: &mut Module, f, mem, v| {
                         match (m.memories[mem].memory64, m.memories[self.target].memory64) {
                             (true, true) => {}
                             (true, false) => {
                                 let ti = f.type_pool.from_iter(once(Type::I32));
                                 let w = f.arg_pool.from_iter(vec![*v].into_iter());
-                                let x = f.add_value(ValueDef::Operator(
-                                    Operator::I32WrapI64,
-                                    w,
-                                    ti,
-                                ));
+                                let x =
+                                    f.add_value(ValueDef::Operator(Operator::I32WrapI64, w, ti));
                                 f.append_to_block(k, x);
                                 // crate::append_before(f, x, vi, k);
                                 *v = x;
@@ -147,15 +156,12 @@ impl Fuse {
                             (false, true) => {
                                 let ti = f.type_pool.from_iter(once(Type::I64));
                                 let w = f.arg_pool.from_iter(vec![*v].into_iter());
-                                let x = f.add_value(ValueDef::Operator(
-                                    Operator::I64ExtendI32U,
-                                    w,
-                                    ti,
-                                ));
+                                let x =
+                                    f.add_value(ValueDef::Operator(Operator::I64ExtendI32U, w, ti));
                                 f.append_to_block(k, x);
                                 // crate::append_before(f, x, vi, k);
                                 *v = x;
-                            },
+                            }
                             (false, false) => {}
                         }
                     });
@@ -175,7 +181,7 @@ impl Fuse {
                                     function_index: self.size,
                                 };
                                 bp.push(ia);
-                                p(m,f, mem, &mut bp[0]);
+                                p(m, f, mem, &mut bp[0]);
                             }
                         }
                         Operator::MemoryGrow { mem } => {
@@ -193,7 +199,7 @@ impl Fuse {
                                     function_index: self.grow,
                                 };
                                 bp.push(ia);
-                                p(m, f,mem, &mut bp[0]);
+                                p(m, f, mem, &mut bp[0]);
                             }
                         }
                         _ => crate::op_traits::rewrite_mem(a, &mut bp, |mem, v| {
@@ -208,7 +214,7 @@ impl Fuse {
                                 f.append_to_block(k, ia);
                                 // append_before(f, ia, vi, k);
                                 if let Some(v) = v {
-                                    p(m,f, *mem, &mut *v);
+                                    p(m, f, *mem, &mut *v);
                                     let w = f.arg_pool.from_iter(vec![*v, ia].into_iter());
                                     let x = f.add_value(ValueDef::Operator(
                                         Operator::Call {

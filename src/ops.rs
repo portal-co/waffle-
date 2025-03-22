@@ -16,7 +16,7 @@
 
 use crate::{entity::EntityRef, Func, Global, Memory, Signature, Table, Type};
 use anyhow::Context;
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 pub use wasmparser::{Ieee32, Ieee64};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -29,8 +29,8 @@ pub struct MemoryArg {
     pub memory: Memory,
 }
 
-impl std::fmt::Display for MemoryArg {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for MemoryArg {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
             f,
             "{}, align={}, offset={}",
@@ -913,10 +913,10 @@ pub enum Operator {
 
 #[test]
 fn op_size() {
-    assert_eq!(std::mem::size_of::<Operator>(), 32);
+    assert_eq!(core::mem::size_of::<Operator>(), 32);
 }
 
-impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
+impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
     type Error = ();
 
     fn try_from(op: &'b wasmparser::Operator<'a>) -> Result<Operator, Self::Error> {
@@ -1941,7 +1941,7 @@ impl<'a, 'b> std::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
     }
 }
 
-impl std::convert::From<wasmparser::MemArg> for MemoryArg {
+impl core::convert::From<wasmparser::MemArg> for MemoryArg {
     fn from(value: wasmparser::MemArg) -> MemoryArg {
         MemoryArg {
             align: value.align as u32,
@@ -1951,7 +1951,7 @@ impl std::convert::From<wasmparser::MemArg> for MemoryArg {
     }
 }
 
-impl std::convert::From<MemoryArg> for wasm_encoder::MemArg {
+impl core::convert::From<MemoryArg> for wasm_encoder::MemArg {
     fn from(value: MemoryArg) -> wasm_encoder::MemArg {
         wasm_encoder::MemArg {
             offset: value.offset as u64,

@@ -7,7 +7,11 @@
 use crate::cfg::CFGInfo;
 use crate::entity::PerEntity;
 use crate::ir::{Block, FunctionBody, Value, ValueDef};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeSet;
+use alloc::vec;
+use alloc::vec::Vec;
+use hashbrown::{HashMap, HashSet};
 
 pub(crate) fn run(body: &mut FunctionBody, cut_blocks: Option<HashSet<Block>>, cfg: &CFGInfo) {
     MaxSSAPass::new(cut_blocks).run(body, cfg);
@@ -145,7 +149,7 @@ impl MaxSSAPass {
 
         for i in 0..body.blocks[block].insts.len() {
             let inst = body.blocks[block].insts[i];
-            let mut def = std::mem::take(&mut body.values[inst]);
+            let mut def = core::mem::take(&mut body.values[inst]);
             match &mut def {
                 ValueDef::Operator(_, args, _) => {
                     for i in 0..args.len() {
@@ -165,7 +169,7 @@ impl MaxSSAPass {
             }
             body.values[inst] = def;
         }
-        let mut term = std::mem::take(&mut body.blocks[block].terminator);
+        let mut term = core::mem::take(&mut body.blocks[block].terminator);
         term.update_uses(|u| {
             *u = resolve(body, *u);
         });

@@ -6,9 +6,12 @@ use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Va
 use crate::{HeapType, Operator, WithNullable};
 use anyhow::Result;
 use rayon::prelude::*;
-use std::borrow::Cow;
+use alloc::borrow::Cow;
 use wasm_encoder::Encode;
 use wasm_encoder::{CustomSection, TagType};
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 
 pub mod reducify;
 use reducify::Reducifier;
@@ -1368,7 +1371,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             //     .map(|&ty| wasm_encoder::ValType::from(ty));
             v.push(sig_data.into());
         }
-        types.rec(v);
+        types.ty().rec(v);
     } else {
         for sig_data in module.signatures.values() {
             // let params = sig_data
@@ -1379,7 +1382,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             //     .returns
             //     .iter()
             //     .map(|&ty| wasm_encoder::ValType::from(ty));
-            types.subtype(&sig_data.into());
+            types.ty().subtype(&sig_data.into());
         }
     }
     into_mod.section(&types);
@@ -1412,6 +1415,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                         .unwrap_or(table.initial),
                     maximum: table.max,
                     table64: table.table64,
+                    shared: false,
                 })
             }
             &ImportKind::Global(global) => {
@@ -1476,6 +1480,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                 .unwrap_or(0) as u64,
             maximum: table_data.max,
             table64: table_data.table64,
+            shared: false,
         });
     }
     into_mod.section(&tables);
@@ -1575,7 +1580,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                                 elem.active(
                                     Some(table.index() as u32),
                                     &wasm_encoder::ConstExpr::i32_const(i as i32),
-                                    wasm_encoder::Elements::Functions(&[elt.index() as u32]),
+                                    wasm_encoder::Elements::Functions(Cow::Borrowed(&[elt.index() as u32])),
                                 );
                             }
                             HeapType::Sig { .. } => {
@@ -1584,7 +1589,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                                     &wasm_encoder::ConstExpr::i32_const(i as i32),
                                     wasm_encoder::Elements::Expressions(
                                         h.clone().into(),
-                                        &[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)],
+                                        Cow::Borrowed(&[wasm_encoder::ConstExpr::ref_func(elt.index() as u32)]),
                                     ),
                                 );
                             }
