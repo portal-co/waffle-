@@ -2,23 +2,20 @@ use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
 use crate::{HeapType, StorageType, WithNullable};
 use alloc::boxed::Box;
+use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
 use anyhow::Context;
 use arena_traits::IndexAlloc;
-use paste::paste;
 use core::mem::{replace, take};
-use alloc::
-    // backtrace,
-    collections::{BTreeMap, BTreeSet}
-;
-use hashbrown::HashMap;
 use core::{
     hash::Hash,
     iter::empty,
     ops::{Deref, DerefMut},
 };
-use alloc::vec::Vec;
-use alloc::vec;
+use hashbrown::HashMap;
+use paste::paste;
 pub fn x2i(x: ExportKind) -> ImportKind {
     match x {
         ExportKind::Table(a) => ImportKind::Table(a),
@@ -180,9 +177,10 @@ impl<F: FnMut(&mut Module<'_>, String, String) -> anyhow::Result<Option<ImportBe
         return (self.0)(a, m, n);
     }
 }
-
+#[non_exhaustive]
 pub enum ImportBehavior {
     Bind(ImportKind),
+    BindRerun(ImportKind),
     Passthrough(String, String),
 }
 
@@ -256,6 +254,7 @@ impl<
         let i = match self.resolve_import(&a)? {
             None => None,
             Some(ImportBehavior::Bind(b)) => return Ok(b),
+            Some(ImportBehavior::BindRerun(b)) => return self.translate_import(b),
             Some(ImportBehavior::Passthrough(a, b)) => Some((a, b)),
         };
         if let Some(j) = i.clone() {
@@ -330,27 +329,25 @@ impl<
             let k = self.dest.signatures.alloc(SignatureData::None);
             self.state.sig_cache.insert(s, k);
             let mut d = self.src.signatures[s].clone();
-            match &mut d{
+            match &mut d {
                 SignatureData::Func { params, returns } => {
                     for x in params.iter_mut().chain(returns.iter_mut()) {
                         self.translate_type(x)?;
                     }
-                },
-                SignatureData::None => {
-
-                },
-                SignatureData::Struct { fields } =>{
-                    for ty in fields.iter_mut(){
-                        if let StorageType::Val(v) = &mut ty.value{
+                }
+                SignatureData::None => {}
+                SignatureData::Struct { fields } => {
+                    for ty in fields.iter_mut() {
+                        if let StorageType::Val(v) = &mut ty.value {
                             self.translate_type(v)?;
                         }
                     }
-                },
-                SignatureData::Array { ty } =>{
-                    if let StorageType::Val(v) = &mut ty.value{
+                }
+                SignatureData::Array { ty } => {
+                    if let StorageType::Val(v) = &mut ty.value {
                         self.translate_type(v)?;
                     }
-                },
+                }
             };
             self.dest.signatures[k] = d;
         }
