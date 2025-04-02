@@ -26,6 +26,7 @@ pub fn vaccum(f: &mut FunctionBody) {
                     t = Terminator::Br {
                         target: if_false.clone(),
                     };
+                    f.set_terminator(k, t);
                     work = true;
                     continue;
                 }
@@ -33,6 +34,7 @@ pub fn vaccum(f: &mut FunctionBody) {
                     t = Terminator::Br {
                         target: if_true.clone(),
                     };
+                    f.set_terminator(k, t);
                     work = true;
                     continue;
                 }
