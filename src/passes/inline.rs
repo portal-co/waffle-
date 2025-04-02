@@ -12,6 +12,7 @@ use anyhow::Context;
 use crate::{
     cfg::CFGInfo,
     const_eval,
+    entity::EntityRef,
     passes::{basic_opt::value_is_pure, tcore::results_ref_2},
     util::new_sig,
     Block, BlockTarget, ConstVal, Func, FuncDecl, FunctionBody, ImportKind, Module, Operator,
@@ -32,7 +33,7 @@ pub struct Inline {
     blocks: BTreeMap<Block, Block>,
     return_to: Option<Block>,
     inline_funcs: Arc<InlineCfg>,
-    stack: BTreeSet<Func>,
+    stack: BTreeMap<Func, Block>,
 }
 pub fn inline_mod(m: &mut Module, cfg: InlineCfg) -> anyhow::Result<()> {
     for f in m.funcs.iter().collect::<BTreeSet<_>>() {
@@ -81,6 +82,11 @@ impl Inline {
                 return Ok(*l);
             }
             let mut new = dst.add_block();
+            for a in self.blocks.iter_mut() {
+                if a.1.is_invalid() {
+                    *a.1 = new
+                }
+            }
             let mut state = src.blocks[k]
                 .params
                 .iter()
@@ -111,7 +117,7 @@ impl Inline {
                     crate::ValueDef::Operator(operator, list_ref, list_ref1) => match operator {
                         Operator::Call { function_index }
                             if self.inline_funcs.funcs.contains(function_index)
-                                && !self.stack.contains(function_index)
+                                && !self.stack.contains_key(function_index)
                                 && module.funcs[*function_index].body().is_some() =>
                         {
                             let Some(b) = module.funcs[*function_index].body() else {
@@ -131,7 +137,7 @@ impl Inline {
                                 inline_funcs: self.inline_funcs.clone(),
                                 stack: match self.stack.clone() {
                                     mut a => {
-                                        a.insert(*function_index);
+                                        a.insert(*function_index, Block::invalid());
                                         a
                                     }
                                 },
@@ -268,40 +274,55 @@ impl Inline {
                     },
                     Some(k) => {
                         if self.inline_funcs.funcs.contains(func)
-                            && !self.stack.contains(func)
                             && module.funcs[*func].body().is_some()
                         {
-                            let Some(b) = module.funcs[*func].body() else {
-                                unreachable!()
-                            };
-                            // let k2 = dst.add_block();
-                            let tys = match &module.signatures[module.funcs[*func].sig()] {
-                                SignatureData::Func { params, returns } => returns,
-                                _ => todo!(),
-                            };
-                            let args = args
-                                .iter()
-                                .filter_map(|a| state.get(a))
-                                .flatten()
-                                .cloned()
-                                .collect::<Vec<_>>();
-                            let ke = Inline {
-                                blocks: Default::default(),
-                                return_to: Some(k),
-                                inline_funcs: self.inline_funcs.clone(),
-                                stack: match self.stack.clone() {
-                                    mut a => {
-                                        a.insert(*func);
-                                        a
+                            match self.stack.get(func) {
+                                None => {
+                                    let Some(b) = module.funcs[*func].body() else {
+                                        unreachable!()
+                                    };
+                                    // let k2 = dst.add_block();
+                                    let tys = match &module.signatures[module.funcs[*func].sig()] {
+                                        SignatureData::Func { params, returns } => returns,
+                                        _ => todo!(),
+                                    };
+                                    let args = args
+                                        .iter()
+                                        .filter_map(|a| state.get(a))
+                                        .flatten()
+                                        .cloned()
+                                        .collect::<Vec<_>>();
+                                    let ke = Inline {
+                                        blocks: Default::default(),
+                                        return_to: Some(k),
+                                        inline_funcs: self.inline_funcs.clone(),
+                                        stack: match self.stack.clone() {
+                                            mut a => {
+                                                a.insert(*func, Block::invalid());
+                                                a
+                                            }
+                                        },
                                     }
-                                },
-                            }
-                            .translate(module, dst, b, b.entry)?;
-                            Terminator::Br {
-                                target: BlockTarget {
-                                    block: ke,
-                                    args: args,
-                                },
+                                    .translate(module, dst, b, b.entry)?;
+                                    Terminator::Br {
+                                        target: BlockTarget {
+                                            block: ke,
+                                            args: args,
+                                        },
+                                    }
+                                }
+                                Some(k2) => {
+                                    let k2 = *k2;
+                                    let args = args
+                                        .iter()
+                                        .filter_map(|a| state.get(a))
+                                        .flatten()
+                                        .cloned()
+                                        .collect::<Vec<_>>();
+                                    Terminator::Br {
+                                        target: BlockTarget { block: k2, args },
+                                    }
+                                }
                             }
                         } else {
                             let tys = match &module.signatures[module.funcs[*func].sig()] {
