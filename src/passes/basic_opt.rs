@@ -7,10 +7,10 @@ use crate::passes::dom_pass::{dom_pass, DomtreePass};
 use crate::pool::ListRef;
 use crate::scoped_map::ScopedMap;
 use crate::Operator;
-use smallvec::{smallvec, SmallVec};
+use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
+use smallvec::{smallvec, SmallVec};
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct OptOptions {
@@ -18,6 +18,7 @@ pub struct OptOptions {
     pub cprop: bool,
     pub redundant_blockparams: bool,
     pub inline_refs: bool,
+    pub ub_vaccum: bool,
 }
 
 impl core::default::Default for OptOptions {
@@ -27,6 +28,7 @@ impl core::default::Default for OptOptions {
             cprop: true,
             redundant_blockparams: true,
             inline_refs: true,
+            ub_vaccum: true,
         }
     }
 }
@@ -173,6 +175,11 @@ impl<'a> BasicOptPass<'a> {
                 body.blocks[pred].terminator.update_target(pos, |target| {
                     remove_all_from_vec(&mut target.args, &blockparams_to_remove[..])
                 });
+            }
+        }
+        if self.options.ub_vaccum {
+            if let Terminator::UB = &body.blocks[block].terminator {
+                body.blocks[block].insts.clear();
             }
         }
 
