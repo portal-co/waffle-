@@ -290,6 +290,9 @@ impl InterpContext {
                 }
 
                 match &body.blocks[frame.cur_block].terminator {
+                    crate::Terminator::UB => {
+                        return InterpResult::OutOfFuel;
+                    },
                     &Terminator::ReturnCallIndirect {
                         sig,
                         table,

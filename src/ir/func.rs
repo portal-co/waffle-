@@ -686,6 +686,7 @@ pub enum Terminator {
         args: Vec<Value>,
     },
     Unreachable,
+    UB,
     None,
 }
 
@@ -759,6 +760,7 @@ impl core::fmt::Display for Terminator {
                     .collect::<Vec<_>>()
                     .join(", ")
             )?,
+            crate::Terminator::UB => write!(f,"undefined")?,
         }
         Ok(())
     }
@@ -787,7 +789,7 @@ impl Terminator {
                     f(target);
                 }
             }
-            Terminator::None => {}
+            Terminator::None | Terminator::UB=> {}
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
@@ -817,7 +819,7 @@ impl Terminator {
                     f(target);
                 }
             }
-            Terminator::None => {}
+            Terminator::None | Terminator::UB=> {}
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}

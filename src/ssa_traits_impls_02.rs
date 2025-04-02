@@ -251,7 +251,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
-            Terminator::None => Either::Left(None.into_iter()),
+            Terminator::None | Terminator::UB => Either::Left(None.into_iter()),
         })
     }
 
@@ -278,7 +278,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
-            Terminator::None => Either::Left(None.into_iter()),
+            Terminator::None | Terminator::UB => Either::Left(None.into_iter()),
         })
     }
 }
@@ -320,7 +320,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
                 Either::Right(Either::Left(args.iter().cloned()))
             }
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None => Either::Left(empty()),
+            Terminator::None | Terminator::UB=> Either::Left(empty()),
         })
     }
 
@@ -360,7 +360,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             }
             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter_mut())),
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None => Either::Left(empty()),
+            Terminator::None | Terminator::UB=> Either::Left(empty()),
         })
     }
 }

@@ -464,7 +464,7 @@ impl<'a, 'b> Context<'a, 'b> {
                 &Terminator::Return { ref values } => {
                     into.push(WasmBlock::Return { values });
                 }
-                &Terminator::Unreachable | &Terminator::None => {
+                &Terminator::Unreachable | &Terminator::None | &Terminator::UB => {
                     into.push(WasmBlock::Unreachable);
                 }
                 &Terminator::ReturnCall { func, ref args } => {

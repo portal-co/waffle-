@@ -116,6 +116,7 @@ impl Fts {
                 })
             };
             let t = match &src.blocks[k].terminator {
+                crate::Terminator::UB => crate::Terminator::UB,
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,
                 },
@@ -282,6 +283,7 @@ impl Fts {
                 })
             };
             let t = match &src.blocks[k].terminator {
+                crate::Terminator::UB => crate::Terminator::UB,
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,
                 },

@@ -103,47 +103,48 @@ pub fn tweak_terminator(
     match x {
         Terminator::Br { target } => tweak_target(f, target, m, k),
         Terminator::CondBr {
-            cond,
-            if_true,
-            if_false,
-        } => {
-            m(cond);
-            tweak_target(f, if_true, &mut m, &mut k);
-            tweak_target(f, if_false, m, k);
-        }
+                        cond,
+                        if_true,
+                        if_false,
+            } => {
+                m(cond);
+                tweak_target(f, if_true, &mut m, &mut k);
+                tweak_target(f, if_false, m, k);
+            }
         Terminator::Select {
-            value,
-            targets,
-            default,
-        } => {
-            m(value);
-            for target in targets {
-                tweak_target(f, target, &mut m, &mut k)
+                value,
+                targets,
+                default,
+            } => {
+                m(value);
+                for target in targets {
+                    tweak_target(f, target, &mut m, &mut k)
+                }
+                tweak_target(f, default, m, k)
             }
-            tweak_target(f, default, m, k)
-        }
         Terminator::Return { values } => {
-            for a in values {
-                m(a)
+                for a in values {
+                    m(a)
+                }
             }
-        }
         Terminator::Unreachable => {}
         Terminator::None => {}
         Terminator::ReturnCall { func, args } => {
-            for a in args {
-                m(a)
+                for a in args {
+                    m(a)
+                }
             }
-        }
         Terminator::ReturnCallIndirect { sig, table, args } => {
-            for a in args {
-                m(a)
+                for a in args {
+                    m(a)
+                }
             }
-        }
         Terminator::ReturnCallRef { sig, args } => {
-            for a in args {
-                m(a)
+                for a in args {
+                    m(a)
+                }
             }
-        }
+        Terminator::UB => {},
     }
 }
 pub fn clone_value(

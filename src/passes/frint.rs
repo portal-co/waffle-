@@ -218,6 +218,7 @@ impl Frint {
                 }
                 crate::Terminator::Unreachable => crate::Terminator::Unreachable,
                 crate::Terminator::None => crate::Terminator::None,
+                &crate::Terminator::UB => crate::Terminator::UB,
             };
             dst.set_terminator(new, t);
         }
