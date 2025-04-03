@@ -45,27 +45,36 @@ pub fn vaccum(f: &mut FunctionBody) {
         }
     }
 }
-pub fn gvc(m: &mut Module) -> anyhow::Result<()>{
+pub fn gvc(m: &mut Module) -> anyhow::Result<()> {
     let mut work = true;
     let mut save = BTreeSet::new();
-    while work{
+    while work {
         work = false;
-        for f in m.funcs.iter().collect::<BTreeSet<_>>(){
+        for f in m.funcs.iter().collect::<BTreeSet<_>>() {
             let mut b = take(&mut m.funcs[f]);
-            if let Some(b) = b.body_mut(){
-                vaccum(b);
-                b.optimize(&Default::default());
-                if let Terminator::UB = b.blocks[b.entry].terminator{
-                    if !save.insert(f){
+            'a: {
+                if let Some(b) = b.body_mut() {
+                    if let Terminator::UB = b.blocks[b.entry].terminator {
+                        break 'a;
+                    }
+                    vaccum(b);
+                    b.optimize(&Default::default());
+                    if let Terminator::UB = b.blocks[b.entry].terminator {
+                        save.insert(f);
+                        // if !save.insert(f){
                         work = true
+                        // }
                     }
                 }
             }
             m.funcs[f] = b;
         }
-        inline_mod(m, InlineCfg{
-            funcs: save.clone()
-        })?;
+        inline_mod(
+            m,
+            InlineCfg {
+                funcs: save.clone(),
+            },
+        )?;
     }
     Ok(())
 }
