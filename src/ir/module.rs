@@ -69,17 +69,34 @@ pub enum SignatureData {
         /// which we assume to be present) may have zero or more primitive
         /// types as return values.
         returns: Vec<Type>,
+        ///Is this signature shared
+        shared: bool,
     },
     Struct {
         ///The fields of the struct
         fields: Vec<WithMutablility<StorageType>>,
+                ///Is this signature shared
+                shared: bool,
     },
     Array {
         ///The element type
         ty: WithMutablility<StorageType>,
+                ///Is this signature shared
+                shared: bool,
     },
     #[default]
     None,
+}
+
+impl SignatureData{
+    pub fn shared(&self) -> bool{
+        match self{
+            SignatureData::Func { params, returns, shared } => *shared,
+            SignatureData::Struct { fields, shared } => *shared,
+            SignatureData::Array { ty, shared } => *shared,
+            SignatureData::None => todo!(),
+        }
+    }
 }
 
 /// The size of a single Wasm page, used in memory definitions.
@@ -147,12 +164,15 @@ impl From<&wasmparser::SubType> for SignatureData {
                     .iter()
                     .map(|&ty| ty.into())
                     .collect::<Vec<Type>>(),
+                    shared: fty.composite_type.shared,
             },
             wasmparser::CompositeInnerType::Array(array_type) => Self::Array {
                 ty: array_type.0.clone().into(),
+                shared: fty.composite_type.shared,
             },
             wasmparser::CompositeInnerType::Struct(struct_type) => Self::Struct {
                 fields: struct_type.fields.iter().map(|&ty| ty.into()).collect(),
+                shared: fty.composite_type.shared,
             },
             _ => todo!(),
         }
@@ -167,7 +187,7 @@ impl From<wasmparser::SubType> for SignatureData {
 impl From<&SignatureData> for wasm_encoder::SubType {
     fn from(value: &SignatureData) -> Self {
         match value {
-            SignatureData::Func { params, returns } => wasm_encoder::SubType {
+            SignatureData::Func { params, returns, shared } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
@@ -175,28 +195,28 @@ impl From<&SignatureData> for wasm_encoder::SubType {
                         params.iter().cloned().map(|a| a.into()),
                         returns.iter().cloned().map(|a| a.into()),
                     )),
-                    shared: false,
+                    shared: *shared,
                 },
             },
             SignatureData::None => todo!(),
-            SignatureData::Struct { fields } => wasm_encoder::SubType {
+            SignatureData::Struct { fields,shared } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
                     inner: wasm_encoder::CompositeInnerType::Struct(wasm_encoder::StructType {
                         fields: fields.iter().cloned().map(|a| a.into()).collect(),
                     }),
-                    shared: false,
+                    shared: *shared,
                 },
             },
-            SignatureData::Array { ty } => wasm_encoder::SubType {
+            SignatureData::Array { ty,shared } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
                     inner: wasm_encoder::CompositeInnerType::Array(wasm_encoder::ArrayType(
                         ty.clone().into(),
                     )),
-                    shared: false,
+                    shared: *shared,
                 },
             },
         }
@@ -206,7 +226,7 @@ impl From<&SignatureData> for wasm_encoder::SubType {
 impl Signature {
     pub fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
-            SignatureData::Func { params, returns } => params
+            SignatureData::Func { params, returns, .. } => params
                 .iter()
                 .chain(returns.iter())
                 .flat_map(|a| a.sigs())

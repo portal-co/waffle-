@@ -478,9 +478,10 @@ pub(crate) fn parse_body<'a>(
 
     let mut debug_locs = DebugLocReader::new(module, body.range().start as u32);
 
-    let SignatureData::Func { params, returns } = &module.signatures[my_sig] else{
+    let SignatureData::Func { params, returns, shared } = &module.signatures[my_sig] else{
         anyhow::bail!("invalid sig")
     };
+    ret.shared = *shared;
 
     for &param in &params[..] {
         ret.locals.push(param.into());
@@ -945,7 +946,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             locals: LocalTracker::default(),
         };
 
-        let SignatureData::Func { params, returns } = &module.signatures[my_sig] else{
+        let SignatureData::Func { params, returns, shared } = &module.signatures[my_sig] else{
             todo!()
         };
 
@@ -1518,7 +1519,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
 
             wasmparser::Operator::Return => {
-                let SignatureData::Func { params, returns } = &self.module.signatures[self.my_sig] else{
+                let SignatureData::Func { params, returns, .. } = &self.module.signatures[self.my_sig] else{
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(returns.len());
@@ -1527,7 +1528,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
             wasmparser::Operator::ReturnCall { function_index } => {
                 let sig = self.module.funcs[Func::new(*function_index as usize)].sig();
-                let SignatureData::Func { params, returns } = &self.module.signatures[sig] else{
+                let SignatureData::Func { params, returns, .. } = &self.module.signatures[sig] else{
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(params.len());
@@ -1541,7 +1542,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 table_index,
             } => {
-                let SignatureData::Func { params, returns } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                let SignatureData::Func { params, returns, .. } = &self.module.signatures[Signature::new(*type_index as usize)] else{
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(
@@ -1559,7 +1560,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 // table_index,
             } => {
-                let SignatureData::Func { params, returns } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                let SignatureData::Func { params, returns, .. } = &self.module.signatures[Signature::new(*type_index as usize)] else{
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(
@@ -1608,7 +1609,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 match &frame {
                     None => {
                         if self.reachable {
-                            let SignatureData::Func { params, returns } = &self.module.signatures[self.my_sig] else{
+                            let SignatureData::Func { params, returns, .. } = &self.module.signatures[self.my_sig] else{
                                 anyhow::bail!("invalid signature")
                             };
                             let retvals =
@@ -1868,7 +1869,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             BlockType::Type(ret_ty) => (vec![], vec![ret_ty.into()]),
             BlockType::FuncType(sig_idx) => {
                 let sig = &self.module.signatures[Signature::from(sig_idx)];
-                let SignatureData::Func { params, returns } = &sig else{
+                let SignatureData::Func { params, returns, .. } = &sig else{
                     todo!()
                 };
                 (

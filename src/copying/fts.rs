@@ -203,6 +203,7 @@ impl Fts {
                 SignatureData::Func {
                     params: src.blocks[k].params.iter().map(|a| a.0).collect(),
                     returns: src.rets.clone(),
+                    shared: src.shared,
                 },
             );
             let new_f = module.funcs.alloc(FuncDecl::None);

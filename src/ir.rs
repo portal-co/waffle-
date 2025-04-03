@@ -36,14 +36,15 @@ impl Subtypes for SignatureData {
         vsigs: &BTreeSet<(Signature, Signature)>,
     ) -> bool {
         match (self, other) {
-            (SignatureData::Array { ty }, SignatureData::Array { ty: tyo }) => {
+            (SignatureData::Array { ty,.. }, SignatureData::Array { ty: tyo,.. }) => {
                 ty.subtypes(tyo, module, vsigs)
             }
             (
-                SignatureData::Func { params, returns },
+                SignatureData::Func { params, returns,.. },
                 SignatureData::Func {
                     params: po,
                     returns: ro,
+                    ..
                 },
             ) => {
                 params.len() == po.len()
@@ -57,7 +58,7 @@ impl Subtypes for SignatureData {
                         .zip(ro.iter())
                         .all(|(a, b)| a.subtypes(b, module, vsigs))
             }
-            (SignatureData::Struct { fields }, SignatureData::Struct { fields: fo }) => {
+            (SignatureData::Struct { fields,.. }, SignatureData::Struct { fields: fo,.. }) => {
                 fields.len() >= fo.len()
                     && fields
                         .iter()

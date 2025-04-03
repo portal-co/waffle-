@@ -224,7 +224,7 @@ pub fn gen_trampoline(
         return Ok(*d);
     }
     {
-        let SignatureData::Func { params, returns } = &mut n else {
+        let SignatureData::Func { params, returns, .. } = &mut n else {
             anyhow::bail!("invalid signature")
         };
         params.push(Type::I32);

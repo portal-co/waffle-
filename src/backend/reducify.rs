@@ -461,6 +461,7 @@ mod test {
         let sig = module.signatures.push(SignatureData::Func {
             params: vec![Type::I32, Type::I64, Type::F64],
             returns: vec![Type::I64],
+            shared: false,
         });
         let mut body = FunctionBody::new(&module, sig);
 

@@ -357,6 +357,7 @@ pub fn obf_fn_body(
     m: &mut Module,
     b: &mut FunctionBody,
     obf: &mut impl Obfuscate,
+    shared: bool,
 ) -> anyhow::Result<()> {
     // let s = m.funcs[f].sig();
     // if let Some(b) = m.funcs[f].body() {
@@ -366,6 +367,7 @@ pub fn obf_fn_body(
         obf.sig(SignatureData::Func {
             params: b.blocks[b.entry].params.iter().map(|a| a.0).collect(),
             returns: b.rets.clone(),
+            shared,
         })?,
     );
     let mut n = FunctionBody::new(&m, s);
@@ -378,10 +380,11 @@ pub fn obf_fn_body(
     return Ok(());
 }
 pub fn obf_fn(m: &mut Module, f: Func, obf: &mut impl Obfuscate) -> anyhow::Result<()> {
-    // let s = m.funcs[f].sig();
+    let s = m.funcs[f].sig();
+    let shared = m.signatures[s].shared();
     if let Some(b) = m.funcs[f].body() {
         let mut b = b.clone();
-        obf_fn_body(m, &mut b, obf)?;
+        obf_fn_body(m, &mut b, obf,shared)?;
         *m.funcs[f].body_mut().unwrap() = b;
     }
     return Ok(());

@@ -348,20 +348,20 @@ impl<
             self.state.sig_cache.insert(s, k);
             let mut d = self.src.signatures[s].clone();
             match &mut d {
-                SignatureData::Func { params, returns } => {
+                SignatureData::Func { params, returns, .. } => {
                     for x in params.iter_mut().chain(returns.iter_mut()) {
                         self.translate_type(x)?;
                     }
                 }
                 SignatureData::None => {}
-                SignatureData::Struct { fields } => {
+                SignatureData::Struct { fields, .. } => {
                     for ty in fields.iter_mut() {
                         if let StorageType::Val(v) = &mut ty.value {
                             self.translate_type(v)?;
                         }
                     }
                 }
-                SignatureData::Array { ty } => {
+                SignatureData::Array { ty, .. } => {
                     if let StorageType::Val(v) = &mut ty.value {
                         self.translate_type(v)?;
                     }

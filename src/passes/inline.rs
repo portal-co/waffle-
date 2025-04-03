@@ -284,7 +284,7 @@ impl Inline {
                                     };
                                     // let k2 = dst.add_block();
                                     let tys = match &module.signatures[module.funcs[*func].sig()] {
-                                        SignatureData::Func { params, returns } => returns,
+                                        SignatureData::Func { params, returns,.. } => returns,
                                         _ => todo!(),
                                     };
                                     let args = args
@@ -327,7 +327,7 @@ impl Inline {
                             }
                         } else {
                             let tys = match &module.signatures[module.funcs[*func].sig()] {
-                                SignatureData::Func { params, returns } => returns,
+                                SignatureData::Func { params, returns,.. } => returns,
                                 _ => todo!(),
                             };
                             let values = dst.add_op(
@@ -367,7 +367,7 @@ impl Inline {
                         },
                         Some(k) => {
                             let tys = match &module.signatures[*sig] {
-                                SignatureData::Func { params, returns } => returns,
+                                SignatureData::Func { params, returns,.. } => returns,
                                 _ => todo!(),
                             };
                             let values = dst.add_op(
@@ -406,7 +406,7 @@ impl Inline {
                     },
                     Some(k) => {
                         let tys = match &module.signatures[*sig] {
-                            SignatureData::Func { params, returns } => returns,
+                            SignatureData::Func { params, returns,.. } => returns,
                             _ => todo!(),
                         };
                         let values =

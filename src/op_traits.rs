@@ -21,13 +21,13 @@ pub fn op_inputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            let SignatureData::Func { params, returns } = &module.signatures[sig] else {
+            let SignatureData::Func { params, returns, .. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(params.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else {
+            let SignatureData::Func { params, returns, .. } = &module.signatures[sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             let mut params = params.to_vec();
@@ -689,7 +689,7 @@ pub fn op_inputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else {
+            let SignatureData::Func { params, returns, .. } = &module.signatures[*sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             let mut params = params.to_vec();
@@ -1116,7 +1116,7 @@ pub fn op_inputs(
             })
         } //=> visit_i64_atomic_rmw32_c
         &Operator::StructNew { sig } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(
@@ -1124,7 +1124,7 @@ pub fn op_inputs(
             ))
         }
         &Operator::StructGet { sig, idx } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
@@ -1133,7 +1133,7 @@ pub fn op_inputs(
             })]))
         }
         &Operator::StructSet { sig, idx } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![
@@ -1150,13 +1150,13 @@ pub fn op_inputs(
             ]))
         }
         &Operator::ArrayNew { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![ty.value.clone().unpack(), Type::I32]))
         }
         &Operator::ArrayNewFixed { sig, num } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(
@@ -1164,7 +1164,7 @@ pub fn op_inputs(
             ))
         }
         &Operator::ArrayGet { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
@@ -1173,7 +1173,7 @@ pub fn op_inputs(
             })]))
         }
         &Operator::ArraySet { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![
@@ -1185,7 +1185,7 @@ pub fn op_inputs(
             ]))
         }
         &Operator::ArrayFill { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty ,..} = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![
@@ -1232,13 +1232,13 @@ pub fn op_outputs(
 
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
-            let SignatureData::Func { params, returns } = &module.signatures[sig] else {
+            let SignatureData::Func { params, returns,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
         }
         &Operator::CallIndirect { sig_index, .. } => {
-            let SignatureData::Func { params, returns } = &module.signatures[sig_index] else {
+            let SignatureData::Func { params, returns,.. } = &module.signatures[sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
@@ -1721,7 +1721,7 @@ pub fn op_outputs(
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
 
         Operator::CallRef { sig_index } => {
-            let SignatureData::Func { params, returns } = &module.signatures[*sig_index] else {
+            let SignatureData::Func { params, returns, .. } = &module.signatures[*sig_index] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Vec::from(returns.clone()).into())
@@ -1791,7 +1791,7 @@ pub fn op_outputs(
         Operator::I64AtomicRmw16CmpxchgU { memarg } => Ok(Cow::Borrowed(&[Type::I64])), // => visit_i64_atomic_rmw16_cmpxchg_u
         Operator::I64AtomicRmw32CmpxchgU { memarg } => Ok(Cow::Borrowed(&[Type::I64])), //=> visit_i64_atomic_rmw32_c
         &Operator::StructNew { sig } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
@@ -1800,7 +1800,7 @@ pub fn op_outputs(
             })]))
         }
         &Operator::StructGet { sig, idx } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![fields
@@ -1811,13 +1811,13 @@ pub fn op_outputs(
                 .unpack()]))
         }
         &Operator::StructSet { sig, idx } => {
-            let SignatureData::Struct { fields } = &module.signatures[sig] else {
+            let SignatureData::Struct { fields,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Borrowed(&[]))
         }
         &Operator::ArrayNew { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
@@ -1826,7 +1826,7 @@ pub fn op_outputs(
             })]))
         }
         &Operator::ArrayNewFixed { sig, num } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
@@ -1835,19 +1835,19 @@ pub fn op_outputs(
             })]))
         }
         &Operator::ArrayGet { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Owned(vec![ty.value.clone().unpack()]))
         }
         &Operator::ArraySet { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Borrowed(&[]))
         }
         &Operator::ArrayFill { sig } => {
-            let SignatureData::Array { ty } = &module.signatures[sig] else {
+            let SignatureData::Array { ty,.. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
             Ok(Cow::Borrowed(&[]))

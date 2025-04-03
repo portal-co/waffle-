@@ -17,6 +17,7 @@ pub fn fuse_iter(m: &mut Module, x: impl Iterator<Item = (usize, u8)>, mem: Memo
         SignatureData::Func {
             params: vec![],
             returns: vec![],
+            shared: true,
         },
     );
     let mut b = FunctionBody::new(m, null);
@@ -69,6 +70,7 @@ pub fn metafuse(m: &mut Module, mem: Memory, dat: MemoryData) {
         SignatureData::Func {
             params: vec![],
             returns: vec![],
+            shared: true,
         },
     );
     let mut v = vec![];

@@ -177,6 +177,8 @@ pub struct FunctionBody {
     pub value_locals: PerEntity<Value, Option<Local>>,
     /// Debug source locations of each value.
     pub source_locs: PerEntity<Value, SourceLoc>,
+    ///Is this function shared
+    pub shared: bool,
 }
 
 impl FunctionBody {
@@ -185,7 +187,7 @@ impl FunctionBody {
     /// the function parameters in the signature, but no
     /// contents. `module` is necessary to look up the signature.
     pub fn new(module: &Module, sig: Signature) -> FunctionBody {
-        let SignatureData::Func { params, returns } = &module.signatures[sig] else{
+        let SignatureData::Func { params, returns, shared } = &module.signatures[sig] else{
             todo!()
         };
         let locals = EntityVec::from(params.clone());
@@ -213,6 +215,7 @@ impl FunctionBody {
             value_blocks,
             value_locals: PerEntity::default(),
             source_locs: PerEntity::default(),
+            shared: *shared
         }
     }
 

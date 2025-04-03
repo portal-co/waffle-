@@ -188,7 +188,7 @@ impl<'a> Display for ModuleDisplay<'a> {
         let mut sig_strs = HashMap::new();
         for (sig, sig_data) in self.module.signatures.entries() {
             let sig_str = match sig_data {
-                super::SignatureData::Func { params, returns } => {
+                super::SignatureData::Func { params, returns,shared } => {
                     let arg_tys = params
                         .iter()
                         .map(|&ty| format!("{}", ty))
