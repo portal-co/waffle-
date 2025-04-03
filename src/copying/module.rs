@@ -75,6 +75,7 @@ pub struct State<I> {
     fun_cache: BTreeMap<Func, Func>,
     table_cache: BTreeMap<Table, Table>,
     sig_cache: BTreeMap<Signature, Signature>,
+    ub_cache: BTreeMap<Signature, Func>,
     pub importmap: I,
     pub tables: BTreeSet<Table>,
     pub invasive: bool,
@@ -92,6 +93,7 @@ impl<I> State<I> {
             invasive,
             // tm: Default::default(),
             sig_cache: Default::default(),
+            ub_cache: Default::default(),
         };
     }
 }
@@ -182,6 +184,7 @@ pub enum ImportBehavior {
     Bind(ImportKind),
     BindRerun(ImportKind),
     Passthrough(String, String),
+    UB,
 }
 
 impl<
@@ -256,6 +259,21 @@ impl<
             Some(ImportBehavior::Bind(b)) => return Ok(b),
             Some(ImportBehavior::BindRerun(b)) => return self.translate_import(b),
             Some(ImportBehavior::Passthrough(a, b)) => Some((a, b)),
+            Some(ImportBehavior::UB) => match a {
+                ImportKind::Func(f) => {
+                    let s = self.translate_sig(self.src.funcs[f].sig())?;
+                    loop {
+                        if let Some(f) = self.state.ub_cache.get(&s) {
+                            return Ok(ImportKind::Func(*f));
+                        }
+                        let mut b = FunctionBody::new(&self.dest, s);
+                        b.set_terminator(b.entry, crate::Terminator::UB);
+                        let f = self.dest.funcs.push(FuncDecl::Body(s, format!("ub"), b));
+                        self.state.ub_cache.insert(s, f);
+                    }
+                }
+                _ => anyhow::bail!("ub type invalid"),
+            },
         };
         if let Some(j) = i.clone() {
             for m in self.dest.imports.iter() {
