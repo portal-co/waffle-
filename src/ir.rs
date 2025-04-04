@@ -208,11 +208,12 @@ pub struct WithMutablility<T> {
     pub mutable: bool,
 }
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,Default
 )]
 ///An exception's handler
 pub enum Handler<T>{
     ///Rethrow the exception
+    #[default]
     Throw,
     ///Catch the exception
     Catch(T)
