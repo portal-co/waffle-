@@ -665,8 +665,13 @@ pub struct ValueRecord {
 }
 
 impl ValueRecord {
+    pub fn with_value<T>(&self, f: impl FnOnce(&mut Value) -> T) -> (T, Self) {
+        let mut x = self.clone();
+        let t = f(&mut x.value);
+        (t, x)
+    }
     ///Obtains the core value within this record provided no on-the-spot effects
-    pub fn pure_core(&self) -> Option<Value>{
+    pub fn pure_core(&self) -> Option<Value> {
         Some(self.value)
     }
     ///Creates a record froma  core value
