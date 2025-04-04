@@ -919,10 +919,10 @@ impl Terminator {
             Terminator::ReturnCallRef { sig, args } => {}
         }
     }
-    pub fn visit_target<R, F: FnMut(&BlockTarget) -> R>(&self, index: usize, mut f: F) -> R {
+    pub fn visit_target<R, F: FnOnce(&BlockTarget) -> R>(&self, index: usize, mut f: F) -> R {
         self.try_visit_target(index, f).expect("to be in bounds")
     }
-    pub fn try_visit_target<R, F: FnMut(&BlockTarget) -> R>(
+    pub fn try_visit_target<R, F: FnOnce(&BlockTarget) -> R>(
         &self,
         index: usize,
         mut f: F,
@@ -937,7 +937,7 @@ impl Terminator {
         })
     }
 
-    pub fn update_target<T, F: FnMut(&mut BlockTarget) -> T>(
+    pub fn update_target<T, F: FnOnce(&mut BlockTarget) -> T>(
         &mut self,
         index: usize,
         mut f: F,
