@@ -11,6 +11,7 @@ pub mod mem_fusing;
 pub mod unmem;
 pub mod reorder_funs;
 // pub mod fixup_rets;
+#[cfg(feature = "tcore")]
 pub mod tcore;
 pub mod frint;
 pub mod inline;

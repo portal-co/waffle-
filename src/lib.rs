@@ -47,7 +47,7 @@ pub use passes::basic_opt::OptOptions;
 
 #[cfg(feature = "fuzzing")]
 pub mod fuzzing;
-
+#[cfg(feature = "copying")]
 pub mod copying;
 #[cfg(feature = "ssa-traits-02")]
 mod ssa_traits_impls_02;
