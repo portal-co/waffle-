@@ -1445,6 +1445,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     func_type_idx: tag.sig.index() as u32,
                 })
             }
+            &ImportKind::Type(ty) => todo!()
         };
         imports.import(&import.module[..], &import.name[..], entity);
     }
@@ -1557,6 +1558,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     control_tag.index() as u32,
                 );
             }
+            &ExportKind::Type(ty) => todo!()
         }
     }
     into_mod.section(&exports);

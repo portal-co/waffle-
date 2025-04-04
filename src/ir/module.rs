@@ -282,6 +282,8 @@ pub enum ImportKind {
     Memory(Memory),
     /// An import of a control tag
     ControlTag(ControlTag),
+    /// An import of a type
+    Type(Signature),
 }
 
 impl core::fmt::Display for ImportKind {
@@ -292,6 +294,7 @@ impl core::fmt::Display for ImportKind {
             ImportKind::Global(global) => write!(f, "{}", global)?,
             ImportKind::Memory(mem) => write!(f, "{}", mem)?,
             ImportKind::ControlTag(control_tag) => write!(f, "{}", control_tag)?,
+            ImportKind::Type(t) => write!(f, "{}", t)?,
         }
         Ok(())
     }
@@ -318,6 +321,8 @@ pub enum ExportKind {
     Memory(Memory),
     /// An export of a control tag
     ControlTag(ControlTag),
+    ///An export of a type
+    Type(Signature),
 }
 
 pub fn x2i(x: ExportKind) -> ImportKind {
@@ -327,6 +332,7 @@ pub fn x2i(x: ExportKind) -> ImportKind {
         ExportKind::Global(a) => ImportKind::Global(a),
         ExportKind::Memory(a) => ImportKind::Memory(a),
         ExportKind::ControlTag(control_tag) => ImportKind::ControlTag(control_tag),
+        ExportKind::Type(t) => ImportKind::Type(t),
     }
 }
 pub fn i2x(x: ImportKind) -> ExportKind {
@@ -336,6 +342,7 @@ pub fn i2x(x: ImportKind) -> ExportKind {
         ImportKind::Global(a) => ExportKind::Global(a),
         ImportKind::Memory(a) => ExportKind::Memory(a),
         ImportKind::ControlTag(control_tag) => ExportKind::ControlTag(control_tag),
+        ImportKind::Type(t) => ExportKind::Type(t),
     }
 }
 
@@ -347,6 +354,7 @@ impl core::fmt::Display for ExportKind {
             ExportKind::Global(global) => write!(f, "{}", global)?,
             ExportKind::Memory(memory) => write!(f, "{}", memory)?,
             ExportKind::ControlTag(control_tag) => write!(f, "{}", control_tag)?,
+            ExportKind::Type(t) => write!(f, "{}", t)?,
         }
         Ok(())
     }

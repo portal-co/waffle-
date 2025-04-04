@@ -251,6 +251,7 @@ impl<
             ImportKind::ControlTag(control_tag) => {
                 ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?)
             }
+            ImportKind::Type(t) => ImportKind::Type(self.translate_sig(t)?),
         };
         // if let Some((j, k)) = i.as_ref() {
         //     crate::td::tm(
