@@ -655,6 +655,7 @@ pub struct BlockDef {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
 pub struct ValueRecord {
     ///The value
     pub value: Value,
@@ -837,6 +838,28 @@ impl core::fmt::Display for Terminator {
 }
 
 impl Terminator {
+    pub fn num_targets(&self) -> usize {
+        match self {
+            Terminator::Br { target } => 1,
+            Terminator::CondBr {
+                cond,
+                if_true,
+                if_false,
+            } => 2,
+            Terminator::Select {
+                value,
+                targets,
+                default,
+            } => targets.len() + 1,
+            Terminator::Return { values } => 0,
+            Terminator::ReturnCall { func, args } => 0,
+            Terminator::ReturnCallIndirect { sig, table, args } => 0,
+            Terminator::ReturnCallRef { sig, args } => 0,
+            Terminator::Unreachable => 0,
+            Terminator::UB => 0,
+            Terminator::None => 0,
+        }
+    }
     pub fn visit_targets<F: FnMut(&BlockTarget)>(&self, mut f: F) {
         match self {
             Terminator::Return { .. } => {}
@@ -896,55 +919,57 @@ impl Terminator {
             Terminator::ReturnCallRef { sig, args } => {}
         }
     }
-
     pub fn visit_target<R, F: FnMut(&BlockTarget) -> R>(&self, index: usize, mut f: F) -> R {
-        match (index, self) {
+        self.try_visit_target(index, f).expect("to be in bounds")
+    }
+    pub fn try_visit_target<R, F: FnMut(&BlockTarget) -> R>(
+        &self,
+        index: usize,
+        mut f: F,
+    ) -> Result<R, usize> {
+        Ok(match (index, self) {
             (0, Terminator::Br { ref target, .. }) => f(target),
             (0, Terminator::CondBr { ref if_true, .. }) => f(if_true),
             (1, Terminator::CondBr { ref if_false, .. }) => f(if_false),
             (0, Terminator::Select { ref default, .. }) => f(default),
             (i, Terminator::Select { ref targets, .. }) if i <= targets.len() => f(&targets[i - 1]),
-            _ => panic!("out of bounds"),
-        }
+            _ => return Err(index.wrapping_sub(self.num_targets())),
+        })
     }
 
-    pub fn update_target<F: FnMut(&mut BlockTarget)>(&mut self, index: usize, mut f: F) {
-        match (index, self) {
+    pub fn update_target<T, F: FnMut(&mut BlockTarget) -> T>(
+        &mut self,
+        index: usize,
+        mut f: F,
+    ) -> Result<T, usize> {
+        Ok(match (index, self) {
             (0, Terminator::Br { ref mut target, .. }) => f(target),
             (
                 0,
                 Terminator::CondBr {
                     ref mut if_true, ..
                 },
-            ) => {
-                f(if_true);
-            }
+            ) => f(if_true),
             (
                 1,
                 Terminator::CondBr {
                     ref mut if_false, ..
                 },
-            ) => {
-                f(if_false);
-            }
+            ) => f(if_false),
             (
                 0,
                 Terminator::Select {
                     ref mut default, ..
                 },
-            ) => {
-                f(default);
-            }
+            ) => f(default),
             (
                 i,
                 Terminator::Select {
                     ref mut targets, ..
                 },
-            ) if i <= targets.len() => {
-                f(&mut targets[i - 1]);
-            }
-            (i, this) => panic!("out of bounds: index {} term {:?}", i, this),
-        }
+            ) if i <= targets.len() => f(&mut targets[i - 1]),
+            (i, this) => return Err(i.wrapping_sub(this.num_targets())),
+        })
     }
 
     pub fn visit_successors<F: FnMut(Block)>(&self, mut f: F) {
