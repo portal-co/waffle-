@@ -164,7 +164,10 @@ impl<'a> BasicOptPass<'a> {
             }
 
             for inst in const_insts_to_insert {
-                body.blocks[block].insts.insert(0, inst);
+                body.blocks[block].insts.insert(
+                    0,
+                    ValueRecord::core(inst),
+                );
             }
 
             remove_all_from_vec(&mut body.blocks[block].params, &blockparams_to_remove[..]);
@@ -186,7 +189,7 @@ impl<'a> BasicOptPass<'a> {
         // Pass over instructions, updating in place.
         let mut i = 0;
         while i < body.blocks[block].insts.len() {
-            let inst = body.blocks[block].insts[i];
+            let inst = body.blocks[block].insts[i].value;
             i += 1;
             if value_is_pure(inst, body) {
                 let mut value = body.values[inst].clone();

@@ -72,10 +72,11 @@ impl Frint {
                 .collect::<BTreeMap<_, _>>();
             self.blocks.insert((k, params.clone()), new);
             'a: for i in src.blocks[k].insts.iter().cloned() {
+                let i = i.value;
                 if value_is_pure(i, src) {
                     let mut unused = true;
                     for j in src.blocks[k].insts.iter().cloned() {
-                        src.values[j].visit_uses(&src.arg_pool, |u| {
+                        src.values[j.value].visit_uses(&src.arg_pool, |u| {
                             if u == i {
                                 unused = false;
                             }

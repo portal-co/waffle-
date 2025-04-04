@@ -272,6 +272,7 @@ pub fn clone_block(
     r = obf.boot(r, f)?;
     // eprintln!("insts={:?}",d.insts);
     for v in &mut d.insts {
+        let v = &mut v.value;
         if let Some(_) = m.get(v) {
             continue;
         }
@@ -309,8 +310,8 @@ pub struct FunCloneRes {
 pub fn sanity(body: &FunctionBody) {
     let mut uses = BTreeSet::default();
     for block in body.blocks.iter() {
-        for &inst in &body.blocks[block].insts {
-            match &body.values[inst] {
+        for inst in &body.blocks[block].insts {
+            match &body.values[inst.value] {
                 &ValueDef::Operator(_, args, _) => {
                     for &arg in &body.arg_pool[args] {
                         let arg = body.resolve_alias(arg);

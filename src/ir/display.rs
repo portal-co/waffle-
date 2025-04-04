@@ -121,7 +121,8 @@ impl<'a> Display for FunctionBodyDisplay<'a> {
                     writeln!(f, "{}    # {}: {}", self.indent, param, local)?;
                 }
             }
-            for &inst in &block.insts {
+            for inst in &block.insts {
+                let inst = inst.value;
                 if let Some(local) = self.body.value_locals[inst] {
                     writeln!(f, "{}    # {}: {}", self.indent, inst, local)?;
                 }

@@ -45,8 +45,8 @@ impl Trees {
 
         for block_def in body.blocks.values() {
             let mut last_non_pure = None;
-            for &value in &block_def.insts {
-                match &body.values[value] {
+            for value in &block_def.insts {
+                match &body.values[value.value] {
                     &ValueDef::Operator(op, args, _) => {
                         // Ignore operators with invalid args: these must
                         // always be unreachable.
@@ -56,7 +56,7 @@ impl Trees {
                         // If this is an always-rematerialized operator,
                         // mark it as such and continue.
                         if is_remat(&op) {
-                            remat.insert(value);
+                            remat.insert(value.value);
                             continue;
                         }
 
@@ -75,14 +75,14 @@ impl Trees {
                                 multi_use.insert(arg);
                             } else if Self::is_movable(body, arg) || Some(arg) == last_non_pure {
                                 let pos = u16::try_from(i).unwrap();
-                                let value_arg = ValueArg(value, pos);
+                                let value_arg = ValueArg(value.value, pos);
                                 owner.insert(arg, value_arg);
                                 owned.insert(value_arg, arg);
                             }
                         }
 
                         if !op.is_pure() {
-                            last_non_pure = Some(value);
+                            last_non_pure = Some(value.value);
                         }
                     }
                     &ValueDef::PickOutput(..) => {

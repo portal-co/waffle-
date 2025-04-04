@@ -470,14 +470,14 @@ pub fn tcore_pass(
                 let Some(v) = d.insts.last() else {
                     continue 'gather;
                 };
-                let df = b.values[*v].clone();
+                let df = b.values[v.value].clone();
                 let ValueDef::Operator(o, vs, t) = df else {
                     continue 'gather;
                 };
                 let (Operator::Call { .. } | Operator::CallIndirect { .. }) = o else {
                     continue 'gather;
                 };
-                b.values[*v] = ValueDef::None;
+                b.values[v.value] = ValueDef::None;
                 // let Some(_) = mo.get(&function_index) else {
                 //     continue 'gather;
                 // };
@@ -537,12 +537,12 @@ pub fn tcore_pass(
                 let Some(l) = d.insts.last() else {
                     continue 'gather;
                 };
-                if let ValueDef::None = b.values[*l] {
+                if let ValueDef::None = b.values[l.value] {
                     d.insts.pop();
                     continue;
                 }
-                if taint.contains(l) {
-                    taint.remove(l);
+                if taint.contains(&l.value) {
+                    taint.remove(&l.value);
                     d.insts.pop();
                     continue;
                 }

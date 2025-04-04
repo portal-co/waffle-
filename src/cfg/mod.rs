@@ -100,8 +100,8 @@ impl CFGInfo {
             for &(_, param) in &block_def.params {
                 def_block[param] = block;
             }
-            for &value in &block_def.insts {
-                def_block[value] = block;
+            for value in &block_def.insts {
+                def_block[value.value] = block;
             }
         }
         for value in f.values.iter() {

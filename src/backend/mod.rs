@@ -164,7 +164,8 @@ impl<'a> WasmFuncBackend<'a> {
                 ));
             }
             WasmBlock::Leaf { block } => {
-                for &inst in &self.body.blocks[*block].insts {
+                for inst in &self.body.blocks[*block].insts {
+                    let inst = inst.value;
                     // If this value is "owned", do nothing: it will be lowered in
                     // the one place it's used.
                     if ctx.trees.owner.contains_key(&inst) || ctx.trees.remat.contains(&inst) {

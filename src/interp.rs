@@ -191,7 +191,7 @@ impl InterpContext {
                 }
 
             log::trace!("Interpreting block {}", frame.cur_block);
-            for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().enumerate() {
+            for (inst_idx, &inst) in body.blocks[frame.cur_block].insts.iter().map(|a|&a.value).enumerate() {
                 log::trace!("Evaluating inst {}", inst);
                 let result = match &body.values[inst] {
                     &ValueDef::Alias(_) => smallvec![],

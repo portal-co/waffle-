@@ -50,7 +50,8 @@ impl MaxSSAPass {
         // uses first to deduplicate and allow more efficient
         // processing (and to appease the borrow checker).
         let mut uses = BTreeSet::default();
-        for &inst in &body.blocks[block].insts {
+        for inst in &body.blocks[block].insts {
+            let inst = inst.value;
             match &body.values[inst] {
                 &ValueDef::Operator(_, args, _) => {
                     for &arg in &body.arg_pool[args] {
@@ -148,7 +149,7 @@ impl MaxSSAPass {
         };
 
         for i in 0..body.blocks[block].insts.len() {
-            let inst = body.blocks[block].insts[i];
+            let inst = body.blocks[block].insts[i].value;
             let mut def = core::mem::take(&mut body.values[inst]);
             match &mut def {
                 ValueDef::Operator(_, args, _) => {

@@ -126,7 +126,7 @@ impl Fuse {
             // eprintln!("dbg: {v}");
             // let k = f.value_blocks[v];
             for v in core::mem::take(&mut f.blocks[k].insts) {
-                let mut w = f.values[v].clone();
+                let mut w = f.values[v.value].clone();
                 // let vi = v;
                 if let ValueDef::Operator(a, b, c) = &mut w {
                     let mut bp = f.arg_pool[*b].to_vec();
@@ -237,8 +237,8 @@ impl Fuse {
                         .entry(bp.clone())
                         .or_insert_with(|| f.arg_pool.from_iter(bp.into_iter()));
                 }
-                f.values[v] = w;
-                f.append_to_block(k, v);
+                f.values[v.value] = w;
+                f.append_to_block(k, v.value);
             }
         }
     }

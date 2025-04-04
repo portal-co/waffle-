@@ -186,7 +186,7 @@ impl cfg_traits::Block<FunctionBody> for BlockDef {
 }
 impl ssa_traits::Block<FunctionBody> for BlockDef {
     fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        self.insts.iter().cloned()
+        self.insts.iter().map(|a|&a.value).cloned()
     }
 
     fn add_inst(

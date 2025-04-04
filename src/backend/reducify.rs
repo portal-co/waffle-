@@ -334,10 +334,14 @@ impl<'a> Reducifier<'a> {
                 // args yet -- we'll do a separate pass for that.
                 let insts = new_body.blocks[block].insts.clone();
                 for value in insts {
-                    let def = new_body.values[value].clone();
+                    let def = new_body.values[value.value].clone();
                     let new_value = new_body.values.push(def);
-                    value_map.insert((ctx, value), new_value);
-                    new_body.blocks[new_block].insts.push(new_value);
+                    value_map.insert((ctx, value.value), new_value);
+                    new_body.blocks[new_block].insts.push({
+                        let mut value = value.clone();
+                        value.value = new_value;
+                        value
+                    });
                 }
 
                 // Copy over the terminator but don't update yet --
@@ -393,8 +397,8 @@ impl<'a> Reducifier<'a> {
         // value-map available for all blocks and values, regardless
         // of cycles or processing order.
         for (ctx, new_block) in cloned_blocks {
-            for &inst in &new_body.blocks[new_block].insts {
-                match &mut new_body.values[inst] {
+            for inst in &new_body.blocks[new_block].insts {
+                match &mut new_body.values[inst.value] {
                     ValueDef::Operator(_, args, _) => {
                         let new_args = new_body.arg_pool[*args]
                             .iter()

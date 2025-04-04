@@ -1,4 +1,7 @@
-use super::{Block, FunctionBodyDisplay, Local, Module, Signature, SignatureData, Type, Value, ValueDef};
+use super::{
+    Block, ControlTag, FunctionBodyDisplay, Handler, Local, Module, Signature, SignatureData, Type,
+    Value, ValueDef,
+};
 use crate::backend::WasmFuncBackend;
 use crate::cfg::CFGInfo;
 use crate::entity::{EntityRef, EntityVec, PerEntity};
@@ -7,16 +10,16 @@ use crate::ir::SourceLoc;
 use crate::passes::basic_opt::OptOptions;
 use crate::pool::{ListPool, ListRef};
 use crate::{Func, Operator, Table};
-use alloc::string::String;
-use anyhow::Result;
-use either::Either;
-use hashbrown::{HashMap as FxHashMap};
-use ssa_traits::{Term, Val};
-use hashbrown::HashSet;
-use core::iter::{empty, once};
-use alloc::vec::Vec;
-use alloc::vec;
 use alloc::borrow::ToOwned;
+use alloc::string::String;
+use alloc::vec;
+use alloc::vec::Vec;
+use anyhow::Result;
+use core::iter::{empty, once};
+use either::Either;
+use hashbrown::HashMap as FxHashMap;
+use hashbrown::HashSet;
+use ssa_traits::{Term, Val};
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 ///
@@ -187,7 +190,12 @@ impl FunctionBody {
     /// the function parameters in the signature, but no
     /// contents. `module` is necessary to look up the signature.
     pub fn new(module: &Module, sig: Signature) -> FunctionBody {
-        let SignatureData::Func { params, returns, shared } = &module.signatures[sig] else{
+        let SignatureData::Func {
+            params,
+            returns,
+            shared,
+        } = &module.signatures[sig]
+        else {
             todo!()
         };
         let locals = EntityVec::from(params.clone());
@@ -215,7 +223,7 @@ impl FunctionBody {
             value_blocks,
             value_locals: PerEntity::default(),
             source_locs: PerEntity::default(),
-            shared: *shared
+            shared: *shared,
         }
     }
 
@@ -441,7 +449,7 @@ impl FunctionBody {
 
     /// Append a value to the instruction list in a block.
     pub fn append_to_block(&mut self, block: Block, value: Value) {
-        self.blocks[block].insts.push(value);
+        self.blocks[block].insts.push(ValueRecord ::core(value));
         self.value_blocks[value] = block;
     }
 
@@ -517,8 +525,8 @@ impl FunctionBody {
             for &(_, param) in &block_def.params {
                 block_inst[param] = Some((block, None));
             }
-            for (i, &inst) in block_def.insts.iter().enumerate() {
-                block_inst[inst] = Some((block, Some(i)));
+            for (i, inst) in block_def.insts.iter().enumerate() {
+                block_inst[inst.value] = Some((block, Some(i)));
             }
         }
 
@@ -558,7 +566,8 @@ impl FunctionBody {
                 }
             };
 
-            for (i, &inst) in block_def.insts.iter().enumerate() {
+            for (i, inst) in block_def.insts.iter().enumerate() {
+                let inst = inst.value;
                 match &self.values[inst] {
                     &ValueDef::Operator(_, args, _) => {
                         for &arg in &self.arg_pool[args] {
@@ -623,7 +632,7 @@ impl FunctionBody {
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BlockDef {
     /// Instructions in this block.
-    pub insts: Vec<Value>,
+    pub insts: Vec<ValueRecord>,
     /// Terminator: branch or return.
     pub terminator: Terminator,
     /// Successor blocks.
@@ -641,17 +650,40 @@ pub struct BlockDef {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ValueRecord {
+    ///The value
+    pub value: Value,
+    ///The exception handler
+    // pub handler: PerEntity<ControlTag, Handler<HoleTarget>>,
+    // pub default_handler: Option<Handler<HoleTarget>>,
+    _private: (),
+}
+
+impl ValueRecord {
+    pub fn core(a: Value) -> Self {
+        Self {
+            value: a,
+            // handler: Default::default(),
+            // default_handler: Default::default(),
+            _private: ()
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BlockTarget {
     pub block: Block,
     pub args: Vec<Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct ExceptionTarget {
+pub struct HoleTarget {
     pub block: Block,
-    pub args: Vec<Either<usize,Value>>,
+    pub args: Vec<Either<usize, Value>>,
     pub num_holes: usize,
 }
+
+pub type ExceptionTarget = HoleTarget;
 
 impl core::fmt::Display for BlockTarget {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -663,12 +695,12 @@ impl core::fmt::Display for BlockTarget {
         write!(f, "{}({})", self.block, args.join(", "))
     }
 }
-impl core::fmt::Display for ExceptionTarget {
+impl core::fmt::Display for HoleTarget {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let args = self
             .args
             .iter()
-            .map(|arg| match arg.as_ref(){
+            .map(|arg| match arg.as_ref() {
                 Either::Right(arg) => format!("{}", arg),
                 Either::Left(arg) => format!("hole{}", arg),
             })
@@ -783,7 +815,7 @@ impl core::fmt::Display for Terminator {
                     .collect::<Vec<_>>()
                     .join(", ")
             )?,
-            crate::Terminator::UB => write!(f,"undefined")?,
+            crate::Terminator::UB => write!(f, "undefined")?,
         }
         Ok(())
     }
@@ -812,7 +844,7 @@ impl Terminator {
                     f(target);
                 }
             }
-            Terminator::None | Terminator::UB=> {}
+            Terminator::None | Terminator::UB => {}
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
@@ -842,7 +874,7 @@ impl Terminator {
                     f(target);
                 }
             }
-            Terminator::None | Terminator::UB=> {}
+            Terminator::None | Terminator::UB => {}
             Terminator::Unreachable => {}
             Terminator::ReturnCall { func, args } => {}
             Terminator::ReturnCallIndirect { sig, table, args } => {}
