@@ -447,10 +447,15 @@ impl FunctionBody {
         self.value_locals[value] = Some(local);
     }
 
+    /// Append a value record to the instruction list in a block.
+    pub fn append_record_to_block(&mut self, block: Block, value: ValueRecord) {
+        self.blocks[block].insts.push(value.clone());
+        self.value_blocks[value.value] = block;
+    }
+
     /// Append a value to the instruction list in a block.
     pub fn append_to_block(&mut self, block: Block, value: Value) {
-        self.blocks[block].insts.push(ValueRecord ::core(value));
-        self.value_blocks[value] = block;
+        self.append_record_to_block(block, ValueRecord::core(value));
     }
 
     /// Set the terminator instruction on a block, updating the edge
@@ -660,12 +665,17 @@ pub struct ValueRecord {
 }
 
 impl ValueRecord {
+    ///Obtains the core value within this record provided no on-the-spot effects
+    pub fn pure_core(&self) -> Option<Value>{
+        Some(self.value)
+    }
+    ///Creates a record froma  core value
     pub fn core(a: Value) -> Self {
         Self {
             value: a,
             // handler: Default::default(),
             // default_handler: Default::default(),
-            _private: ()
+            _private: (),
         }
     }
 }
