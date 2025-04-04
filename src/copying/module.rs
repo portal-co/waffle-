@@ -327,6 +327,11 @@ impl<
                         self.translate_type(v)?;
                     }
                 }
+                SignatureData::Import { like, shared } => {
+                    if let HeapType::Sig { sig_index: like } = like {
+                        *like = self.translate_sig(*like)?;
+                    }
+                }
             };
             self.dest.signatures[k] = d;
         }

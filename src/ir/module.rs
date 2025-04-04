@@ -84,6 +84,10 @@ pub enum SignatureData {
         ///Is this signature shared
         shared: bool,
     },
+    Import{
+        like: HeapType,
+        shared: bool,
+    },
     #[default]
     None,
 }
@@ -98,6 +102,7 @@ impl SignatureData {
             } => *shared,
             SignatureData::Struct { fields, shared } => *shared,
             SignatureData::Array { ty, shared } => *shared,
+            SignatureData::Import { like, shared } => *shared,
             SignatureData::None => todo!(),
         }
     }
@@ -227,6 +232,7 @@ impl From<&SignatureData> for wasm_encoder::SubType {
                     shared: *shared,
                 },
             },
+            SignatureData::Import { like, shared } => todo!(),
         }
     }
 }
