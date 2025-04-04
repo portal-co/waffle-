@@ -31,11 +31,11 @@ serde = { version = "1.0.204", features = ["derive"] }
 
 either = "1.13.0"
 arena-traits = "0.2.0"
-ssa-traits = "0.2.0"
-cfg-traits = "0.2.0"
+ssa-traits = {version="0.2.0",optional=true}
+cfg-traits = {version="0.2.0",optional=true}
 
-cfg-traits-03 = {version="0.3.0-alpha.0",package="cfg-traits"}
-ssa-traits-03 = {version="0.3.0-alpha.0",package="ssa-traits"}
+cfg-traits-03 = {version="0.3.0-alpha.0",package="cfg-traits",optional=true}
+ssa-traits-03 = {version="0.3.0-alpha.0",package="ssa-traits",optional=true}
 lending-iterator = "0.1.7"
 hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
 
@@ -47,6 +47,5 @@ env_logger = "0.11"
 default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
 stacker = ["dep:stacker"]
-
-
- 
+ssa-traits-02 = ["dep:ssa-traits","dep:cfg-traits"]
+ssa-traits-03 = ["dep:ssa-traits-03","dep:cfg-traits-03"]
