@@ -259,7 +259,8 @@ pub struct Import {
     pub kind: ImportKind,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq,PartialOrd, Ord,Hash)]
+#[non_exhaustive]
 pub enum ImportKind {
     /// An import of a table.
     Table(Table),
@@ -294,7 +295,8 @@ pub struct Export {
     pub kind: ExportKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug,PartialEq, Eq, PartialOrd, Ord,Hash)]
+#[non_exhaustive]
 pub enum ExportKind {
     /// An export of a table.
     Table(Table),
@@ -306,6 +308,25 @@ pub enum ExportKind {
     Memory(Memory),
     /// An export of a control tag
     ControlTag(ControlTag),
+}
+
+pub fn x2i(x: ExportKind) -> ImportKind {
+    match x {
+        ExportKind::Table(a) => ImportKind::Table(a),
+        ExportKind::Func(a) => ImportKind::Func(a),
+        ExportKind::Global(a) => ImportKind::Global(a),
+        ExportKind::Memory(a) => ImportKind::Memory(a),
+        ExportKind::ControlTag(control_tag) => ImportKind::ControlTag(control_tag),
+    }
+}
+pub fn i2x(x: ImportKind) -> ExportKind {
+    match x {
+        ImportKind::Table(a) => ExportKind::Table(a),
+        ImportKind::Func(a) => ExportKind::Func(a),
+        ImportKind::Global(a) => ExportKind::Global(a),
+        ImportKind::Memory(a) => ExportKind::Memory(a),
+        ImportKind::ControlTag(control_tag) => ExportKind::ControlTag(control_tag),
+    }
 }
 
 impl core::fmt::Display for ExportKind {

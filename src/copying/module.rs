@@ -16,59 +16,17 @@ use core::{
 };
 use hashbrown::HashMap;
 use paste::paste;
-pub fn x2i(x: ExportKind) -> ImportKind {
-    match x {
-        ExportKind::Table(a) => ImportKind::Table(a),
-        ExportKind::Func(a) => ImportKind::Func(a),
-        ExportKind::Global(a) => ImportKind::Global(a),
-        ExportKind::Memory(a) => ImportKind::Memory(a),
-        ExportKind::ControlTag(control_tag) => ImportKind::ControlTag(control_tag),
-    }
-}
-pub fn i2x(x: ImportKind) -> ExportKind {
-    match x {
-        ImportKind::Table(a) => ExportKind::Table(a),
-        ImportKind::Func(a) => ExportKind::Func(a),
-        ImportKind::Global(a) => ExportKind::Global(a),
-        ImportKind::Memory(a) => ExportKind::Memory(a),
-        ImportKind::ControlTag(control_tag) => ExportKind::ControlTag(control_tag),
-    }
-}
+
 use crate::{
-    entity::EntityRef, ControlTag, ExportKind, Func, FuncDecl, FunctionBody, Global, ImportKind,
-    Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type, ValueDef,
+    entity::EntityRef, i2x, x2i, ControlTag, ExportKind, Func, FuncDecl, FunctionBody, Global,
+    ImportKind, Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type,
+    ValueDef,
 };
 
 use super::fcopy::{clone_fn, DontObf};
 use super::kts::Kts;
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Hash)]
 pub struct IKW(pub ImportKind);
-impl Hash for IKW {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        match &self.0 {
-            ImportKind::Table(a) => {
-                state.write_usize(0);
-                a.hash(state);
-            }
-            ImportKind::Func(a) => {
-                state.write_usize(1);
-                a.hash(state);
-            }
-            ImportKind::Global(a) => {
-                state.write_usize(2);
-                a.hash(state);
-            }
-            ImportKind::Memory(a) => {
-                state.write_usize(3);
-                a.hash(state);
-            }
-            ImportKind::ControlTag(control_tag) => {
-                state.write_usize(4);
-                control_tag.hash(state);
-            }
-        }
-    }
-}
 
 pub struct State<I> {
     cache: HashMap<IKW, ImportKind>,
@@ -348,7 +306,9 @@ impl<
             self.state.sig_cache.insert(s, k);
             let mut d = self.src.signatures[s].clone();
             match &mut d {
-                SignatureData::Func { params, returns, .. } => {
+                SignatureData::Func {
+                    params, returns, ..
+                } => {
                     for x in params.iter_mut().chain(returns.iter_mut()) {
                         self.translate_type(x)?;
                     }
