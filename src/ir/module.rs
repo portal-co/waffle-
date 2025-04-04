@@ -75,23 +75,27 @@ pub enum SignatureData {
     Struct {
         ///The fields of the struct
         fields: Vec<WithMutablility<StorageType>>,
-                ///Is this signature shared
-                shared: bool,
+        ///Is this signature shared
+        shared: bool,
     },
     Array {
         ///The element type
         ty: WithMutablility<StorageType>,
-                ///Is this signature shared
-                shared: bool,
+        ///Is this signature shared
+        shared: bool,
     },
     #[default]
     None,
 }
 
-impl SignatureData{
-    pub fn shared(&self) -> bool{
-        match self{
-            SignatureData::Func { params, returns, shared } => *shared,
+impl SignatureData {
+    pub fn shared(&self) -> bool {
+        match self {
+            SignatureData::Func {
+                params,
+                returns,
+                shared,
+            } => *shared,
             SignatureData::Struct { fields, shared } => *shared,
             SignatureData::Array { ty, shared } => *shared,
             SignatureData::None => todo!(),
@@ -164,7 +168,7 @@ impl From<&wasmparser::SubType> for SignatureData {
                     .iter()
                     .map(|&ty| ty.into())
                     .collect::<Vec<Type>>(),
-                    shared: fty.composite_type.shared,
+                shared: fty.composite_type.shared,
             },
             wasmparser::CompositeInnerType::Array(array_type) => Self::Array {
                 ty: array_type.0.clone().into(),
@@ -187,7 +191,11 @@ impl From<wasmparser::SubType> for SignatureData {
 impl From<&SignatureData> for wasm_encoder::SubType {
     fn from(value: &SignatureData) -> Self {
         match value {
-            SignatureData::Func { params, returns, shared } => wasm_encoder::SubType {
+            SignatureData::Func {
+                params,
+                returns,
+                shared,
+            } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
@@ -199,7 +207,7 @@ impl From<&SignatureData> for wasm_encoder::SubType {
                 },
             },
             SignatureData::None => todo!(),
-            SignatureData::Struct { fields,shared } => wasm_encoder::SubType {
+            SignatureData::Struct { fields, shared } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
@@ -209,7 +217,7 @@ impl From<&SignatureData> for wasm_encoder::SubType {
                     shared: *shared,
                 },
             },
-            SignatureData::Array { ty,shared } => wasm_encoder::SubType {
+            SignatureData::Array { ty, shared } => wasm_encoder::SubType {
                 is_final: true,
                 supertype_idx: None,
                 composite_type: wasm_encoder::CompositeType {
@@ -226,7 +234,9 @@ impl From<&SignatureData> for wasm_encoder::SubType {
 impl Signature {
     pub fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
-            SignatureData::Func { params, returns, .. } => params
+            SignatureData::Func {
+                params, returns, ..
+            } => params
                 .iter()
                 .chain(returns.iter())
                 .flat_map(|a| a.sigs())
@@ -259,7 +269,7 @@ pub struct Import {
     pub kind: ImportKind,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq,PartialOrd, Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum ImportKind {
     /// An import of a table.
@@ -295,7 +305,7 @@ pub struct Export {
     pub kind: ExportKind,
 }
 
-#[derive(Clone, Debug,PartialEq, Eq, PartialOrd, Ord,Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum ExportKind {
     /// An export of a table.

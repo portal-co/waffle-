@@ -9,7 +9,10 @@ pub fn add_start(m: &mut Module, tf: Func) {
     let mut f = FunctionBody::new(&m, s);
     let vz = f.arg_pool.from_iter(core::iter::empty());
     let t = m.funcs[tf].sig();
-    let SignatureData::Func { params, returns, .. } = m.signatures[t].clone() else{
+    let SignatureData::Func {
+        params, returns, ..
+    } = m.signatures[t].clone()
+    else {
         todo!()
     };
     let t = returns;

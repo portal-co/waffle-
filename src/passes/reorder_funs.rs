@@ -1,12 +1,12 @@
-use alloc::collections::BTreeMap;
-use core::convert::Infallible;
-use alloc::vec;
-use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
 use crate::{
     entity::EntityRef, ExportKind, Func, FuncDecl, FunctionBody, ImportKind, Memory, Module,
     Operator, Terminator, ValueDef,
 };
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::convert::Infallible;
 
 use crate::op_traits::rewrite_mem;
 

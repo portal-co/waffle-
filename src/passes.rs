@@ -8,11 +8,11 @@ pub mod resolve_aliases;
 // pub mod ssa;
 // pub mod trace;
 pub mod mem_fusing;
-pub mod unmem;
 pub mod reorder_funs;
+pub mod unmem;
 // pub mod fixup_rets;
-#[cfg(feature = "tcore")]
-pub mod tcore;
 pub mod frint;
 pub mod inline;
+#[cfg(feature = "tcore")]
+pub mod tcore;
 pub mod ub_vaccum;

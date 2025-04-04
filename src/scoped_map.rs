@@ -27,12 +27,12 @@
 //! particular, we use this for GVN, where if a key already exists, we
 //! use it rather than setting it again in a more nested scope.
 
-use hashbrown::HashMap;
-use core::fmt::Debug;
-use core::hash::Hash;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Debug;
+use core::hash::Hash;
+use hashbrown::HashMap;
 
 /// A scoped hashmap: a key-value map with "push" and "pop" operations
 /// and the ability to quickly remove mappings created at a given

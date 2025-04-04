@@ -36,11 +36,13 @@ impl Subtypes for SignatureData {
         vsigs: &BTreeSet<(Signature, Signature)>,
     ) -> bool {
         match (self, other) {
-            (SignatureData::Array { ty,.. }, SignatureData::Array { ty: tyo,.. }) => {
+            (SignatureData::Array { ty, .. }, SignatureData::Array { ty: tyo, .. }) => {
                 ty.subtypes(tyo, module, vsigs)
             }
             (
-                SignatureData::Func { params, returns,.. },
+                SignatureData::Func {
+                    params, returns, ..
+                },
                 SignatureData::Func {
                     params: po,
                     returns: ro,
@@ -58,7 +60,7 @@ impl Subtypes for SignatureData {
                         .zip(ro.iter())
                         .all(|(a, b)| a.subtypes(b, module, vsigs))
             }
-            (SignatureData::Struct { fields,.. }, SignatureData::Struct { fields: fo,.. }) => {
+            (SignatureData::Struct { fields, .. }, SignatureData::Struct { fields: fo, .. }) => {
                 fields.len() >= fo.len()
                     && fields
                         .iter()
@@ -189,7 +191,7 @@ pub enum HeapType {
     FuncRef,
     ExternRef,
     Sig { sig_index: Signature },
-    Array
+    Array,
 }
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -208,15 +210,25 @@ pub struct WithMutablility<T> {
     pub mutable: bool,
 }
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,Default
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
+    Default,
 )]
 ///An exception's handler
-pub enum Handler<T>{
+pub enum Handler<T> {
     ///Rethrow the exception
     #[default]
     Throw,
     ///Catch the exception
-    Catch(T)
+    Catch(T),
 }
 #[non_exhaustive]
 #[derive(
@@ -319,7 +331,7 @@ impl core::fmt::Display for HeapType {
             HeapType::FuncRef => write!(f, "funcref"),
             HeapType::ExternRef => write!(f, "externref"),
             HeapType::Sig { sig_index } => write!(f, "sigref({})", sig_index),
-            HeapType::Array => write!(f,"arrayref"),
+            HeapType::Array => write!(f, "arrayref"),
         }
     }
 }

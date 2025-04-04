@@ -164,10 +164,7 @@ impl<'a> BasicOptPass<'a> {
             }
 
             for inst in const_insts_to_insert {
-                body.blocks[block].insts.insert(
-                    0,
-                    ValueRecord::core(inst),
-                );
+                body.blocks[block].insts.insert(0, ValueRecord::core(inst));
             }
 
             remove_all_from_vec(&mut body.blocks[block].params, &blockparams_to_remove[..]);

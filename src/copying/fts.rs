@@ -9,9 +9,9 @@ use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, Block, BlockTarget, Func,
     FuncDecl, FunctionBody, Module, Operator, SignatureData, ValueDef,
 };
+use alloc::string::ToString;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::string::ToString;
 #[derive(Default)]
 pub struct Fts {
     pub blocks: BTreeMap<Block, Func>,

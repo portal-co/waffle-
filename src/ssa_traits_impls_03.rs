@@ -2,17 +2,17 @@ use crate::{
     entity::EntityVec, pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator,
     Terminator, Type, Value, ValueDef,
 };
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 use cfg_traits_03 as cfg_traits;
+use core::iter::{empty, once};
+use core::ops::{Deref, DerefMut};
 use either::Either;
 use lending_iterator::prelude::*;
 use ssa_traits::Val;
 use ssa_traits_03 as ssa_traits;
-use core::iter::{empty, once};
-use core::ops::{Deref, DerefMut};
-use alloc::boxed::Box;
-use alloc::vec;
-use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
 
 impl cfg_traits::Func for FunctionBody {
     type Block = Block;
@@ -28,9 +28,15 @@ impl cfg_traits::Func for FunctionBody {
         self.entry
     }
 
-    type BRef<'a> = &'a Self::Blocks where Self: 'a;
+    type BRef<'a>
+        = &'a Self::Blocks
+    where
+        Self: 'a;
 
-    type BMut<'a> = &'a mut Self::Blocks where Self: 'a;
+    type BMut<'a>
+        = &'a mut Self::Blocks
+    where
+        Self: 'a;
 }
 impl ssa_traits::Func for FunctionBody {
     type Value = Value;
@@ -45,11 +51,13 @@ impl ssa_traits::Func for FunctionBody {
         &mut self.values
     }
 
-    type VRef<'a> = &'a Self::Values
+    type VRef<'a>
+        = &'a Self::Values
     where
         Self: 'a;
 
-    type VMut<'a>= &'a mut Self::Values
+    type VMut<'a>
+        = &'a mut Self::Values
     where
         Self: 'a;
 }
@@ -186,7 +194,7 @@ impl cfg_traits::Block<FunctionBody> for BlockDef {
 }
 impl ssa_traits::Block<FunctionBody> for BlockDef {
     fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        self.insts.iter().map(|a|&a.value).cloned()
+        self.insts.iter().map(|a| &a.value).cloned()
     }
 
     fn add_inst(
@@ -207,7 +215,10 @@ impl cfg_traits::Target<FunctionBody> for BlockTarget {
         &mut self.block
     }
 
-    type BMut<'a> = &'a mut Block where Self: 'a;
+    type BMut<'a>
+        = &'a mut Block
+    where
+        Self: 'a;
 }
 
 impl ssa_traits::Target<FunctionBody> for BlockTarget {
@@ -287,7 +298,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
-            Terminator::None | Terminator::UB=> Either::Left(None.into_iter()),
+            Terminator::None | Terminator::UB => Either::Left(None.into_iter()),
         })
     }
 
@@ -314,7 +325,7 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
             Terminator::ReturnCallIndirect { sig, table, args } => Either::Left(None.into_iter()),
             Terminator::ReturnCallRef { sig, args } => Either::Left(None.into_iter()),
             Terminator::Unreachable => Either::Left(None.into_iter()),
-            Terminator::None | Terminator::UB=> Either::Left(None.into_iter()),
+            Terminator::None | Terminator::UB => Either::Left(None.into_iter()),
         })
     }
 }
@@ -354,7 +365,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             }
             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter())),
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None | Terminator::UB=> Either::Left(empty()),
+            Terminator::None | Terminator::UB => Either::Left(empty()),
         })
     }
 
@@ -395,7 +406,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             }
             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter_mut())),
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None | Terminator::UB=> Either::Left(empty()),
+            Terminator::None | Terminator::UB => Either::Left(empty()),
         })
     }
 }

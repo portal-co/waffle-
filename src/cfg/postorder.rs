@@ -5,10 +5,10 @@
 
 use crate::entity::PerEntity;
 use crate::ir::Block;
-use smallvec::{smallvec, SmallVec};
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use smallvec::{smallvec, SmallVec};
 
 pub fn calculate<'a, SuccFn: Fn(Block) -> &'a [Block]>(
     entry: Block,

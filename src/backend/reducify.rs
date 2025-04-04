@@ -152,10 +152,10 @@ use crate::entity::EntityRef;
 use crate::{cfg::CFGInfo, cfg::RPOIndex, entity::PerEntity, Block, FunctionBody, Value, ValueDef};
 use alloc::borrow::Cow;
 use alloc::collections::VecDeque;
+use alloc::vec;
+use alloc::vec::Vec;
 use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet, HashSet};
 use smallvec::SmallVec;
-use alloc::vec::Vec;
-use alloc::vec;
 
 pub struct Reducifier<'a> {
     body: &'a FunctionBody,

@@ -13,10 +13,10 @@ use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{Block, BlockTarget, FunctionBody, Terminator, Type, Value};
 use crate::{Func, Signature, Table};
-use hashbrown::HashSet;
-use core::convert::TryFrom;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
+use core::convert::TryFrom;
+use hashbrown::HashSet;
 
 #[derive(Clone, Debug)]
 pub enum WasmBlock<'a> {
@@ -130,7 +130,7 @@ enum StackEntry<'a> {
     FinishBlock(Block),
     Else,
     FinishIf(Value),
-    DoBranch{
+    DoBranch {
         block: Block,
         target: &'a BlockTarget,
         prefix: usize,
@@ -245,8 +245,12 @@ impl<'a, 'b> Context<'a, 'b> {
             StackEntry::FinishIf(cond) => {
                 self.finish_if(cond);
             }
-            StackEntry::DoBranch{block,target, prefix} => {
-                self.do_branch(block, target,prefix);
+            StackEntry::DoBranch {
+                block,
+                target,
+                prefix,
+            } => {
+                self.do_branch(block, target, prefix);
             }
         }
     }
@@ -438,7 +442,11 @@ impl<'a, 'b> Context<'a, 'b> {
             into.push(WasmBlock::Leaf { block });
             match &self.body.blocks[block].terminator {
                 &Terminator::Br { ref target } => {
-                    self.process_stack.push(StackEntry::DoBranch{block,target,prefix: 0});
+                    self.process_stack.push(StackEntry::DoBranch {
+                        block,
+                        target,
+                        prefix: 0,
+                    });
                 }
                 &Terminator::CondBr {
                     cond,
@@ -447,11 +455,17 @@ impl<'a, 'b> Context<'a, 'b> {
                 } => {
                     self.ctrl_stack.push(CtrlEntry::IfThenElse);
                     self.process_stack.push(StackEntry::FinishIf(cond));
-                    self.process_stack
-                        .push(StackEntry::DoBranch { block: block, target: if_false, prefix: 0 });
+                    self.process_stack.push(StackEntry::DoBranch {
+                        block: block,
+                        target: if_false,
+                        prefix: 0,
+                    });
                     self.process_stack.push(StackEntry::Else);
-                    self.process_stack
-                        .push(StackEntry::DoBranch {block: block, target: if_true, prefix: 0});
+                    self.process_stack.push(StackEntry::DoBranch {
+                        block: block,
+                        target: if_true,
+                        prefix: 0,
+                    });
                     self.result.push(vec![]); // if-body
                 }
                 &Terminator::Select {

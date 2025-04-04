@@ -903,12 +903,12 @@ pub enum Operator {
     },
     ArrayLen,
 
-    RefTest{
-        ty: Type
-    },
-    RefCast{
+    RefTest {
         ty: Type,
-    }
+    },
+    RefCast {
+        ty: Type,
+    },
 }
 
 #[test]
@@ -1932,10 +1932,18 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
                 src: Signature::new(array_type_index_src as usize),
             }),
             &wasmparser::Operator::ArrayLen => Ok(Operator::ArrayLen),
-            &wasmparser::Operator::RefTestNonNull { hty } => Ok(Operator::RefTest { ty: Type::Heap(wasmparser::RefType::new(false, hty).unwrap().into()) }),
-            &wasmparser::Operator::RefCastNonNull { hty } => Ok(Operator::RefCast { ty: Type::Heap(wasmparser::RefType::new(false, hty).unwrap().into()) }),
-            &wasmparser::Operator::RefTestNullable { hty } => Ok(Operator::RefTest { ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()) }),
-            &wasmparser::Operator::RefCastNullable { hty } => Ok(Operator::RefCast { ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()) }),
+            &wasmparser::Operator::RefTestNonNull { hty } => Ok(Operator::RefTest {
+                ty: Type::Heap(wasmparser::RefType::new(false, hty).unwrap().into()),
+            }),
+            &wasmparser::Operator::RefCastNonNull { hty } => Ok(Operator::RefCast {
+                ty: Type::Heap(wasmparser::RefType::new(false, hty).unwrap().into()),
+            }),
+            &wasmparser::Operator::RefTestNullable { hty } => Ok(Operator::RefTest {
+                ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()),
+            }),
+            &wasmparser::Operator::RefCastNullable { hty } => Ok(Operator::RefCast {
+                ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()),
+            }),
             _ => Err(()),
         }
     }

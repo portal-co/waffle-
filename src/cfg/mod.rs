@@ -6,10 +6,10 @@
 use crate::declare_entity;
 use crate::entity::{EntityRef, EntityVec, PerEntity};
 use crate::ir::{Block, FunctionBody, Terminator, Value, ValueDef};
-use smallvec::SmallVec;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use smallvec::SmallVec;
 
 pub mod domtree;
 pub mod postorder;

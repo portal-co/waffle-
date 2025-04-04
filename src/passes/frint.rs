@@ -1,11 +1,11 @@
 use alloc::collections::BTreeMap;
 use core::default;
 
-use anyhow::Context;
-use arena_traits::IndexAlloc;
+use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
+use anyhow::Context;
+use arena_traits::IndexAlloc;
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
@@ -42,7 +42,7 @@ impl Frint {
         k: Block,
         params: Vec<Option<Func>>,
     ) -> anyhow::Result<Block> {
-         loop {
+        loop {
             if let Some(l) = self.blocks.get(&(k, params.clone())) {
                 return Ok(*l);
             }

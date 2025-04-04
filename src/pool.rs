@@ -15,13 +15,13 @@
 //! actual slice. This container is instantiated several times in the
 //! `FunctionBody`, namely for the `arg_pool` and `type_pool`.
 
+use alloc::boxed::Box;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
-use alloc::boxed::Box;
-use alloc::vec;
-use alloc::vec::Vec;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 /// A "storage pool" backing many `ListRef`s of the given type.

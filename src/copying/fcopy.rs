@@ -1,6 +1,6 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
-use hashbrown::{HashMap};
+use hashbrown::HashMap;
 
 // use libc::key_t;
 
@@ -11,8 +11,8 @@ use crate::{
 };
 
 use crate::util::new_sig;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
 pub trait Obfuscate {
     fn boot(&mut self, b: Block, f: &mut FunctionBody) -> anyhow::Result<Block> {
         return Ok(b);
@@ -103,48 +103,48 @@ pub fn tweak_terminator(
     match x {
         Terminator::Br { target } => tweak_target(f, target, m, k),
         Terminator::CondBr {
-                        cond,
-                        if_true,
-                        if_false,
-            } => {
-                m(cond);
-                tweak_target(f, if_true, &mut m, &mut k);
-                tweak_target(f, if_false, m, k);
-            }
+            cond,
+            if_true,
+            if_false,
+        } => {
+            m(cond);
+            tweak_target(f, if_true, &mut m, &mut k);
+            tweak_target(f, if_false, m, k);
+        }
         Terminator::Select {
-                value,
-                targets,
-                default,
-            } => {
-                m(value);
-                for target in targets {
-                    tweak_target(f, target, &mut m, &mut k)
-                }
-                tweak_target(f, default, m, k)
+            value,
+            targets,
+            default,
+        } => {
+            m(value);
+            for target in targets {
+                tweak_target(f, target, &mut m, &mut k)
             }
+            tweak_target(f, default, m, k)
+        }
         Terminator::Return { values } => {
-                for a in values {
-                    m(a)
-                }
+            for a in values {
+                m(a)
             }
+        }
         Terminator::Unreachable => {}
         Terminator::None => {}
         Terminator::ReturnCall { func, args } => {
-                for a in args {
-                    m(a)
-                }
+            for a in args {
+                m(a)
             }
+        }
         Terminator::ReturnCallIndirect { sig, table, args } => {
-                for a in args {
-                    m(a)
-                }
+            for a in args {
+                m(a)
             }
+        }
         Terminator::ReturnCallRef { sig, args } => {
-                for a in args {
-                    m(a)
-                }
+            for a in args {
+                m(a)
             }
-        Terminator::UB => {},
+        }
+        Terminator::UB => {}
     }
 }
 pub fn clone_value(
@@ -385,7 +385,7 @@ pub fn obf_fn(m: &mut Module, f: Func, obf: &mut impl Obfuscate) -> anyhow::Resu
     let shared = m.signatures[s].shared();
     if let Some(b) = m.funcs[f].body() {
         let mut b = b.clone();
-        obf_fn_body(m, &mut b, obf,shared)?;
+        obf_fn_body(m, &mut b, obf, shared)?;
         *m.funcs[f].body_mut().unwrap() = b;
     }
     return Ok(());

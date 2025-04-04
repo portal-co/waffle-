@@ -6,11 +6,11 @@ use crate::cfg::CFGInfo;
 use crate::entity::{EntityVec, PerEntity};
 use crate::ir::{Block, FunctionBody, Local, Type, Value, ValueDef};
 use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
+use core::ops::Range;
 use hashbrown::{HashMap, HashSet};
 use smallvec::{smallvec, SmallVec};
-use core::ops::Range;
-use alloc::vec::Vec;
-use alloc::vec;
 
 #[derive(Clone, Debug, Default)]
 pub struct Localifier {
@@ -76,7 +76,7 @@ impl<'a, V: Visitor> BlockVisitor<'a, V> {
         });
         self.visitor.pre_term();
 
-        for &inst in self.body.blocks[block].insts.iter().map(|a|&a.value).rev() {
+        for &inst in self.body.blocks[block].insts.iter().map(|a| &a.value).rev() {
             if self.trees.owner.contains_key(&inst) || self.trees.remat.contains(&inst) {
                 continue;
             }

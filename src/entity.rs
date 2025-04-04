@@ -43,15 +43,7 @@ pub trait EntityRef: Clone + Copy + PartialEq + Eq + PartialOrd + Ord + Hash {
 macro_rules! declare_entity {
     ($name:tt, $prefix:tt) => {
         #[derive(
-            Clone,
-            Copy,
-            PartialEq,
-            Eq,
-            PartialOrd,
-            Ord,
-            Hash,
-            serde::Serialize,
-            serde::Deserialize,
+            Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
         )]
         pub struct $name(u32);
 

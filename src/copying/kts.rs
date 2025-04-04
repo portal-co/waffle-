@@ -1,9 +1,9 @@
 use alloc::collections::BTreeMap;
 use core::default;
 
-use anyhow::Context;
-use alloc::vec::Vec;
 use alloc::vec;
+use alloc::vec::Vec;
+use anyhow::Context;
 
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, FunctionBody, Operator,

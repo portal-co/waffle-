@@ -1,13 +1,14 @@
 use crate::{
-    entity::EntityVec, pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator, Terminator, Type, Value, ValueDef
+    entity::EntityVec, pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator,
+    Terminator, Type, Value, ValueDef,
 };
-use either::Either;
-use ssa_traits::Val;
-use core::iter::{empty, once};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
+use core::iter::{empty, once};
+use either::Either;
+use ssa_traits::Val;
 
 impl cfg_traits::Func for FunctionBody {
     type Block = Block;
@@ -151,7 +152,7 @@ impl cfg_traits::Block<FunctionBody> for BlockDef {
 }
 impl ssa_traits::Block<FunctionBody> for BlockDef {
     fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
-        self.insts.iter().map(|a|&a.value).cloned()
+        self.insts.iter().map(|a| &a.value).cloned()
     }
 
     fn add_inst(
@@ -191,9 +192,7 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for BlockTarget {
     type Target = BlockTarget;
 
-    fn targets<'a>(
-        &'a self,
-    ) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
@@ -320,7 +319,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
                 Either::Right(Either::Left(args.iter().cloned()))
             }
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None | Terminator::UB=> Either::Left(empty()),
+            Terminator::None | Terminator::UB => Either::Left(empty()),
         })
     }
 
@@ -360,7 +359,7 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             }
             Terminator::ReturnCallRef { sig, args } => Either::Right(Either::Left(args.iter_mut())),
             Terminator::Unreachable => Either::Left(empty()),
-            Terminator::None | Terminator::UB=> Either::Left(empty()),
+            Terminator::None | Terminator::UB => Either::Left(empty()),
         })
     }
 }

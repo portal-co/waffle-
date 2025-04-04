@@ -8,15 +8,15 @@ use crate::ir::*;
 use crate::op_traits::{op_inputs, op_outputs};
 use crate::ops::Operator;
 // use addr2line::gimli;
-use anyhow::{bail, Result};
-use hashbrown::{HashMap as FxHashMap,HashSet as  FxHashSet};
-use log::trace;
-use core::convert::TryFrom;
-use wasmparser::{BlockType, DataKind, ExternalKind, KnownCustom, Name, Parser, Payload, TypeRef};
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
-use alloc::borrow::ToOwned;
+use anyhow::{bail, Result};
+use core::convert::TryFrom;
+use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet};
+use log::trace;
+use wasmparser::{BlockType, DataKind, ExternalKind, KnownCustom, Name, Parser, Payload, TypeRef};
 
 /// Options to control the Wasm-to-bytecode translation process.
 #[derive(Clone, Copy, Debug, Default)]
@@ -34,7 +34,7 @@ pub(crate) fn wasm_to_ir<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Resu
     // let mut dwarf = gimli::Dwarf::default();
     let mut extra_sections = ExtraSections::default();
     for payload in parser.parse_all(bytes) {
-        let payload = payload.map_err(|e|anyhow::Error::from(e))?;
+        let payload = payload.map_err(|e| anyhow::Error::from(e))?;
         handle_payload(
             &mut module,
             payload,
@@ -105,7 +105,7 @@ fn handle_payload<'a>(
                 for ty in rec_group?.into_types() {
                     // match &ty.composite_type {
                     //     wasmparser::CompositeType::Func(fty) => {
-                            module.signatures.push((&ty).into());
+                    module.signatures.push((&ty).into());
                     //     }
                     //     _ => bail!(FrontendError::UnsupportedFeature(
                     //         "non-function type in type section".into()
@@ -143,7 +143,7 @@ fn handle_payload<'a>(
                             initial: ty.initial,
                             max: ty.maximum,
                             func_elements: Some(vec![]),
-                            table64: ty.table64
+                            table64: ty.table64,
                         });
                         ImportKind::Table(table)
                     }
@@ -159,7 +159,9 @@ fn handle_payload<'a>(
                         ImportKind::Memory(mem)
                     }
                     TypeRef::Tag(tag) => {
-                        let tag = module.control_tags.push(ControlTagData { sig: Signature::new(tag.func_type_idx as usize) });
+                        let tag = module.control_tags.push(ControlTagData {
+                            sig: Signature::new(tag.func_type_idx as usize),
+                        });
                         ImportKind::ControlTag(tag)
                     }
                     t => {
@@ -197,7 +199,7 @@ fn handle_payload<'a>(
                     initial: table.ty.initial,
                     max: table.ty.maximum,
                     func_elements: Some(vec![]),
-                    table64: table.ty.table64
+                    table64: table.ty.table64,
                 });
             }
         }
@@ -231,7 +233,9 @@ fn handle_payload<'a>(
                     ExternalKind::Table => Some(ExportKind::Table(Table::from(export.index))),
                     ExternalKind::Global => Some(ExportKind::Global(Global::from(export.index))),
                     ExternalKind::Memory => Some(ExportKind::Memory(Memory::from(export.index))),
-                    ExternalKind::Tag => Some(ExportKind::ControlTag(ControlTag::from(export.index))),
+                    ExternalKind::Tag => {
+                        Some(ExportKind::ControlTag(ControlTag::from(export.index)))
+                    }
                     _ => None,
                 };
                 if let Some(kind) = kind {
@@ -248,14 +252,16 @@ fn handle_payload<'a>(
                     segments: vec![],
                     memory64: memory.memory64,
                     shared: memory.shared,
-                    page_size_log2: memory.page_size_log2
+                    page_size_log2: memory.page_size_log2,
                 });
             }
         }
         Payload::TagSection(reader) => {
-            for tag in reader{
+            for tag in reader {
                 let tag = tag?;
-                module.control_tags.push(ControlTagData { sig: Signature::new(tag.func_type_idx as usize) });
+                module.control_tags.push(ControlTagData {
+                    sig: Signature::new(tag.func_type_idx as usize),
+                });
             }
         }
         Payload::DataSection(reader) => {
@@ -334,8 +340,8 @@ fn handle_payload<'a>(
                 // }else{
                 {
                     module
-                    .custom_sections
-                    .insert(reader.name().to_owned(), reader.data().to_owned());
+                        .custom_sections
+                        .insert(reader.name().to_owned(), reader.data().to_owned());
                 }
             }
             _ => {}
@@ -478,7 +484,12 @@ pub(crate) fn parse_body<'a>(
 
     let mut debug_locs = DebugLocReader::new(module, body.range().start as u32);
 
-    let SignatureData::Func { params, returns, shared } = &module.signatures[my_sig] else{
+    let SignatureData::Func {
+        params,
+        returns,
+        shared,
+    } = &module.signatures[my_sig]
+    else {
         anyhow::bail!("invalid sig")
     };
     ret.shared = *shared;
@@ -946,7 +957,12 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             locals: LocalTracker::default(),
         };
 
-        let SignatureData::Func { params, returns, shared } = &module.signatures[my_sig] else{
+        let SignatureData::Func {
+            params,
+            returns,
+            shared,
+        } = &module.signatures[my_sig]
+        else {
             todo!()
         };
 
@@ -1519,7 +1535,10 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
 
             wasmparser::Operator::Return => {
-                let SignatureData::Func { params, returns, .. } = &self.module.signatures[self.my_sig] else{
+                let SignatureData::Func {
+                    params, returns, ..
+                } = &self.module.signatures[self.my_sig]
+                else {
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(returns.len());
@@ -1528,7 +1547,10 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
             wasmparser::Operator::ReturnCall { function_index } => {
                 let sig = self.module.funcs[Func::new(*function_index as usize)].sig();
-                let SignatureData::Func { params, returns, .. } = &self.module.signatures[sig] else{
+                let SignatureData::Func {
+                    params, returns, ..
+                } = &self.module.signatures[sig]
+                else {
                     anyhow::bail!("invalid signature")
                 };
                 let retvals = self.pop_n(params.len());
@@ -1542,13 +1564,13 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 table_index,
             } => {
-                let SignatureData::Func { params, returns, .. } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                let SignatureData::Func {
+                    params, returns, ..
+                } = &self.module.signatures[Signature::new(*type_index as usize)]
+                else {
                     anyhow::bail!("invalid signature")
                 };
-                let retvals = self.pop_n(
-                    params
-                        .len(),
-                );
+                let retvals = self.pop_n(params.len());
                 self.emit_term(Terminator::ReturnCallIndirect {
                     sig: Signature::new(*type_index as usize),
                     table: Table::new(*table_index as usize),
@@ -1560,13 +1582,13 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 type_index,
                 // table_index,
             } => {
-                let SignatureData::Func { params, returns, .. } = &self.module.signatures[Signature::new(*type_index as usize)] else{
+                let SignatureData::Func {
+                    params, returns, ..
+                } = &self.module.signatures[Signature::new(*type_index as usize)]
+                else {
                     anyhow::bail!("invalid signature")
                 };
-                let retvals = self.pop_n(
-                    params
-                        .len(),
-                );
+                let retvals = self.pop_n(params.len());
                 self.emit_term(Terminator::ReturnCallRef {
                     sig: Signature::new(*type_index as usize),
                     // table: Table::new(*table_index as usize),
@@ -1609,11 +1631,13 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 match &frame {
                     None => {
                         if self.reachable {
-                            let SignatureData::Func { params, returns, .. } = &self.module.signatures[self.my_sig] else{
+                            let SignatureData::Func {
+                                params, returns, ..
+                            } = &self.module.signatures[self.my_sig]
+                            else {
                                 anyhow::bail!("invalid signature")
                             };
-                            let retvals =
-                                self.pop_n(returns.len());
+                            let retvals = self.pop_n(returns.len());
                             self.emit_ret(&retvals[..]);
                         } else {
                             self.emit_unreachable();
@@ -1869,13 +1893,13 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             BlockType::Type(ret_ty) => (vec![], vec![ret_ty.into()]),
             BlockType::FuncType(sig_idx) => {
                 let sig = &self.module.signatures[Signature::from(sig_idx)];
-                let SignatureData::Func { params, returns, .. } = &sig else{
+                let SignatureData::Func {
+                    params, returns, ..
+                } = &sig
+                else {
                     todo!()
                 };
-                (
-                    Vec::from(params.clone()),
-                    Vec::from(returns.clone()),
-                )
+                (Vec::from(params.clone()), Vec::from(returns.clone()))
             }
         }
     }
@@ -2093,4 +2117,3 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         Ok(())
     }
 }
-
