@@ -48,6 +48,5 @@ default = []
 fuzzing = ["libfuzzer-sys", "wasm-smith"]
 stacker = ["dep:stacker"]
 
-[lib]
-name = "waffle"
+
  
