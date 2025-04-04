@@ -646,12 +646,32 @@ pub struct BlockTarget {
     pub args: Vec<Value>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ExceptionTarget {
+    pub block: Block,
+    pub args: Vec<Either<usize,Value>>,
+    pub num_holes: usize,
+}
+
 impl core::fmt::Display for BlockTarget {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let args = self
             .args
             .iter()
             .map(|arg| format!("{}", arg))
+            .collect::<Vec<_>>();
+        write!(f, "{}({})", self.block, args.join(", "))
+    }
+}
+impl core::fmt::Display for ExceptionTarget {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let args = self
+            .args
+            .iter()
+            .map(|arg| match arg.as_ref(){
+                Either::Right(arg) => format!("{}", arg),
+                Either::Left(arg) => format!("hole{}", arg),
+            })
             .collect::<Vec<_>>();
         write!(f, "{}({})", self.block, args.join(", "))
     }
