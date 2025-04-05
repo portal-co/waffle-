@@ -28,7 +28,7 @@ use super::kts::Kts;
 #[derive(Eq, PartialEq, Clone, Hash)]
 pub struct IKW(pub ImportKind);
 
-pub struct State<I> {
+pub struct State<I, G = bool> {
     cache: HashMap<IKW, ImportKind>,
     fun_cache: BTreeMap<Func, Func>,
     table_cache: BTreeMap<Table, Table>,
@@ -36,12 +36,12 @@ pub struct State<I> {
     ub_cache: BTreeMap<Signature, Func>,
     pub importmap: I,
     pub tables: BTreeSet<Table>,
-    pub invasive: bool,
+    pub invasive: G,
     // pub(crate) tm: crate::td::TM,
 }
 
-impl<I> State<I> {
-    pub fn new(importmap: I, tables: BTreeSet<Table>, invasive: bool) -> Self {
+impl<I, G> State<I, G> {
+    pub fn new(importmap: I, tables: BTreeSet<Table>, invasive: G) -> Self {
         return Self {
             importmap,
             cache: Default::default(),
@@ -87,7 +87,7 @@ macro_rules! translator {
 pub fn tree_shake(m: &mut Module) -> anyhow::Result<()> {
     return tree_shake_via(
         m,
-        import_fn(|_, m, n| Ok(Some(ImportBehavior::Passthrough(m, n)))),
+        import_fn(|_, _, m, n| Ok(Some(ImportBehavior::Passthrough(m, n)))),
     );
 }
 pub fn tree_shake_via(m: &mut Module, i: impl Imports) -> anyhow::Result<()> {
@@ -111,6 +111,7 @@ pub trait Imports {
     fn get_import(
         &mut self,
         a: &mut Module<'_>,
+        d: &Module<'_>,
         m: String,
         n: String,
     ) -> anyhow::Result<Option<ImportBehavior>>;
@@ -120,21 +121,33 @@ pub trait Imports {
 pub struct ImportFn<F>(pub F);
 
 pub fn import_fn(
-    a: impl FnMut(&mut Module<'_>, String, String) -> anyhow::Result<Option<ImportBehavior>>,
+    a: impl FnMut(
+        &mut Module<'_>,
+        &Module<'_>,
+        String,
+        String,
+    ) -> anyhow::Result<Option<ImportBehavior>>,
 ) -> impl Imports {
     ImportFn(a)
 }
 
-impl<F: FnMut(&mut Module<'_>, String, String) -> anyhow::Result<Option<ImportBehavior>>> Imports
-    for ImportFn<F>
+impl<
+        F: FnMut(
+            &mut Module<'_>,
+            &Module<'_>,
+            String,
+            String,
+        ) -> anyhow::Result<Option<ImportBehavior>>,
+    > Imports for ImportFn<F>
 {
     fn get_import(
         &mut self,
         a: &mut Module<'_>,
+        d: &Module<'_>,
         m: String,
         n: String,
     ) -> anyhow::Result<Option<ImportBehavior>> {
-        return (self.0)(a, m, n);
+        return (self.0)(a, d, m, n);
     }
 }
 #[non_exhaustive]
@@ -144,15 +157,36 @@ pub enum ImportBehavior {
     Passthrough(String, String),
     UB,
 }
-
+pub trait GetGuard<'a, A> {
+    fn get(&self, a: &mut A, f: Func) -> FuncDecl<'a>;
+}
+impl<'a, A: DerefMut<Target = crate::Module<'a>>> GetGuard<'a, A> for bool {
+    fn get(&self, a: &mut A, f: Func) -> FuncDecl<'a> {
+        if *self {
+            take(&mut a.funcs[f])
+        } else {
+            a.funcs[f].clone()
+        }
+    }
+}
+impl<'a, A: Deref<Target = crate::Module<'a>>> GetGuard<'a, A> for () {
+    fn get(&self, a: &mut A, f: Func) -> FuncDecl<'a> {
+        // if *self{
+        //     take(&mut a.funcs[f])
+        // }else{
+        a.funcs[f].clone()
+        // }
+    }
+}
 impl<
         'a: 'b,
         'b,
-        A: DerefMut<Target = crate::Module<'a>>,
+        A: Deref<Target = crate::Module<'a>>,
         B: Deref<Target = crate::Module<'b>> + DerefMut,
-        S: Deref<Target = State<I>> + DerefMut,
+        S: Deref<Target = State<I, G>> + DerefMut,
         I: Deref<Target = J> + DerefMut,
         J: Imports + ?Sized,
+        G: GetGuard<'a, A>,
     > Copier<A, B, S>
 {
     // pub fn collect(&mut self) -> anyhow::Result<BTreeMap<String, ExportKind>> {
@@ -184,6 +218,7 @@ impl<
             if i.kind == *a {
                 return self.state.importmap.get_import(
                     &mut self.dest,
+                    &self.src,
                     i.module.clone(),
                     i.name.clone(),
                 );
@@ -355,11 +390,7 @@ impl<
             if Some(f) == self.src.start_func {
                 add_start(&mut self.dest, a);
             }
-            let mut f = if self.state.invasive {
-                take(&mut self.src.funcs[f])
-            } else {
-                self.src.funcs[f].clone()
-            };
+            let mut f = self.state.invasive.get(&mut self.src, f);
             // let sig = self.translate_sig(f.sig())?;
             if let Some(b) = f.body_mut() {
                 // b.convert_to_max_ssa(None);

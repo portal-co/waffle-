@@ -13,16 +13,22 @@ use crate::{
     cfg::CFGInfo,
     const_eval,
     entity::EntityRef,
-    passes::{basic_opt::value_is_pure, tcore::results_ref_2},
+    passes::{basic_opt::value_is_pure},
+    util::results_ref_2,
     util::new_sig,
-    Block, BlockTarget, ConstVal, Func, FuncDecl, FunctionBody, ImportKind, Module, Operator,
-    SignatureData, Terminator, Type, Value, ValueDef,
+    Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody, ImportKind, Module,
+    Operator, SignatureData, Terminator, Type, Value, ValueDef,
 };
 
 // use crate::FuncCollector;
 #[derive(Clone)]
 pub struct InlineCfg {
     pub funcs: BTreeSet<Func>,
+}
+impl FuncCollector for InlineCfg {
+    fn collect_func(&mut self, f: Func) {
+        self.funcs.insert(f);
+    }
 }
 // impl FuncCollector for InlineCfg {
 //     fn add_func(&mut self, f: Func) {

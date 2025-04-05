@@ -1,3 +1,5 @@
+use alloc::{borrow::ToOwned, vec::Vec};
+
 use crate::*;
 pub fn add_start(m: &mut Module, tf: Func) {
     let s = SignatureData::Func {
@@ -43,4 +45,24 @@ pub fn new_sig(m: &mut Module, s: SignatureData) -> Signature {
         }
     }
     return m.signatures.push(s);
+}
+
+pub fn results_ref_2(f: &mut FunctionBody, c: Value) -> Vec<Value> {
+    let c = f.resolve_and_update_alias(c);
+    let b = f.value_blocks[c];
+    let mut v = vec![];
+    let s = match f.values[c] {
+        ValueDef::Operator(_, _1, _2) => f.type_pool[_2].to_owned(),
+        _ => return vec![c],
+    };
+    if s.len() == 1 {
+        return vec![c];
+    }
+    for (s, i) in s.iter().map(|a| *a).enumerate() {
+        let w = f.add_value(ValueDef::PickOutput(c, s as u32, i));
+        f.append_to_block(b, w);
+        v.push(w);
+    }
+
+    return v;
 }

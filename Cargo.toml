@@ -38,6 +38,7 @@ cfg-traits-03 = {version="0.3.0-alpha.0",package="cfg-traits",optional=true}
 ssa-traits-03 = {version="0.3.0-alpha.0",package="ssa-traits",optional=true}
 lending-iterator = "0.1.7"
 hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
+impl-trait-for-tuples = "0.2.3"
 
 [dev-dependencies]
 wat = "1.212.0"

@@ -25,26 +25,7 @@ use crate::{SignatureData, Value};
 // use waffle_ast::fcopy::DontObf;
 // pub mod fcopy;
 // pub mod unswitch;
-
-pub fn results_ref_2(f: &mut FunctionBody, c: Value) -> Vec<Value> {
-    let c = f.resolve_and_update_alias(c);
-    let b = f.value_blocks[c];
-    let mut v = vec![];
-    let s = match f.values[c] {
-        ValueDef::Operator(_, _1, _2) => f.type_pool[_2].to_owned(),
-        _ => return vec![c],
-    };
-    if s.len() == 1 {
-        return vec![c];
-    }
-    for (s, i) in s.iter().map(|a| *a).enumerate() {
-        let w = f.add_value(ValueDef::PickOutput(c, s as u32, i));
-        f.append_to_block(b, w);
-        v.push(w);
-    }
-
-    return v;
-}
+pub use crate::util::results_ref_2;
 // pub fn tcore_bytes(a: &[u8], do_fuse: bool) -> anyhow::Result<Vec<u8>> {
 //     let mut m = Module::from_wasm_bytes(a, &Default::default())?;
 //     m.expand_all_funcs()?;

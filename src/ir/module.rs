@@ -1,5 +1,6 @@
 use alloc::collections::BTreeMap;
 use alloc::string::String;
+use impl_trait_for_tuples::impl_for_tuples;
 use core::default;
 use core::iter::{empty, once};
 
@@ -577,6 +578,10 @@ impl<'a> Module<'a> {
             control_tags: EntityVec::default(),
         }
     }
+}
+#[impl_for_tuples(12)]
+pub trait FuncCollector{
+    fn collect_func(&mut self, f: Func);
 }
 
 #[cfg(test)]
