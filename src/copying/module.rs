@@ -213,6 +213,12 @@ impl<
             state: cache,
         };
     }
+    pub fn render_imports(&mut self) -> anyhow::Result<()> {
+        for i in self.src.imports.clone() {
+            self.translate_import(i.kind.clone())?;
+        }
+        Ok(())
+    }
     pub fn resolve_import(&mut self, a: &ImportKind) -> anyhow::Result<Option<ImportBehavior>> {
         for i in self.src.imports.iter() {
             if i.kind == *a {
