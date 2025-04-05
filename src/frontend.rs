@@ -164,7 +164,7 @@ fn handle_payload<'a>(
                         });
                         ImportKind::ControlTag(tag)
                     }
-                    
+
                     t => {
                         bail!(FrontendError::UnsupportedFeature(format!(
                             "Unknown import type: {:?}",

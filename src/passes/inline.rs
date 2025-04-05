@@ -10,14 +10,9 @@ use anyhow::Context;
 // use arena_traits::IndexAlloc;
 
 use crate::{
-    cfg::CFGInfo,
-    const_eval,
-    entity::EntityRef,
-    passes::{basic_opt::value_is_pure},
-    util::results_ref_2,
-    util::new_sig,
-    Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody, ImportKind, Module,
-    Operator, SignatureData, Terminator, Type, Value, ValueDef,
+    cfg::CFGInfo, const_eval, entity::EntityRef, passes::basic_opt::value_is_pure, util::new_sig,
+    util::results_ref_2, Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody,
+    ImportKind, Module, Operator, SignatureData, Terminator, Type, Value, ValueDef,
 };
 
 // use crate::FuncCollector;

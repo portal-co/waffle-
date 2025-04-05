@@ -1,8 +1,8 @@
 use alloc::collections::BTreeMap;
 use alloc::string::String;
-use impl_trait_for_tuples::impl_for_tuples;
 use core::default;
 use core::iter::{empty, once};
+use impl_trait_for_tuples::impl_for_tuples;
 
 use super::{
     ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, StorageType,
@@ -85,7 +85,7 @@ pub enum SignatureData {
         ///Is this signature shared
         shared: bool,
     },
-    Import{
+    Import {
         like: HeapType,
         shared: bool,
     },
@@ -580,7 +580,7 @@ impl<'a> Module<'a> {
     }
 }
 #[impl_for_tuples(12)]
-pub trait FuncCollector{
+pub trait FuncCollector {
     fn collect_func(&mut self, f: Func);
 }
 
