@@ -55,5 +55,7 @@ mod ssa_traits_impls_02;
 mod ssa_traits_impls_03;
 #[cfg(feature = "hooking")]
 pub mod hooking;
+#[doc(hidden)]
+pub mod td;
 
 // mod td;

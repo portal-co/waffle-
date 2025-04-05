@@ -36,7 +36,8 @@ pub struct Inline {
     inline_funcs: Arc<InlineCfg>,
     stack: BTreeMap<Func, Block>,
 }
-pub fn inline_mod(m: &mut Module, cfg: InlineCfg) -> anyhow::Result<()> {
+pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
+    crate::td::ix(m, &mut cfg);
     for f in m.funcs.iter().collect::<BTreeSet<_>>() {
         let mut g = take(&mut m.funcs[f]);
         if let FuncDecl::Body(s, _, b) = &mut g {
