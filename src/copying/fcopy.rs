@@ -14,10 +14,15 @@ use crate::util::new_sig;
 use alloc::vec;
 use alloc::vec::Vec;
 pub trait Obfuscate {
-    fn boot(&mut self, b: Block, f: &mut FunctionBody) -> anyhow::Result<Block> {
+    fn boot(
+        &mut self,
+        b: Block,
+        f: &mut FunctionBody,
+        module: &mut Module,
+    ) -> anyhow::Result<Block> {
         return Ok(b);
     }
-    fn sig(&mut self, a: SignatureData) -> anyhow::Result<SignatureData> {
+    fn sig(&mut self, a: SignatureData, module: &mut Module) -> anyhow::Result<SignatureData> {
         return Ok(a);
     }
     fn obf(
@@ -29,7 +34,13 @@ pub trait Obfuscate {
         types: &[Type],
         module: &mut Module,
     ) -> anyhow::Result<(Value, Block)>;
-    fn obf_term(&mut self, t: Terminator, b: Block, f: &mut FunctionBody) -> anyhow::Result<()> {
+    fn obf_term(
+        &mut self,
+        t: Terminator,
+        b: Block,
+        f: &mut FunctionBody,
+        module: &mut Module,
+    ) -> anyhow::Result<()> {
         f.set_terminator(b, t);
         return Ok(());
     }
@@ -269,7 +280,7 @@ pub fn clone_block(
         m.insert(*pv, npv);
         *pv = npv;
     }
-    r = obf.boot(r, f)?;
+    r = obf.boot(r, f, modu)?;
     // eprintln!("insts={:?}",d.insts);
     for v in &mut d.insts {
         let v = &mut v.value;
@@ -301,7 +312,7 @@ pub fn clone_block(
     // for a in d.insts.clone(){
     //     f.append_to_block(r, a);
     // }
-    obf.obf_term(d.terminator.clone(), r, f)?;
+    obf.obf_term(d.terminator.clone(), r, f, modu)?;
     return Ok(());
 }
 pub struct FunCloneRes {
@@ -363,14 +374,15 @@ pub fn obf_fn_body(
     // let s = m.funcs[f].sig();
     // if let Some(b) = m.funcs[f].body() {
     // let b = b.clone();
-    let s = new_sig(
-        m,
-        obf.sig(SignatureData::Func {
+    let s = obf.sig(
+        SignatureData::Func {
             params: b.blocks[b.entry].params.iter().map(|a| a.0).collect(),
             returns: b.rets.clone(),
             shared,
-        })?,
-    );
+        },
+        m,
+    )?;
+    let s = new_sig(m, s);
     let mut n = FunctionBody::new(&m, s);
     let r = clone_fn(&mut n, &b, obf, m)?;
     n.entry = *r.all.get(&b.entry).unwrap();
