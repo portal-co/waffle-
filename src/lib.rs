@@ -53,5 +53,7 @@ pub mod fuzzing;
 mod ssa_traits_impls_02;
 #[cfg(feature = "ssa-traits-03")]
 mod ssa_traits_impls_03;
+#[cfg(feature = "hooking")]
+pub mod hooking;
 
 // mod td;

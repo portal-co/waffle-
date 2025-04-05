@@ -583,6 +583,11 @@ impl<'a> Module<'a> {
 pub trait FuncCollector {
     fn collect_func(&mut self, f: Func);
 }
+impl<'a, T: FuncCollector> FuncCollector for &'a mut T {
+    fn collect_func(&mut self, f: Func) {
+        FuncCollector::collect_func(&mut **self, f);
+    }
+}
 
 #[cfg(test)]
 mod test {
