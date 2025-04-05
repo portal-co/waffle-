@@ -19,7 +19,7 @@ use core::iter::{empty, once};
 use either::Either;
 use hashbrown::HashMap as FxHashMap;
 use hashbrown::HashSet;
-use ssa_traits::{Term, Val};
+// use ssa_traits::{Term, Val};
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 ///
