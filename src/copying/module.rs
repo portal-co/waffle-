@@ -98,6 +98,7 @@ pub fn tree_shake_via(m: &mut Module, i: impl Imports) -> anyhow::Result<()> {
         m,
         Box::new(State::new(Box::new(i), BTreeSet::new(), true)),
     );
+    s.render_imports()?;
     for x in exports.iter() {
         let i = x2i(x.kind.clone());
         let i = s.translate_import(i)?;
@@ -214,6 +215,12 @@ impl<
         };
     }
     pub fn render_imports(&mut self) -> anyhow::Result<()> {
+        for i in self.src.imports.clone() {
+            let ImportKind::Func(_) = &i.kind else{
+                continue;
+            };
+            self.translate_import(i.kind.clone())?;
+        }
         for i in self.src.imports.clone() {
             self.translate_import(i.kind.clone())?;
         }

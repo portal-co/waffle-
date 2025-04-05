@@ -4,16 +4,16 @@ use alloc::borrow::ToOwned;
 
 use crate::*;
 
-pub fn with_swizz<R>(
+pub fn with_swizz<R,T: FuncCollector + ?Sized>(
     module: &mut Module,
     f: Func,
-    collector: &mut (dyn FuncCollector + '_),
+    collector: &mut T,
     shim: impl FnOnce(
         (
             &mut Module,
             &mut FunctionBody,
             Func,
-            &mut (dyn FuncCollector + '_),
+            &mut T,
         ),
     ) -> R,
 ) -> R {
