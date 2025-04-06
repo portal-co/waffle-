@@ -14,7 +14,8 @@ use anyhow::Context;
 
 use crate::{
     cfg::CFGInfo,
-    passes::{basic_opt::value_is_pure, tcore::results_ref_2},
+    passes::{basic_opt::value_is_pure},
+    util::results_ref_2,
     util::new_sig,
     Block, BlockTarget, Export, Func, FuncDecl, FunctionBody, Import, ImportKind, Module, Operator,
     Type, Value, ValueDef,
