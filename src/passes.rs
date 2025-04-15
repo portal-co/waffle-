@@ -18,3 +18,5 @@ pub mod tcore;
 pub mod ub_vaccum;
 #[cfg(feature = "importify")]
 pub mod importify;
+#[cfg(feature = "copying")]
+pub mod mapping;
