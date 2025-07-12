@@ -239,21 +239,45 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for BlockTarget {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    fn targets<'a>(
+        &'a self,
+    ) -> Box<
+        dyn LendingIteratorDyn<Item = HKT!(<'b> => Box<dyn Deref<Target = Self::Target> + 'b>)>
+            + 'a,
+    >
     where
         FunctionBody: 'a,
     {
-        Box::new(core::iter::once(self))
+        ssa_traits_03::val_iter(once(self))
     }
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
+    ) -> Box<
+        dyn LendingIteratorDyn<Item = HKT!(<'b> => Box<dyn DerefMut<Target = Self::Target> + 'b>)>
+            + 'a,
+    >
     where
         FunctionBody: 'a,
     {
-        Box::new(core::iter::once(self))
+        ssa_traits_03::val_mut_iter(once(self))
     }
+
+    // fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    // where
+    //     FunctionBody: 'a,
+    // {
+    //     Box::new(core::iter::once(self))
+    // }
+
+    // fn targets_mut<'a>(
+    //     &'a mut self,
+    // ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
+    // where
+    //     FunctionBody: 'a,
+    // {
+    //     Box::new(core::iter::once(self))
+    // }
 }
 impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
     fn values<'a>(
@@ -277,11 +301,16 @@ impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
 impl cfg_traits::Term<FunctionBody> for Terminator {
     type Target = BlockTarget;
 
-    fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
+    fn targets<'a>(
+        &'a self,
+    ) -> Box<
+        dyn LendingIteratorDyn<Item = HKT!(<'b> => Box<dyn Deref<Target = Self::Target> + 'b>)>
+            + 'a,
+    >
     where
         FunctionBody: 'a,
     {
-        Box::new(match self {
+        ssa_traits_03::val_iter(match self {
             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
             Terminator::CondBr {
                 cond,
@@ -304,11 +333,14 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
 
     fn targets_mut<'a>(
         &'a mut self,
-    ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
+    ) -> Box<
+        dyn LendingIteratorDyn<Item = HKT!(<'b> => Box<dyn DerefMut<Target = Self::Target> + 'b>)>
+            + 'a,
+    >
     where
         FunctionBody: 'a,
     {
-        Box::new(match self {
+        ssa_traits_03::val_mut_iter(match self {
             Terminator::Br { target } => Either::Left(Some(target).into_iter()),
             Terminator::CondBr {
                 cond,
