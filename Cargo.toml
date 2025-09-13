@@ -31,11 +31,11 @@ serde = { version = "1.0.204", features = ["derive"] }
 
 either = { version = "1.13.0", features = ["serde"], default-features = false }
 arena-traits = "^0.2.3"
-ssa-traits = {version="0.2.3",optional=true}
-cfg-traits = {version="0.2.3",optional=true}
+ssa-traits = {version="^0.2.3",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="master"}
+cfg-traits = {version="^0.2.3",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="master"}
 
-cfg-traits-03 = {version="0.3.0-alpha.2",package="cfg-traits",optional=true}
-ssa-traits-03 = {version="0.3.0-alpha.2",package="ssa-traits",optional=true}
+cfg-traits-03 = {version="0.3.0-alpha.2",package="cfg-traits",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
+ssa-traits-03 = {version="0.3.0-alpha.2",package="ssa-traits",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
 lending-iterator = "0.1.7"
 hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
 impl-trait-for-tuples = "0.2.3"
