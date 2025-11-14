@@ -1,5 +1,15 @@
 [package]
 name = "portal-pc-waffle"
+version.workspace = true #  = "0.5.5"
+description.workspace = true #  = "Wasm Analysis Framework For Lightweight Experiments"
+authors.workspace = true #  = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
+license.workspace = true #  = "Apache-2.0 WITH LLVM-exception"
+edition.workspace = true #  = "2018"
+
+[workspace]
+members = ["."]
+
+[workspace.package]
 version = "0.5.5"
 description = "Wasm Analysis Framework For Lightweight Experiments"
 authors = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
@@ -7,6 +17,29 @@ license = "Apache-2.0 WITH LLVM-exception"
 edition = "2018"
 
 [dependencies]
+wasmparser .workspace = true # { version .workspace = true # "0.227", default-features .workspace = true # false, features .workspace = true # ["simd"] }
+wasm-encoder .workspace = true # { version .workspace = true # "0.227", default-features .workspace = true # false }
+anyhow .workspace = true # { version .workspace = true # "^1.0", default-features .workspace = true # false }
+log .workspace = true # { version .workspace = true # "0.4", default-features .workspace = true # false }
+smallvec .workspace = true # { version .workspace = true # "1.13", default-features .workspace = true # false }
+libfuzzer-sys ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.4", optional .workspace = true # true }
+indexmap .workspace = true # { version .workspace = true # "2.2.2", default-features .workspace = true # false }
+stacker ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.1.15", optional .workspace = true # true }
+wasm-smith ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.202", optional .workspace = true # true }
+paste .workspace = true # "1.0.15"
+serde .workspace = true # { version .workspace = true # "1.0.204", features .workspace = true # ["derive"] }
+either .workspace = true # { version .workspace = true # "1.13.0", features .workspace = true # ["serde"], default-features .workspace = true # false }
+arena-traits .workspace = true # "^0.2.3"
+ssa-traits ={workspace = true,optional=true} # {version.workspace = true #"^0.2.3",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"master"}
+cfg-traits ={workspace = true,optional=true} # {version.workspace = true #"^0.2.3",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"master"}
+cfg-traits-03 ={workspace = true,optional=true} # {version.workspace = true #"0.3.0-alpha.2",package.workspace = true #"cfg-traits",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"dev/0.3"}
+ssa-traits-03 ={workspace = true,optional=true} # {version.workspace = true #"0.3.0-alpha.2",package.workspace = true #"ssa-traits",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"dev/0.3"}
+lending-iterator .workspace = true # "0.1.7"
+hashbrown .workspace = true # { version .workspace = true # "0.15.2", default-features .workspace = true # false, features .workspace = true # ["alloc", "default-hasher", "equivalent", "serde"] }
+impl-trait-for-tuples .workspace = true # "0.2.3"
+sha3 .workspace = true # { version .workspace = true # "0.10.8", default-features .workspace = true # false }
+
+[workspace.dependencies]
 wasmparser = { version = "0.227", default-features = false, features = ["simd"] }
 wasm-encoder = { version = "0.227", default-features = false }
 anyhow = { version = "^1.0", default-features = false }
@@ -21,21 +54,21 @@ smallvec = { version = "1.13", default-features = false }
 # addr2line = "0.21"
 
 # For fuzzing only. Versions must match those in fuzz/Cargo.toml.
-libfuzzer-sys = { version = "0.4", optional = true }
+libfuzzer-sys = { version = "0.4" }
 indexmap = { version = "2.2.2", default-features = false }
-stacker = { version = "0.1.15", optional = true }
-wasm-smith = { version = "0.202", optional = true }
+stacker = { version = "0.1.15" }
+wasm-smith = { version = "0.202" }
 paste = "1.0.15"
 serde = { version = "1.0.204", features = ["derive"] }
 
 
 either = { version = "1.13.0", features = ["serde"], default-features = false }
 arena-traits = "^0.2.3"
-ssa-traits = {version="^0.2.3",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="master"}
-cfg-traits = {version="^0.2.3",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="master"}
+ssa-traits = {version="^0.2.3",git="https://github.com/portal-co/codegen-utils.git",branch="master"}
+cfg-traits = {version="^0.2.3",git="https://github.com/portal-co/codegen-utils.git",branch="master"}
 
-cfg-traits-03 = {version="0.3.0-alpha.2",package="cfg-traits",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
-ssa-traits-03 = {version="0.3.0-alpha.2",package="ssa-traits",optional=true,git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
+cfg-traits-03 = {version="0.3.0-alpha.2",package="cfg-traits",git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
+ssa-traits-03 = {version="0.3.0-alpha.2",package="ssa-traits",git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
 lending-iterator = "0.1.7"
 hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
 impl-trait-for-tuples = "0.2.3"
