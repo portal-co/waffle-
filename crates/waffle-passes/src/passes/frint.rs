@@ -1,5 +1,5 @@
 use crate::{
-    cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
+    CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
     HeapType, Operator, Type, ValueDef, WithNullable,
 };
 use alloc::borrow::ToOwned;
@@ -7,7 +7,7 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Context;
-use arena_traits::IndexAlloc;
+use crate::arena_traits::IndexAlloc;
 use core::default;
 #[derive(Default)]
 pub struct Frint {
@@ -218,6 +218,7 @@ impl Frint {
                 crate::Terminator::Unreachable => crate::Terminator::Unreachable,
                 crate::Terminator::None => crate::Terminator::None,
                 &crate::Terminator::UB => crate::Terminator::UB,
+                _ => todo!("Unknown terminator kind"),
             };
             dst.set_terminator(new, t);
         }

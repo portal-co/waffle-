@@ -8,9 +8,9 @@
 //!   2022 (Functional Pearl). https://dl.acm.org/doi/10.1145/3547621
 //!
 //! for more details on how this algorithm works.
-use crate::cfg::CFGInfo;
-use crate::entity::EntityRef;
-use crate::ir::{Block, BlockTarget, FunctionBody, Terminator, Type, Value};
+use crate::CFGInfo;
+use crate::EntityRef;
+use crate::{Block, BlockTarget, FunctionBody, Terminator, Type, Value};
 use crate::{Func, Signature, Table};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -473,6 +473,7 @@ impl<'a, 'b> Context<'a, 'b> {
                     // table,
                     values: args,
                 }),
+                _ => todo!("Unknown terminator kind"),
             }
         }
     }

@@ -8,7 +8,7 @@ use anyhow::Context;
 use core::{default, mem::take, usize};
 // use arena_traits::IndexAlloc;
 use crate::{
-    cfg::CFGInfo, const_eval, entity::EntityRef, passes::basic_opt::value_is_pure, util::new_sig,
+    CFGInfo, const_eval, EntityRef, passes::basic_opt::value_is_pure, util::new_sig,
     util::results_ref_2, Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody,
     ImportKind, Module, Operator, SignatureData, Terminator, Type, Value, ValueDef,
 };
@@ -38,7 +38,10 @@ pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
     for f in m.funcs.iter().collect::<BTreeSet<_>>() {
         let mut g = take(&mut m.funcs[f]);
         if let FuncDecl::Body(s, _, b) = &mut g {
-            b.convert_to_max_ssa(None);
+            // Convert to max SSA
+            let b_cfg = CFGInfo::new(b);
+            crate::passes::maxssa::run(b, None, &b_cfg);
+            
             let s = *s;
             let mut new = FunctionBody::new(&m, s);
             new.entry = match (Inline::new(cfg.clone())).translate(
@@ -53,7 +56,10 @@ pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
                 }
             };
             new.recompute_edges();
-            new.optimize(&Default::default());
+            // Optimize
+            let new_cfg = CFGInfo::new(&new);
+            crate::passes::basic_opt::basic_opt(&mut new, &new_cfg, &Default::default());
+            crate::passes::empty_blocks::run(&mut new);
             *b = new;
         }
         m.funcs[f] = g;

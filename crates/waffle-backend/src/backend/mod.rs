@@ -1,7 +1,7 @@
 //! Backend: IR to Wasm.
-use crate::cfg::CFGInfo;
-use crate::entity::EntityRef;
-use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
+use crate::CFGInfo;
+use crate::EntityRef;
+use crate::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
 use crate::{HeapType, Operator, WithNullable};
 use anyhow::Result;
 // use rayon::prelude::*;
@@ -19,6 +19,9 @@ pub mod treeify;
 use treeify::Trees;
 pub mod localify;
 use localify::Localifier;
+// Backend-specific passes
+pub mod maxssa;
+pub mod resolve_aliases;
 pub struct WasmFuncBackend<'a> {
     body: Cow<'a, FunctionBody>,
     cfg: CFGInfo,
@@ -1289,6 +1292,7 @@ impl<'a> WasmFuncBackend<'a> {
                 }
                 _ => todo!(),
             }),
+            _ => todo!("Unknown operator"),
         };
         if let Some(inst) = inst {
             func.instruction(&inst);
@@ -1386,7 +1390,8 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     func_type_idx: tag.sig.index() as u32,
                 })
             }
-            &ImportKind::Type(ty) => todo!(),
+            &ImportKind::Type(_) => todo!("Type imports not yet supported"),
+            _ => todo!("Unknown import kind"),
         };
         imports.import(&import.module[..], &import.name[..], entity);
     }
@@ -1493,7 +1498,8 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     control_tag.index() as u32,
                 );
             }
-            &ExportKind::Type(ty) => todo!(),
+            &ExportKind::Type(_) => todo!("Type exports not yet supported"),
+            _ => todo!("Unknown export kind"),
         }
     }
     into_mod.section(&exports);

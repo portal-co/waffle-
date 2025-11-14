@@ -1,5 +1,5 @@
 use super::inline::{inline_mod, InlineCfg};
-use crate::{FunctionBody, Module, Terminator};
+use crate::{CFGInfo, FunctionBody, Module, Terminator};
 use alloc::collections::btree_set::BTreeSet;
 use core::mem::take;
 pub fn vaccum(f: &mut FunctionBody) {
@@ -54,7 +54,10 @@ pub fn gvc(m: &mut Module) -> anyhow::Result<()> {
                         break 'a;
                     }
                     vaccum(b);
-                    b.optimize(&Default::default());
+                    // Optimize
+                    let b_cfg = CFGInfo::new(b);
+                    crate::passes::basic_opt::basic_opt(b, &b_cfg, &Default::default());
+                    crate::passes::empty_blocks::run(b);
                     if let Terminator::UB = b.blocks[b.entry].terminator {
                         save.insert(f);
                         // if !save.insert(f){

@@ -1,6 +1,6 @@
 //! Pass to remove empty blocks.
-use crate::entity::EntityRef;
-use crate::ir::{Block, BlockTarget, FunctionBody, Terminator};
+use crate::EntityRef;
+use crate::{Block, BlockTarget, FunctionBody, Terminator};
 use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;

@@ -1,6 +1,6 @@
 //! Simple framework for a domtree-based pass.
-use crate::cfg::CFGInfo;
-use crate::ir::{Block, FunctionBody};
+use crate::CFGInfo;
+use crate::{Block, FunctionBody};
 pub trait DomtreePass {
     fn enter(&mut self, _block: Block, _body: &mut FunctionBody) {}
     fn leave(&mut self, _block: Block, _body: &mut FunctionBody) {}

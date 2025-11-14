@@ -1,9 +1,9 @@
 //! Basic optimizations: GVN and constant-propagation/folding.
-use crate::cfg::CFGInfo;
+use crate::CFGInfo;
 use crate::interp::{const_eval, ConstVal};
-use crate::ir::*;
+use crate::*;
 use crate::passes::dom_pass::{dom_pass, DomtreePass};
-use crate::pool::ListRef;
+use crate::ListRef;
 use crate::scoped_map::ScopedMap;
 use crate::Operator;
 use alloc::borrow::ToOwned;

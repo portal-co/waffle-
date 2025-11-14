@@ -1,10 +1,10 @@
 //! Frontend: convert Wasm to IR.
 #![allow(dead_code)]
-use crate::entity::EntityRef;
-use crate::errors::FrontendError;
-use crate::ir::*;
-use crate::op_traits::{op_inputs, op_outputs};
-use crate::ops::Operator;
+use crate::EntityRef;
+use crate::FrontendError;
+use crate::*;
+use crate::{op_inputs, op_outputs};
+use crate::Operator;
 // use addr2line::gimli;
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;

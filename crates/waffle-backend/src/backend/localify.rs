@@ -1,9 +1,9 @@
 //! Localification: a simple form of register allocation that picks
 //! locations for SSA values in Wasm locals.
 use crate::backend::treeify::Trees;
-use crate::cfg::CFGInfo;
-use crate::entity::{EntityVec, PerEntity};
-use crate::ir::{Block, FunctionBody, Local, Type, Value, ValueDef};
+use crate::CFGInfo;
+use crate::{EntityVec, PerEntity};
+use crate::{Block, FunctionBody, Local, Type, Value, ValueDef};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;

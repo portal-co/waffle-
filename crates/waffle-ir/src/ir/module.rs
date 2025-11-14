@@ -487,7 +487,7 @@ impl<'a> Module<'a> {
     /// Internal (used during parsing): create an empty module, with
     /// the given slice of original Wasm bytecode. Used during parsing
     /// and meant to be filled in as the Wasm bytecode is processed.
-    pub(crate) fn with_orig_bytes(orig_bytes: &'a [u8]) -> Module<'a> {
+    pub fn with_orig_bytes(orig_bytes: &'a [u8]) -> Module<'a> {
         Module {
             orig_bytes: Some(orig_bytes),
             funcs: EntityVec::default(),

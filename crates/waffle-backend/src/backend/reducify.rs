@@ -147,7 +147,7 @@
 //! (i.e., a loop exit edge) if the exited loop has a
 //! side-entrance; this is the only way in which we can have a
 //! merge-point between different copies of the same subgraph.
-use crate::entity::EntityRef;
+use crate::EntityRef;
 use crate::{cfg::CFGInfo, cfg::RPOIndex, entity::PerEntity, Block, FunctionBody, Value, ValueDef};
 use alloc::borrow::Cow;
 use alloc::collections::VecDeque;
@@ -270,8 +270,9 @@ impl<'a> Reducifier<'a> {
         }
         let mut new_body = self.body.clone();
         let cfg = CFGInfo::new(&new_body);
-        crate::passes::maxssa::run(&mut new_body, Some(cut_blocks), &cfg);
-        crate::passes::resolve_aliases::run(&mut new_body);
+        // Backend-specific passes
+        crate::backend::maxssa::run(&mut new_body, Some(cut_blocks), &cfg);
+        crate::backend::resolve_aliases::run(&mut new_body);
         log::trace!("after max-SSA run:\n{}\n", new_body.display("| ", None));
         // Implicitly, context {} has an identity-map from old block
         // number to new block number. We use the map only for

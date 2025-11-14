@@ -5,6 +5,9 @@
 #[macro_use]
 extern crate alloc;
 
+// Re-export arena_traits for use by other crates
+pub use arena_traits;
+
 pub mod entity;
 pub mod pool;
 

@@ -27,14 +27,14 @@ mod ir_subtypes;
 pub mod op_traits;
 mod ops;
 pub mod scoped_map;
-mod interp;
+pub mod interp;
 pub mod util;
 
 pub use errors::*;
 pub use ir_types::*;
 pub use ir::*;
 pub use ir_subtypes::*;
-pub use op_traits::SideEffect;
+pub use op_traits::{SideEffect, op_inputs, op_outputs};
 pub use ops::{Ieee32, Ieee64, MemoryArg, Operator};
 pub use interp::*;
 

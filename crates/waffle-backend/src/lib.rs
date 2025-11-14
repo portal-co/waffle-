@@ -10,6 +10,7 @@ extern crate alloc;
 pub use waffle_entity as entity;
 pub use waffle_ir as ir;
 pub use waffle_ir::*;
+pub use waffle_ir::cfg::CFGInfo;
 
 pub mod backend;
 pub use backend::*;

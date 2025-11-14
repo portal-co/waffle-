@@ -1,7 +1,7 @@
 //! Treeification: placing some values "under" others if only used
 //! once, to generate more AST-like Wasm code.
-use crate::entity::EntityRef;
-use crate::ir::{FunctionBody, Value, ValueDef};
+use crate::EntityRef;
+use crate::{Block, FunctionBody, Value, ValueDef};
 use crate::Operator;
 use alloc::vec;
 use alloc::vec::Vec;
