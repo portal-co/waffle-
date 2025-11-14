@@ -1,21 +1,11 @@
-use core::mem::replace;
-
-use alloc::borrow::ToOwned;
-
 use crate::*;
-
-pub fn with_swizz<R,T: FuncCollector + ?Sized>(
+use alloc::borrow::ToOwned;
+use core::mem::replace;
+pub fn with_swizz<R, T: FuncCollector + ?Sized>(
     module: &mut Module,
     f: Func,
     collector: &mut T,
-    shim: impl FnOnce(
-        (
-            &mut Module,
-            &mut FunctionBody,
-            Func,
-            &mut T,
-        ),
-    ) -> R,
+    shim: impl FnOnce((&mut Module, &mut FunctionBody, Func, &mut T)) -> R,
 ) -> R {
     let sig = module.funcs[f].sig();
     let name = module.funcs[f].name().to_owned();

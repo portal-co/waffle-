@@ -1,8 +1,6 @@
 //! Very basic WASI implementation for interpreter: sufficient to let stdout work.
-
 use crate::interp::{read_u32, write_u32, ConstVal, InterpMemory, InterpResult};
 use smallvec::smallvec;
-
 pub fn call_wasi(mem: &mut InterpMemory, name: &str, args: &[ConstVal]) -> Option<InterpResult> {
     match name {
         "fd_prestat_get" => {

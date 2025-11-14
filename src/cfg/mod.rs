@@ -1,8 +1,6 @@
 //! Lightweight CFG analyses.
-
 // Borrowed from regalloc2's cfg.rs, which is also Apache-2.0 with
 // LLVM exception.
-
 use crate::declare_entity;
 use crate::entity::{EntityRef, EntityVec, PerEntity};
 use crate::ir::{Block, FunctionBody, Terminator, Value, ValueDef};
@@ -10,12 +8,9 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use smallvec::SmallVec;
-
 pub mod domtree;
 pub mod postorder;
-
 declare_entity!(RPOIndex, "rpo");
-
 /// Auxiliary analyses of the control-flow graph.
 #[derive(Clone, Debug)]
 pub struct CFGInfo {
@@ -38,18 +33,15 @@ pub struct CFGInfo {
     /// A given block's position in each predecessor's successor list.
     pub pred_pos: PerEntity<Block, SmallVec<[usize; 4]>>,
 }
-
 #[derive(Clone, Debug, Default)]
 pub struct DomtreeChildren {
     pub child: Block,
     pub next: Block,
 }
-
 pub struct DomtreeChildIter<'a> {
     domtree_children: &'a PerEntity<Block, DomtreeChildren>,
     block: Block,
 }
-
 impl<'a> Iterator for DomtreeChildIter<'a> {
     type Item = Block;
     fn next(&mut self) -> Option<Block> {
@@ -62,7 +54,6 @@ impl<'a> Iterator for DomtreeChildIter<'a> {
         }
     }
 }
-
 impl CFGInfo {
     pub fn new(f: &FunctionBody) -> CFGInfo {
         let mut return_blocks = vec![];
@@ -79,12 +70,9 @@ impl CFGInfo {
                 target_idx += 1;
             });
         }
-
         let postorder = postorder::calculate(f.entry, |block| &f.blocks[block].succs[..]);
-
         let domtree =
             domtree::calculate(|block| &f.blocks[block].preds[..], &postorder[..], f.entry);
-
         let mut domtree_children: PerEntity<Block, DomtreeChildren> = PerEntity::default();
         for block in f.blocks.iter().rev() {
             let idom = domtree[block];
@@ -94,7 +82,6 @@ impl CFGInfo {
                 domtree_children[idom].child = block;
             }
         }
-
         let mut def_block: PerEntity<Value, Block> = PerEntity::default();
         for (block, block_def) in f.blocks.entries() {
             for &(_, param) in &block_def.params {
@@ -112,7 +99,6 @@ impl CFGInfo {
             };
             def_block[value] = def_block[underlying_value];
         }
-
         let mut rpo = postorder;
         rpo.reverse();
         let rpo = EntityVec::from(rpo);
@@ -120,7 +106,6 @@ impl CFGInfo {
         for (rpo, &block) in rpo.entries() {
             rpo_pos[block] = Some(rpo);
         }
-
         CFGInfo {
             entry: f.entry,
             return_blocks,
@@ -133,11 +118,9 @@ impl CFGInfo {
             pred_pos,
         }
     }
-
     pub fn dominates(&self, a: Block, b: Block) -> bool {
         domtree::dominates(&self.domtree, a, b)
     }
-
     pub fn dom_children<'a>(&'a self, block: Block) -> DomtreeChildIter<'a> {
         DomtreeChildIter {
             domtree_children: &self.domtree_children,

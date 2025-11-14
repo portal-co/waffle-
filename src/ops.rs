@@ -13,22 +13,18 @@
 //! features of Wasm bytecode that waffle "lifts" into its own SSA IR:
 //! accesses to Wasm locals (these become the SSA dataflow itself) and
 //! control flow (these become `Terminator` instructions).
-
 use crate::{entity::EntityRef, Func, Global, Memory, Signature, Table, Type};
 use anyhow::Context;
 use core::convert::TryFrom;
 pub use wasmparser::{Ieee32, Ieee64};
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 /// An argument to a memory load or store, specifying which memory,
 /// alignment and an optional offset.
-
 pub struct MemoryArg {
     pub align: u32,
     pub offset: u64,
     pub memory: Memory,
 }
-
 impl core::fmt::Display for MemoryArg {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         write!(
@@ -42,11 +38,9 @@ impl core::fmt::Display for MemoryArg {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 /// An operator in the IR, consuming arguments and producing results
 /// when executed.
-
 pub enum Operator {
     Unreachable,
     Nop,
-
     Call {
         function_index: Func,
     },
@@ -64,7 +58,6 @@ pub enum Operator {
     GlobalSet {
         global_index: Global,
     },
-
     I32Load {
         memory: MemoryArg,
     },
@@ -107,7 +100,6 @@ pub enum Operator {
     I64Load32U {
         memory: MemoryArg,
     },
-
     I32Store {
         memory: MemoryArg,
     },
@@ -135,7 +127,6 @@ pub enum Operator {
     I64Store32 {
         memory: MemoryArg,
     },
-
     I32Const {
         value: u32,
     },
@@ -148,7 +139,6 @@ pub enum Operator {
     F64Const {
         value: u64,
     },
-
     I32Eqz,
     I32Eq,
     I32Ne,
@@ -160,9 +150,7 @@ pub enum Operator {
     I32LeU,
     I32GeS,
     I32GeU,
-
     I64Eqz,
-
     I64Eq,
     I64Ne,
     I64LtS,
@@ -173,25 +161,21 @@ pub enum Operator {
     I64LeU,
     I64GeS,
     I64GeU,
-
     F32Eq,
     F32Ne,
     F32Lt,
     F32Gt,
     F32Le,
     F32Ge,
-
     F64Eq,
     F64Ne,
     F64Lt,
     F64Gt,
     F64Le,
     F64Ge,
-
     I32Clz,
     I32Ctz,
     I32Popcnt,
-
     I32Add,
     I32Sub,
     I32Mul,
@@ -207,11 +191,9 @@ pub enum Operator {
     I32ShrU,
     I32Rotl,
     I32Rotr,
-
     I64Clz,
     I64Ctz,
     I64Popcnt,
-
     I64Add,
     I64Sub,
     I64Mul,
@@ -227,7 +209,6 @@ pub enum Operator {
     I64ShrU,
     I64Rotl,
     I64Rotr,
-
     F32Abs,
     F32Neg,
     F32Ceil,
@@ -235,7 +216,6 @@ pub enum Operator {
     F32Trunc,
     F32Nearest,
     F32Sqrt,
-
     F32Add,
     F32Sub,
     F32Mul,
@@ -243,7 +223,6 @@ pub enum Operator {
     F32Min,
     F32Max,
     F32Copysign,
-
     F64Abs,
     F64Neg,
     F64Ceil,
@@ -251,7 +230,6 @@ pub enum Operator {
     F64Trunc,
     F64Nearest,
     F64Sqrt,
-
     F64Add,
     F64Sub,
     F64Mul,
@@ -259,7 +237,6 @@ pub enum Operator {
     F64Min,
     F64Max,
     F64Copysign,
-
     I32WrapI64,
     I32TruncF32S,
     I32TruncF32U,
@@ -316,7 +293,6 @@ pub enum Operator {
     MemoryGrow {
         mem: Memory,
     },
-
     V128Load {
         memory: MemoryArg,
     },
@@ -391,15 +367,12 @@ pub enum Operator {
         memory: MemoryArg,
         lane: u8,
     },
-
     V128Const {
         value: u128,
     },
-
     I8x16Shuffle {
         lanes: [u8; 16],
     },
-
     I8x16ExtractLaneS {
         lane: u8,
     },
@@ -442,7 +415,6 @@ pub enum Operator {
     F64x2ReplaceLane {
         lane: u8,
     },
-
     I8x16Swizzle,
     I8x16Splat,
     I16x8Splat,
@@ -450,7 +422,6 @@ pub enum Operator {
     I64x2Splat,
     F32x4Splat,
     F64x2Splat,
-
     I8x16Eq,
     I8x16Ne,
     I8x16LtS,
@@ -461,7 +432,6 @@ pub enum Operator {
     I8x16LeU,
     I8x16GeS,
     I8x16GeU,
-
     I16x8Eq,
     I16x8Ne,
     I16x8LtS,
@@ -472,7 +442,6 @@ pub enum Operator {
     I16x8LeU,
     I16x8GeS,
     I16x8GeU,
-
     I32x4Eq,
     I32x4Ne,
     I32x4LtS,
@@ -483,28 +452,24 @@ pub enum Operator {
     I32x4LeU,
     I32x4GeS,
     I32x4GeU,
-
     I64x2Eq,
     I64x2Ne,
     I64x2LtS,
     I64x2GtS,
     I64x2LeS,
     I64x2GeS,
-
     F32x4Eq,
     F32x4Ne,
     F32x4Lt,
     F32x4Gt,
     F32x4Le,
     F32x4Ge,
-
     F64x2Eq,
     F64x2Ne,
     F64x2Lt,
     F64x2Gt,
     F64x2Le,
     F64x2Ge,
-
     V128Not,
     V128And,
     V128AndNot,
@@ -512,7 +477,6 @@ pub enum Operator {
     V128Xor,
     V128Bitselect,
     V128AnyTrue,
-
     I8x16Abs,
     I8x16Neg,
     I8x16Popcnt,
@@ -534,7 +498,6 @@ pub enum Operator {
     I8x16MaxS,
     I8x16MaxU,
     I8x16AvgrU,
-
     I16x8ExtAddPairwiseI8x16S,
     I16x8ExtAddPairwiseI8x16U,
     I16x8Abs,
@@ -569,7 +532,6 @@ pub enum Operator {
     I16x8ExtMulHighI8x16U,
     I32x4ExtAddPairwiseI16x8S,
     I32x4ExtAddPairwiseI16x8U,
-
     I32x4Abs,
     I32x4Neg,
     I32x4AllTrue,
@@ -651,7 +613,6 @@ pub enum Operator {
     F64x2ConvertLowI32x4U,
     F32x4DemoteF64x2Zero,
     F64x2PromoteLowF32x4,
-
     CallRef {
         sig_index: Signature,
     },
@@ -868,7 +829,6 @@ pub enum Operator {
     I64AtomicRmw32CmpxchgU {
         memarg: MemoryArg,
     }, //=> visit_i64_atomic_rmw32_c
-
     StructNew {
         sig: Signature,
     },
@@ -880,7 +840,6 @@ pub enum Operator {
         sig: Signature,
         idx: usize,
     },
-
     ArrayNew {
         sig: Signature,
     },
@@ -902,7 +861,6 @@ pub enum Operator {
         src: Signature,
     },
     ArrayLen,
-
     RefTest {
         ty: Type,
     },
@@ -910,15 +868,12 @@ pub enum Operator {
         ty: Type,
     },
 }
-
 #[test]
 fn op_size() {
     assert_eq!(core::mem::size_of::<Operator>(), 32);
 }
-
 impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
     type Error = ();
-
     fn try_from(op: &'b wasmparser::Operator<'a>) -> Result<Operator, Self::Error> {
         match op {
             &wasmparser::Operator::Unreachable => Ok(Operator::Unreachable),
@@ -1182,7 +1137,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::MemoryGrow { mem, .. } => Ok(Operator::MemoryGrow {
                 mem: Memory::from(mem),
             }),
-
             &wasmparser::Operator::V128Load { memarg } => Ok(Operator::V128Load {
                 memory: memarg.into(),
             }),
@@ -1271,13 +1225,10 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
                     lane,
                 })
             }
-
             &wasmparser::Operator::V128Const { value } => Ok(Operator::V128Const {
                 value: value.i128() as u128,
             }),
-
             &wasmparser::Operator::I8x16Shuffle { lanes } => Ok(Operator::I8x16Shuffle { lanes }),
-
             &wasmparser::Operator::I8x16ExtractLaneS { lane } => {
                 Ok(Operator::I8x16ExtractLaneS { lane })
             }
@@ -1320,7 +1271,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::F64x2ReplaceLane { lane } => {
                 Ok(Operator::F64x2ReplaceLane { lane })
             }
-
             &wasmparser::Operator::I8x16Swizzle => Ok(Operator::I8x16Swizzle),
             &wasmparser::Operator::I8x16Splat => Ok(Operator::I8x16Splat),
             &wasmparser::Operator::I16x8Splat => Ok(Operator::I16x8Splat),
@@ -1328,7 +1278,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I64x2Splat => Ok(Operator::I64x2Splat),
             &wasmparser::Operator::F32x4Splat => Ok(Operator::F32x4Splat),
             &wasmparser::Operator::F64x2Splat => Ok(Operator::F64x2Splat),
-
             &wasmparser::Operator::I8x16Eq => Ok(Operator::I8x16Eq),
             &wasmparser::Operator::I8x16Ne => Ok(Operator::I8x16Ne),
             &wasmparser::Operator::I8x16LtS => Ok(Operator::I8x16LtS),
@@ -1339,7 +1288,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I8x16LeU => Ok(Operator::I8x16LeU),
             &wasmparser::Operator::I8x16GeS => Ok(Operator::I8x16GeS),
             &wasmparser::Operator::I8x16GeU => Ok(Operator::I8x16GeU),
-
             &wasmparser::Operator::I16x8Eq => Ok(Operator::I16x8Eq),
             &wasmparser::Operator::I16x8Ne => Ok(Operator::I16x8Ne),
             &wasmparser::Operator::I16x8LtS => Ok(Operator::I16x8LtS),
@@ -1350,7 +1298,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I16x8LeU => Ok(Operator::I16x8LeU),
             &wasmparser::Operator::I16x8GeS => Ok(Operator::I16x8GeS),
             &wasmparser::Operator::I16x8GeU => Ok(Operator::I16x8GeU),
-
             &wasmparser::Operator::I32x4Eq => Ok(Operator::I32x4Eq),
             &wasmparser::Operator::I32x4Ne => Ok(Operator::I32x4Ne),
             &wasmparser::Operator::I32x4LtS => Ok(Operator::I32x4LtS),
@@ -1361,28 +1308,24 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I32x4LeU => Ok(Operator::I32x4LeU),
             &wasmparser::Operator::I32x4GeS => Ok(Operator::I32x4GeS),
             &wasmparser::Operator::I32x4GeU => Ok(Operator::I32x4GeU),
-
             &wasmparser::Operator::I64x2Eq => Ok(Operator::I64x2Eq),
             &wasmparser::Operator::I64x2Ne => Ok(Operator::I64x2Ne),
             &wasmparser::Operator::I64x2LtS => Ok(Operator::I64x2LtS),
             &wasmparser::Operator::I64x2GtS => Ok(Operator::I64x2GtS),
             &wasmparser::Operator::I64x2LeS => Ok(Operator::I64x2LeS),
             &wasmparser::Operator::I64x2GeS => Ok(Operator::I64x2GeS),
-
             &wasmparser::Operator::F32x4Eq => Ok(Operator::F32x4Eq),
             &wasmparser::Operator::F32x4Ne => Ok(Operator::F32x4Ne),
             &wasmparser::Operator::F32x4Lt => Ok(Operator::F32x4Lt),
             &wasmparser::Operator::F32x4Gt => Ok(Operator::F32x4Gt),
             &wasmparser::Operator::F32x4Le => Ok(Operator::F32x4Le),
             &wasmparser::Operator::F32x4Ge => Ok(Operator::F32x4Ge),
-
             &wasmparser::Operator::F64x2Eq => Ok(Operator::F64x2Eq),
             &wasmparser::Operator::F64x2Ne => Ok(Operator::F64x2Ne),
             &wasmparser::Operator::F64x2Lt => Ok(Operator::F64x2Lt),
             &wasmparser::Operator::F64x2Gt => Ok(Operator::F64x2Gt),
             &wasmparser::Operator::F64x2Le => Ok(Operator::F64x2Le),
             &wasmparser::Operator::F64x2Ge => Ok(Operator::F64x2Ge),
-
             &wasmparser::Operator::V128Not => Ok(Operator::V128Not),
             &wasmparser::Operator::V128And => Ok(Operator::V128And),
             &wasmparser::Operator::V128AndNot => Ok(Operator::V128AndNot),
@@ -1390,7 +1333,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::V128Xor => Ok(Operator::V128Xor),
             &wasmparser::Operator::V128Bitselect => Ok(Operator::V128Bitselect),
             &wasmparser::Operator::V128AnyTrue => Ok(Operator::V128AnyTrue),
-
             &wasmparser::Operator::I8x16Abs => Ok(Operator::I8x16Abs),
             &wasmparser::Operator::I8x16Neg => Ok(Operator::I8x16Neg),
             &wasmparser::Operator::I8x16Popcnt => Ok(Operator::I8x16Popcnt),
@@ -1412,7 +1354,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I8x16MaxS => Ok(Operator::I8x16MaxS),
             &wasmparser::Operator::I8x16MaxU => Ok(Operator::I8x16MaxU),
             &wasmparser::Operator::I8x16AvgrU => Ok(Operator::I8x16AvgrU),
-
             &wasmparser::Operator::I16x8ExtAddPairwiseI8x16S => {
                 Ok(Operator::I16x8ExtAddPairwiseI8x16S)
             }
@@ -1455,7 +1396,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::I32x4ExtAddPairwiseI16x8U => {
                 Ok(Operator::I32x4ExtAddPairwiseI16x8U)
             }
-
             &wasmparser::Operator::I32x4Abs => Ok(Operator::I32x4Abs),
             &wasmparser::Operator::I32x4Neg => Ok(Operator::I32x4Neg),
             &wasmparser::Operator::I32x4AllTrue => Ok(Operator::I32x4AllTrue),
@@ -1537,7 +1477,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::F64x2ConvertLowI32x4U => Ok(Operator::F64x2ConvertLowI32x4U),
             &wasmparser::Operator::F32x4DemoteF64x2Zero => Ok(Operator::F32x4DemoteF64x2Zero),
             &wasmparser::Operator::F64x2PromoteLowF32x4 => Ok(Operator::F64x2PromoteLowF32x4),
-
             &wasmparser::Operator::CallRef { type_index } => Ok(Operator::CallRef {
                 sig_index: Signature::from(type_index),
             }),
@@ -1545,7 +1484,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::RefFunc { function_index } => Ok(Operator::RefFunc {
                 func_index: Func::from(function_index),
             }),
-
             &wasmparser::Operator::MemoryCopy { dst_mem, src_mem } => Ok(Operator::MemoryCopy {
                 dst_mem: Memory::from(dst_mem),
                 src_mem: Memory::from(src_mem),
@@ -1887,7 +1825,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
                     memarg: memarg.into(),
                 })
             }
-
             &wasmparser::Operator::StructNew { struct_type_index } => Ok(Operator::StructNew {
                 sig: Signature::new(struct_type_index as usize),
             }),
@@ -1948,7 +1885,6 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
         }
     }
 }
-
 impl core::convert::From<wasmparser::MemArg> for MemoryArg {
     fn from(value: wasmparser::MemArg) -> MemoryArg {
         MemoryArg {
@@ -1958,7 +1894,6 @@ impl core::convert::From<wasmparser::MemArg> for MemoryArg {
         }
     }
 }
-
 impl core::convert::From<MemoryArg> for wasm_encoder::MemArg {
     fn from(value: MemoryArg) -> wasm_encoder::MemArg {
         wasm_encoder::MemArg {

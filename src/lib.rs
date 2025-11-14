@@ -11,17 +11,15 @@
 //! recompiled to Wasm with `Module::to_wasm_bytes()`, after
 //! modifications are performed or new code is added. A new module can
 //! also be built from scratch with `Module::empty()`.
-
 #![allow(dead_code)]
 #![no_std]
+#![forbid(unsafe_code)]
 #[macro_use]
 extern crate alloc;
-
 // Re-export wasmparser for easier use of the right version by our embedders.
 pub use wasmparser;
 // Likewise for wasm-encoder.
 pub use wasm_encoder;
-
 pub mod backend;
 pub mod cfg;
 pub mod entity;
@@ -33,29 +31,24 @@ mod ops;
 pub mod passes;
 pub mod pool;
 mod scoped_map;
-
 pub use errors::*;
 pub use ir::*;
 pub use op_traits::SideEffect;
 pub use ops::{Ieee32, Ieee64, MemoryArg, Operator};
-
 mod interp;
 pub use interp::*;
 pub mod util;
-
 pub use passes::basic_opt::OptOptions;
-
 #[cfg(feature = "copying")]
 pub mod copying;
 #[cfg(feature = "fuzzing")]
 pub mod fuzzing;
+#[cfg(feature = "hooking")]
+pub mod hooking;
 #[cfg(feature = "ssa-traits-02")]
 mod ssa_traits_impls_02;
 #[cfg(feature = "ssa-traits-03")]
 mod ssa_traits_impls_03;
-#[cfg(feature = "hooking")]
-pub mod hooking;
 #[doc(hidden)]
 pub mod td;
-
 // mod td;

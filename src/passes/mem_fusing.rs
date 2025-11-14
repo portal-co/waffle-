@@ -2,21 +2,18 @@ use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;
 use alloc::{collections::BTreeMap, string::String};
+use anyhow::Context;
 use core::{
     convert::Infallible,
     iter::{empty, once},
 };
-
-use anyhow::Context;
 // use libc::name_t;
-
 // use crate::append_before;
 use crate::{
     entity::{EntityRef, EntityVec},
     ExportKind, Func, FuncDecl, FunctionBody, Memory, Module, Operator, Type, ValueDef,
 };
 // use itertools::Itertools;
-
 pub struct Fuse {
     pub resolve: Func,
     pub grow: Func,

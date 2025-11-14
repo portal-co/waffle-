@@ -4,17 +4,14 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{default, mem::take, usize};
-
 use anyhow::Context;
+use core::{default, mem::take, usize};
 // use arena_traits::IndexAlloc;
-
 use crate::{
     cfg::CFGInfo, const_eval, entity::EntityRef, passes::basic_opt::value_is_pure, util::new_sig,
     util::results_ref_2, Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody,
     ImportKind, Module, Operator, SignatureData, Terminator, Type, Value, ValueDef,
 };
-
 // use crate::FuncCollector;
 #[derive(Clone)]
 pub struct InlineCfg {

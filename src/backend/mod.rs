@@ -1,5 +1,4 @@
 //! Backend: IR to Wasm.
-
 use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{ExportKind, FuncDecl, FunctionBody, ImportKind, Module, Type, Value, ValueDef};
@@ -12,7 +11,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 use wasm_encoder::Encode;
 use wasm_encoder::{CustomSection, TagType};
-
 pub mod reducify;
 use reducify::Reducifier;
 pub mod stackify;
@@ -21,24 +19,20 @@ pub mod treeify;
 use treeify::Trees;
 pub mod localify;
 use localify::Localifier;
-
 pub struct WasmFuncBackend<'a> {
     body: Cow<'a, FunctionBody>,
     cfg: CFGInfo,
 }
-
 struct CompileContext<'a> {
     trees: Trees,
     ctrl: Vec<WasmBlock<'a>>,
     locals: Localifier,
 }
-
 macro_rules! op {
     ($name:tt) => {
         Some(wasm_encoder::Instruction::$name)
     };
 }
-
 impl<'a> WasmFuncBackend<'a> {
     pub fn compile(body: &'a FunctionBody) -> Result<wasm_encoder::Function> {
         body.validate()?;
@@ -53,7 +47,6 @@ impl<'a> WasmFuncBackend<'a> {
         let state = WasmFuncBackend { body, cfg };
         state.lower()
     }
-
     pub fn lower(&self) -> Result<wasm_encoder::Function> {
         log::debug!("CFG:\n{:?}\n", self.cfg);
         let trees = Trees::compute(&self.body);
@@ -62,13 +55,11 @@ impl<'a> WasmFuncBackend<'a> {
         log::debug!("Ctrl:\n{:?}\n", ctrl);
         let locals = Localifier::compute(&self.body, &self.cfg, &trees);
         log::debug!("Locals:\n{:?}\n", locals);
-
         let ctx = CompileContext {
             trees,
             ctrl,
             locals,
         };
-
         let mut func = wasm_encoder::Function::new(
             ctx.locals
                 .locals
@@ -77,11 +68,9 @@ impl<'a> WasmFuncBackend<'a> {
                 .map(|&ty| (1, wasm_encoder::ValType::from(ty)))
                 .collect::<Vec<_>>(),
         );
-
         for block in &ctx.ctrl {
             self.lower_block(&ctx, block, &mut func);
         }
-
         // If the last block was a Block, Loop or If, then the type
         // may not match, so end with an Unreachable.
         match ctx.ctrl.last() {
@@ -93,12 +82,9 @@ impl<'a> WasmFuncBackend<'a> {
             _ => {}
         }
         func.instruction(&wasm_encoder::Instruction::End);
-
         log::debug!("Compiled to:\n{:?}\n", func);
-
         Ok(func)
     }
-
     fn lower_block(
         &self,
         ctx: &CompileContext<'_>,
@@ -259,7 +245,6 @@ impl<'a> WasmFuncBackend<'a> {
             }
         }
     }
-
     fn lower_value(
         &self,
         ctx: &CompileContext<'_>,
@@ -281,7 +266,6 @@ impl<'a> WasmFuncBackend<'a> {
             func.instruction(&wasm_encoder::Instruction::LocalGet(local.index() as u32));
         }
     }
-
     fn lower_set_value(
         &self,
         ctx: &CompileContext<'a>,
@@ -297,7 +281,6 @@ impl<'a> WasmFuncBackend<'a> {
         let local = ctx.locals.values[value][0];
         func.instruction(&wasm_encoder::Instruction::LocalSet(local.index() as u32));
     }
-
     fn lower_inst(
         &self,
         ctx: &CompileContext<'a>,
@@ -336,7 +319,6 @@ impl<'a> WasmFuncBackend<'a> {
             def => unreachable!("Unexpected inst: {:?}", def),
         }
     }
-
     fn lower_op(&self, op: &Operator, func: &mut wasm_encoder::Function) {
         let inst = match op {
             Operator::Unreachable => Some(wasm_encoder::Instruction::Unreachable),
@@ -403,7 +385,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64Load32U { memory } => Some(wasm_encoder::Instruction::I64Load32U(
                 wasm_encoder::MemArg::from(*memory),
             )),
-
             Operator::I32Store { memory } => Some(wasm_encoder::Instruction::I32Store(
                 wasm_encoder::MemArg::from(*memory),
             )),
@@ -431,7 +412,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64Store32 { memory } => Some(wasm_encoder::Instruction::I64Store32(
                 wasm_encoder::MemArg::from(*memory),
             )),
-
             Operator::I32Const { value } => {
                 Some(wasm_encoder::Instruction::I32Const(*value as i32))
             }
@@ -444,7 +424,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64Const { value } => {
                 Some(wasm_encoder::Instruction::F64Const(f64::from_bits(*value)))
             }
-
             Operator::I32Eqz => op!(I32Eqz),
             Operator::I32Eq => op!(I32Eq),
             Operator::I32Ne => op!(I32Ne),
@@ -456,9 +435,7 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I32LeU => op!(I32LeU),
             Operator::I32GeS => op!(I32GeS),
             Operator::I32GeU => op!(I32GeU),
-
             Operator::I64Eqz => op!(I64Eqz),
-
             Operator::I64Eq => op!(I64Eq),
             Operator::I64Ne => op!(I64Ne),
             Operator::I64LtS => op!(I64LtS),
@@ -469,25 +446,21 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64LeU => op!(I64LeU),
             Operator::I64GeS => op!(I64GeS),
             Operator::I64GeU => op!(I64GeU),
-
             Operator::F32Eq => op!(F32Eq),
             Operator::F32Ne => op!(F32Ne),
             Operator::F32Lt => op!(F32Lt),
             Operator::F32Gt => op!(F32Gt),
             Operator::F32Le => op!(F32Le),
             Operator::F32Ge => op!(F32Ge),
-
             Operator::F64Eq => op!(F64Eq),
             Operator::F64Ne => op!(F64Ne),
             Operator::F64Lt => op!(F64Lt),
             Operator::F64Gt => op!(F64Gt),
             Operator::F64Le => op!(F64Le),
             Operator::F64Ge => op!(F64Ge),
-
             Operator::I32Clz => op!(I32Clz),
             Operator::I32Ctz => op!(I32Ctz),
             Operator::I32Popcnt => op!(I32Popcnt),
-
             Operator::I32Add => op!(I32Add),
             Operator::I32Sub => op!(I32Sub),
             Operator::I32Mul => op!(I32Mul),
@@ -503,11 +476,9 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I32ShrU => op!(I32ShrU),
             Operator::I32Rotl => op!(I32Rotl),
             Operator::I32Rotr => op!(I32Rotr),
-
             Operator::I64Clz => op!(I64Clz),
             Operator::I64Ctz => op!(I64Ctz),
             Operator::I64Popcnt => op!(I64Popcnt),
-
             Operator::I64Add => op!(I64Add),
             Operator::I64Sub => op!(I64Sub),
             Operator::I64Mul => op!(I64Mul),
@@ -523,7 +494,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64ShrU => op!(I64ShrU),
             Operator::I64Rotl => op!(I64Rotl),
             Operator::I64Rotr => op!(I64Rotr),
-
             Operator::F32Abs => op!(F32Abs),
             Operator::F32Neg => op!(F32Neg),
             Operator::F32Ceil => op!(F32Ceil),
@@ -531,7 +501,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F32Trunc => op!(F32Trunc),
             Operator::F32Nearest => op!(F32Nearest),
             Operator::F32Sqrt => op!(F32Sqrt),
-
             Operator::F32Add => op!(F32Add),
             Operator::F32Sub => op!(F32Sub),
             Operator::F32Mul => op!(F32Mul),
@@ -539,7 +508,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F32Min => op!(F32Min),
             Operator::F32Max => op!(F32Max),
             Operator::F32Copysign => op!(F32Copysign),
-
             Operator::F64Abs => op!(F64Abs),
             Operator::F64Neg => op!(F64Neg),
             Operator::F64Ceil => op!(F64Ceil),
@@ -547,7 +515,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64Trunc => op!(F64Trunc),
             Operator::F64Nearest => op!(F64Nearest),
             Operator::F64Sqrt => op!(F64Sqrt),
-
             Operator::F64Add => op!(F64Add),
             Operator::F64Sub => op!(F64Sub),
             Operator::F64Mul => op!(F64Mul),
@@ -555,7 +522,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64Min => op!(F64Min),
             Operator::F64Max => op!(F64Max),
             Operator::F64Copysign => op!(F64Copysign),
-
             Operator::I32WrapI64 => op!(I32WrapI64),
             Operator::I32TruncF32S => op!(I32TruncF32S),
             Operator::I32TruncF32U => op!(I32TruncF32U),
@@ -594,7 +560,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64ReinterpretI64 => op!(F64ReinterpretI64),
             Operator::I32ReinterpretF32 => op!(I32ReinterpretF32),
             Operator::I64ReinterpretF64 => op!(I64ReinterpretF64),
-
             Operator::TableGet { table_index } => Some(wasm_encoder::Instruction::TableGet(
                 table_index.index() as u32,
             )),
@@ -622,7 +587,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::MemoryFill { mem } => {
                 Some(wasm_encoder::Instruction::MemoryFill(mem.index() as u32))
             }
-
             Operator::V128Load { memory } => Some(wasm_encoder::Instruction::V128Load(
                 wasm_encoder::MemArg::from(*memory),
             )),
@@ -716,11 +680,9 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::V128Const { value } => {
                 Some(wasm_encoder::Instruction::V128Const(*value as i128))
             }
-
             Operator::I8x16Shuffle { lanes } => {
                 Some(wasm_encoder::Instruction::I8x16Shuffle(lanes.clone()))
             }
-
             Operator::I8x16ExtractLaneS { lane } => {
                 Some(wasm_encoder::Instruction::I8x16ExtractLaneS(*lane))
             }
@@ -763,7 +725,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64x2ReplaceLane { lane } => {
                 Some(wasm_encoder::Instruction::F64x2ReplaceLane(*lane))
             }
-
             Operator::I8x16Swizzle => Some(wasm_encoder::Instruction::I8x16Swizzle),
             Operator::I8x16Splat => Some(wasm_encoder::Instruction::I8x16Splat),
             Operator::I16x8Splat => Some(wasm_encoder::Instruction::I16x8Splat),
@@ -771,7 +732,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64x2Splat => Some(wasm_encoder::Instruction::I64x2Splat),
             Operator::F32x4Splat => Some(wasm_encoder::Instruction::F32x4Splat),
             Operator::F64x2Splat => Some(wasm_encoder::Instruction::F64x2Splat),
-
             Operator::I8x16Eq => Some(wasm_encoder::Instruction::I8x16Eq),
             Operator::I8x16Ne => Some(wasm_encoder::Instruction::I8x16Ne),
             Operator::I8x16LtS => Some(wasm_encoder::Instruction::I8x16LtS),
@@ -782,7 +742,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I8x16LeU => Some(wasm_encoder::Instruction::I8x16LeU),
             Operator::I8x16GeS => Some(wasm_encoder::Instruction::I8x16GeS),
             Operator::I8x16GeU => Some(wasm_encoder::Instruction::I8x16GeU),
-
             Operator::I16x8Eq => Some(wasm_encoder::Instruction::I16x8Eq),
             Operator::I16x8Ne => Some(wasm_encoder::Instruction::I16x8Ne),
             Operator::I16x8LtS => Some(wasm_encoder::Instruction::I16x8LtS),
@@ -793,7 +752,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I16x8LeU => Some(wasm_encoder::Instruction::I16x8LeU),
             Operator::I16x8GeS => Some(wasm_encoder::Instruction::I16x8GeS),
             Operator::I16x8GeU => Some(wasm_encoder::Instruction::I16x8GeU),
-
             Operator::I32x4Eq => Some(wasm_encoder::Instruction::I32x4Eq),
             Operator::I32x4Ne => Some(wasm_encoder::Instruction::I32x4Ne),
             Operator::I32x4LtS => Some(wasm_encoder::Instruction::I32x4LtS),
@@ -804,28 +762,24 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I32x4LeU => Some(wasm_encoder::Instruction::I32x4LeU),
             Operator::I32x4GeS => Some(wasm_encoder::Instruction::I32x4GeS),
             Operator::I32x4GeU => Some(wasm_encoder::Instruction::I32x4GeU),
-
             Operator::I64x2Eq => Some(wasm_encoder::Instruction::I64x2Eq),
             Operator::I64x2Ne => Some(wasm_encoder::Instruction::I64x2Ne),
             Operator::I64x2LtS => Some(wasm_encoder::Instruction::I64x2LtS),
             Operator::I64x2GtS => Some(wasm_encoder::Instruction::I64x2GtS),
             Operator::I64x2LeS => Some(wasm_encoder::Instruction::I64x2LeS),
             Operator::I64x2GeS => Some(wasm_encoder::Instruction::I64x2GeS),
-
             Operator::F32x4Eq => Some(wasm_encoder::Instruction::F32x4Eq),
             Operator::F32x4Ne => Some(wasm_encoder::Instruction::F32x4Ne),
             Operator::F32x4Lt => Some(wasm_encoder::Instruction::F32x4Lt),
             Operator::F32x4Gt => Some(wasm_encoder::Instruction::F32x4Gt),
             Operator::F32x4Le => Some(wasm_encoder::Instruction::F32x4Le),
             Operator::F32x4Ge => Some(wasm_encoder::Instruction::F32x4Ge),
-
             Operator::F64x2Eq => Some(wasm_encoder::Instruction::F64x2Eq),
             Operator::F64x2Ne => Some(wasm_encoder::Instruction::F64x2Ne),
             Operator::F64x2Lt => Some(wasm_encoder::Instruction::F64x2Lt),
             Operator::F64x2Gt => Some(wasm_encoder::Instruction::F64x2Gt),
             Operator::F64x2Le => Some(wasm_encoder::Instruction::F64x2Le),
             Operator::F64x2Ge => Some(wasm_encoder::Instruction::F64x2Ge),
-
             Operator::V128Not => Some(wasm_encoder::Instruction::V128Not),
             Operator::V128And => Some(wasm_encoder::Instruction::V128And),
             Operator::V128AndNot => Some(wasm_encoder::Instruction::V128AndNot),
@@ -833,7 +787,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::V128Xor => Some(wasm_encoder::Instruction::V128Xor),
             Operator::V128Bitselect => Some(wasm_encoder::Instruction::V128Bitselect),
             Operator::V128AnyTrue => Some(wasm_encoder::Instruction::V128AnyTrue),
-
             Operator::I8x16Abs => Some(wasm_encoder::Instruction::I8x16Abs),
             Operator::I8x16Neg => Some(wasm_encoder::Instruction::I8x16Neg),
             Operator::I8x16Popcnt => Some(wasm_encoder::Instruction::I8x16Popcnt),
@@ -855,7 +808,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I8x16MaxS => Some(wasm_encoder::Instruction::I8x16MaxS),
             Operator::I8x16MaxU => Some(wasm_encoder::Instruction::I8x16MaxU),
             Operator::I8x16AvgrU => Some(wasm_encoder::Instruction::I8x16AvgrU),
-
             Operator::I16x8ExtAddPairwiseI8x16S => {
                 Some(wasm_encoder::Instruction::I16x8ExtAddPairwiseI8x16S)
             }
@@ -900,7 +852,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I16x8ExtMulHighI8x16U => {
                 Some(wasm_encoder::Instruction::I16x8ExtMulHighI8x16U)
             }
-
             Operator::I32x4ExtAddPairwiseI16x8S => {
                 Some(wasm_encoder::Instruction::I32x4ExtAddPairwiseI16x8S)
             }
@@ -938,7 +889,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I32x4ExtMulHighI16x8U => {
                 Some(wasm_encoder::Instruction::I32x4ExtMulHighI16x8U)
             }
-
             Operator::I64x2Abs => Some(wasm_encoder::Instruction::I64x2Abs),
             Operator::I64x2Neg => Some(wasm_encoder::Instruction::I64x2Neg),
             Operator::I64x2AllTrue => Some(wasm_encoder::Instruction::I64x2AllTrue),
@@ -965,7 +915,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::I64x2ExtMulHighI32x4U => {
                 Some(wasm_encoder::Instruction::I64x2ExtMulHighI32x4U)
             }
-
             Operator::F32x4Ceil => Some(wasm_encoder::Instruction::F32x4Ceil),
             Operator::F32x4Floor => Some(wasm_encoder::Instruction::F32x4Floor),
             Operator::F32x4Trunc => Some(wasm_encoder::Instruction::F32x4Trunc),
@@ -981,7 +930,6 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F32x4Max => Some(wasm_encoder::Instruction::F32x4Max),
             Operator::F32x4PMin => Some(wasm_encoder::Instruction::F32x4PMin),
             Operator::F32x4PMax => Some(wasm_encoder::Instruction::F32x4PMax),
-
             Operator::F64x2Ceil => Some(wasm_encoder::Instruction::F64x2Ceil),
             Operator::F64x2Floor => Some(wasm_encoder::Instruction::F64x2Floor),
             Operator::F64x2Trunc => Some(wasm_encoder::Instruction::F64x2Trunc),
@@ -997,10 +945,8 @@ impl<'a> WasmFuncBackend<'a> {
             Operator::F64x2Max => Some(wasm_encoder::Instruction::F64x2Max),
             Operator::F64x2PMin => Some(wasm_encoder::Instruction::F64x2PMin),
             Operator::F64x2PMax => Some(wasm_encoder::Instruction::F64x2PMax),
-
             Operator::I32x4TruncSatF32x4S => Some(wasm_encoder::Instruction::I32x4TruncSatF32x4S),
             Operator::I32x4TruncSatF32x4U => Some(wasm_encoder::Instruction::I32x4TruncSatF32x4U),
-
             Operator::F32x4ConvertI32x4S => Some(wasm_encoder::Instruction::F32x4ConvertI32x4S),
             Operator::F32x4ConvertI32x4U => Some(wasm_encoder::Instruction::F32x4ConvertI32x4U),
             Operator::I32x4TruncSatF64x2SZero => {
@@ -1017,7 +963,6 @@ impl<'a> WasmFuncBackend<'a> {
             }
             Operator::F32x4DemoteF64x2Zero => Some(wasm_encoder::Instruction::F32x4DemoteF64x2Zero),
             Operator::F64x2PromoteLowF32x4 => Some(wasm_encoder::Instruction::F64x2PromoteLowF32x4),
-
             Operator::CallRef { sig_index } => {
                 Some(wasm_encoder::Instruction::CallRef(sig_index.index() as u32))
             }
@@ -1345,16 +1290,13 @@ impl<'a> WasmFuncBackend<'a> {
                 _ => todo!(),
             }),
         };
-
         if let Some(inst) = inst {
             func.instruction(&inst);
         }
     }
 }
-
 pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut into_mod = wasm_encoder::Module::new();
-
     let mut types = wasm_encoder::TypeSection::new();
     let recurses = module.signatures.iter().any(|s| s.is_backref(module));
     if recurses {
@@ -1385,7 +1327,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
     }
     into_mod.section(&types);
-
     let mut imports = wasm_encoder::ImportSection::new();
     let mut num_func_imports = 0;
     let mut num_table_imports = 0;
@@ -1449,9 +1390,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         };
         imports.import(&import.module[..], &import.name[..], entity);
     }
-
     into_mod.section(&imports);
-
     let mut funcs = wasm_encoder::FunctionSection::new();
     for (func, func_decl) in module.funcs.entries().skip(num_func_imports) {
         match func_decl {
@@ -1465,7 +1404,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
     }
     into_mod.section(&funcs);
-
     let mut tables = wasm_encoder::TableSection::new();
     for table_data in module.tables.values().skip(num_table_imports) {
         tables.table(wasm_encoder::TableType {
@@ -1484,7 +1422,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         });
     }
     into_mod.section(&tables);
-
     let mut memories = wasm_encoder::MemorySection::new();
     for mem_data in module.memories.values().skip(num_mem_imports) {
         memories.memory(wasm_encoder::MemoryType {
@@ -1506,7 +1443,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
         into_mod.section(&tags);
     }
-
     let mut globals = wasm_encoder::GlobalSection::new();
     for global_data in module.globals.values().skip(num_global_imports) {
         globals.global(
@@ -1519,7 +1455,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         );
     }
     into_mod.section(&globals);
-
     let mut exports = wasm_encoder::ExportSection::new();
     for export in &module.exports {
         match &export.kind {
@@ -1562,14 +1497,12 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
     }
     into_mod.section(&exports);
-
     if let Some(start) = module.start_func {
         let start = wasm_encoder::StartSection {
             function_index: start.index() as u32,
         };
         into_mod.section(&start);
     }
-
     let mut elem = wasm_encoder::ElementSection::new();
     for (table, table_data) in module.tables.entries() {
         if let Some(elts) = &table_data.func_elements {
@@ -1606,9 +1539,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
     }
     into_mod.section(&elem);
-
     let mut code = wasm_encoder::CodeSection::new();
-
     let bodies = module
         .funcs
         .entries()
@@ -1631,12 +1562,10 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             }
         })
         .collect::<Result<Vec<_>>>()?;
-
     for body in bodies {
         code.raw(&body);
     }
     into_mod.section(&code);
-
     let mut data = wasm_encoder::DataSection::new();
     for (mem, mem_data) in module.memories.entries() {
         for segment in &mem_data.segments {
@@ -1648,7 +1577,6 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         }
     }
     into_mod.section(&data);
-
     let mut names = wasm_encoder::NameSection::new();
     let mut func_names = wasm_encoder::NameMap::new();
     for (func, decl) in module.funcs.entries() {
@@ -1656,17 +1584,14 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     }
     names.functions(&func_names);
     into_mod.section(&names);
-
     for (n, e) in module.custom_sections.iter() {
         into_mod.section(&CustomSection {
             name: Cow::Borrowed(n.as_str()),
             data: Cow::Borrowed(e),
         });
     }
-
     Ok(into_mod)
 }
-
 fn const_init(ty: Type, value: Option<u64>) -> wasm_encoder::ConstExpr {
     let bits = value.unwrap_or(0);
     match ty {

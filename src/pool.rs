@@ -14,7 +14,6 @@
 //! `T`, with a `ListRef<T>` that together with the pool can yield an
 //! actual slice. This container is instantiated several times in the
 //! `FunctionBody`, namely for the `arg_pool` and `type_pool`.
-
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -22,20 +21,16 @@ use core::convert::TryFrom;
 use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
-
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 /// A "storage pool" backing many `ListRef`s of the given type.
-
 pub struct ListPool<T: Clone + Debug> {
     pub storage: Vec<T>,
 }
-
 impl<T: Clone + Debug> Default for ListPool<T> {
     fn default() -> Self {
         ListPool { storage: vec![] }
     }
 }
-
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, serde::Serialize, serde::Deserialize)]
 /// A handle to a list stored in a `ListPool`.
 ///
@@ -43,15 +38,12 @@ impl<T: Clone + Debug> Default for ListPool<T> {
 /// but has much smaller overhead than a separately-owned `Vec`: e.g.,
 /// 8 bytes on 64-bit systems, rather than 24 bytes, and no separate
 /// memory allocation overhead.
-
 pub struct ListRef<T>(u32, u32, PhantomData<T>);
-
 impl<T> Default for ListRef<T> {
     fn default() -> Self {
         ListRef(0, 0, PhantomData)
     }
 }
-
 impl<T: Clone + Debug> ListPool<T> {
     /// Create a new list in this pool from the items yielded by the
     /// given iterator.
@@ -94,20 +86,17 @@ impl<T: Clone + Debug> ListPool<T> {
         ListRef(start, end, PhantomData)
     }
 }
-
 impl<T: Clone + Debug> Index<ListRef<T>> for ListPool<T> {
     type Output = [T];
     fn index(&self, index: ListRef<T>) -> &[T] {
         &self.storage[index.0 as usize..index.1 as usize]
     }
 }
-
 impl<T: Clone + Debug> IndexMut<ListRef<T>> for ListPool<T> {
     fn index_mut(&mut self, index: ListRef<T>) -> &mut [T] {
         &mut self.storage[index.0 as usize..index.1 as usize]
     }
 }
-
 impl<T> ListRef<T> {
     /// Return the number of items in this list. (We do not need the
     /// pool to compute this.)

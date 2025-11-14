@@ -1,24 +1,21 @@
-use alloc::collections::BTreeMap;
-use alloc::string::String;
-use core::default;
-use core::iter::{empty, once};
-use impl_trait_for_tuples::impl_for_tuples;
-
 use super::{
     ControlTag, Func, FuncDecl, Global, HeapType, Memory, ModuleDisplay, Signature, StorageType,
     Table, Type, WithMutablility,
 };
 use crate::entity::{EntityRef, EntityVec};
+pub use crate::frontend::FrontendOptions;
 use crate::ir::{Debug, DebugMap, FunctionBody};
 use crate::{backend, frontend};
+use alloc::collections::BTreeMap;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Result;
+use core::default;
+use core::iter::{empty, once};
 use either::Either;
+use impl_trait_for_tuples::impl_for_tuples;
 use indexmap::IndexMap;
-
-pub use crate::frontend::FrontendOptions;
-
 #[derive(Clone, Debug)]
 pub struct Module<'a> {
     /// The original Wasm module this module was parsed from, if
@@ -92,7 +89,6 @@ pub enum SignatureData {
     #[default]
     None,
 }
-
 impl SignatureData {
     pub fn shared(&self) -> bool {
         match self {
@@ -108,10 +104,8 @@ impl SignatureData {
         }
     }
 }
-
 /// The size of a single Wasm page, used in memory definitions.
 pub const WASM_PAGE: usize = 0x1_0000; // 64KiB
-
 /// A memory definition.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MemoryData {
@@ -125,7 +119,6 @@ pub struct MemoryData {
     pub shared: bool,
     pub page_size_log2: Option<u32>,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MemorySegment {
     /// The offset of this data.
@@ -133,7 +126,6 @@ pub struct MemorySegment {
     /// The data, overlaid on previously-existing data at this offset.
     pub data: Vec<u8>,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TableData {
     /// The type of element in this table.
@@ -147,7 +139,6 @@ pub struct TableData {
     pub func_elements: Option<Vec<Func>>,
     pub table64: bool,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GlobalData {
     /// The type of this global variable.
@@ -159,7 +150,6 @@ pub struct GlobalData {
     /// Whether this global variable is mutable.
     pub mutable: bool,
 }
-
 impl From<&wasmparser::SubType> for SignatureData {
     fn from(fty: &wasmparser::SubType) -> Self {
         match &fty.composite_type.inner {
@@ -193,7 +183,6 @@ impl From<wasmparser::SubType> for SignatureData {
         (&fty).into()
     }
 }
-
 impl From<&SignatureData> for wasm_encoder::SubType {
     fn from(value: &SignatureData) -> Self {
         match value {
@@ -237,7 +226,6 @@ impl From<&SignatureData> for wasm_encoder::SubType {
         }
     }
 }
-
 impl Signature {
     pub fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
@@ -252,7 +240,6 @@ impl Signature {
         };
     }
 }
-
 impl Type {
     pub fn sigs<'a>(&'a self) -> impl Iterator<Item = Signature> + 'a {
         match self {
@@ -264,7 +251,6 @@ impl Type {
         }
     }
 }
-
 #[derive(Clone, Debug)]
 pub struct Import {
     /// The name of the module the import comes from.
@@ -275,7 +261,6 @@ pub struct Import {
     /// The kind of import and its specific entity index.
     pub kind: ImportKind,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum ImportKind {
@@ -292,7 +277,6 @@ pub enum ImportKind {
     /// An import of a type
     Type(Signature),
 }
-
 impl core::fmt::Display for ImportKind {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -306,7 +290,6 @@ impl core::fmt::Display for ImportKind {
         Ok(())
     }
 }
-
 #[derive(Clone, Debug)]
 pub struct Export {
     /// The name of this export.
@@ -314,7 +297,6 @@ pub struct Export {
     /// The kind of export and its specific entity index.
     pub kind: ExportKind,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum ExportKind {
@@ -331,7 +313,6 @@ pub enum ExportKind {
     ///An export of a type
     Type(Signature),
 }
-
 pub fn x2i(x: ExportKind) -> ImportKind {
     match x {
         ExportKind::Table(a) => ImportKind::Table(a),
@@ -352,7 +333,6 @@ pub fn i2x(x: ImportKind) -> ExportKind {
         ImportKind::Type(t) => ExportKind::Type(t),
     }
 }
-
 impl core::fmt::Display for ExportKind {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -366,7 +346,6 @@ impl core::fmt::Display for ExportKind {
         Ok(())
     }
 }
-
 impl<'a> Module<'a> {
     // pub(crate) fn with_orig_bytes(orig_bytes: &'a [u8]) -> Module<'a> {
     //     Module {
@@ -384,7 +363,6 @@ impl<'a> Module<'a> {
     //         custom_sections: BTreeMap::default(),
     //     }
     // }
-
     pub fn empty() -> Module<'static> {
         Module {
             orig_bytes: None,
@@ -402,13 +380,11 @@ impl<'a> Module<'a> {
             control_tags: Default::default(),
         }
     }
-
     /// Parse a WebAssembly module, as a slice of bytes in memory,
     /// into a waffle Module ready to be manipulated and recompile.
     pub fn from_wasm_bytes(bytes: &'a [u8], options: &FrontendOptions) -> Result<Self> {
         frontend::wasm_to_ir(bytes, options)
     }
-
     /// Take this module and strip its reference to the original
     /// bytes, producing a module with the same logical contents.
     ///
@@ -443,7 +419,6 @@ impl<'a> Module<'a> {
         }
     }
 }
-
 impl<'a> Module<'a> {
     // pub(crate) fn frontend_add_table(&mut self, ty: Type, initial: u64, max: Option<u64>) -> Table {
     //     let func_elements = Some(vec![]);
@@ -454,18 +429,15 @@ impl<'a> Module<'a> {
     //         max,
     //     })
     // }
-
     // pub fn from_wasm_bytes(bytes: &'a [u8], options: &FrontendOptions) -> Result<Self> {
     //     frontend::wasm_to_ir(bytes, options)
     // }
-
     pub fn to_wasm_bytes(&self) -> Result<Vec<u8>> {
         backend::compile(self).map(|a| a.finish())
     }
     pub fn to_encoded_module(&self) -> Result<wasm_encoder::Module> {
         backend::compile(self)
     }
-
     pub fn per_func_body<F: Fn(&mut FunctionBody)>(&mut self, f: F) {
         for func_decl in self.funcs.values_mut() {
             if let Some(body) = func_decl.body_mut() {
@@ -473,7 +445,6 @@ impl<'a> Module<'a> {
             }
         }
     }
-
     pub fn take_per_func_body<F: FnMut(&mut Self, &mut FunctionBody)>(&mut self, mut f: F) {
         for func_decl in self.funcs.iter().collect::<Vec<_>>() {
             let mut x = core::mem::take(&mut self.funcs[func_decl]);
@@ -483,7 +454,6 @@ impl<'a> Module<'a> {
             self.funcs[func_decl] = x;
         }
     }
-
     pub fn try_per_func_body<F: FnMut(&mut FunctionBody) -> Result<(), E>, E>(
         &mut self,
         mut f: F,
@@ -495,7 +465,6 @@ impl<'a> Module<'a> {
         }
         Ok(())
     }
-
     pub fn try_take_per_func_body<F: FnMut(&mut Self, &mut FunctionBody) -> Result<(), E>, E>(
         &mut self,
         mut f: F,
@@ -513,7 +482,6 @@ impl<'a> Module<'a> {
         }
         Ok(())
     }
-
     /// Expand a function body, parsing its lazy reference to original
     /// bytecode into IR if needed.
     pub fn expand_func<'b>(&'b mut self, id: Func) -> Result<&'b mut FuncDecl<'a>> {
@@ -525,7 +493,6 @@ impl<'a> Module<'a> {
         }
         Ok(&mut self.funcs[id])
     }
-
     /// Clone a function body *without* expanding it, and return a
     /// *new* function body with IR expanded. Useful when a tool
     /// appends new functions that are processed versions of an
@@ -538,7 +505,6 @@ impl<'a> Module<'a> {
             _ => unreachable!(),
         })
     }
-
     /// For all functions that are lazy references to initial
     /// bytecode, expand them into IR.
     pub fn expand_all_funcs(&mut self) -> Result<()> {
@@ -548,7 +514,6 @@ impl<'a> Module<'a> {
         }
         Ok(())
     }
-
     /// Return a wrapper that implements Display on this module,
     /// pretty-printing it as textual IR.
     pub fn display<'b>(&'b self) -> ModuleDisplay<'b>
@@ -557,7 +522,6 @@ impl<'a> Module<'a> {
     {
         ModuleDisplay { module: self }
     }
-
     /// Internal (used during parsing): create an empty module, with
     /// the given slice of original Wasm bytecode. Used during parsing
     /// and meant to be filled in as the Wasm bytecode is processed.
@@ -588,11 +552,9 @@ impl<'a, T: FuncCollector> FuncCollector for &'a mut T {
         FuncCollector::collect_func(&mut **self, f);
     }
 }
-
 #[cfg(test)]
 mod test {
     use super::*;
-
     #[test]
     fn empty_module_valid() {
         let module = Module::empty();

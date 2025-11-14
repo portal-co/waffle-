@@ -1,20 +1,17 @@
-use alloc::{borrow::ToOwned, collections::BTreeMap};
-use core::mem;
-
 use crate::{
     copying::fcopy::{obf_mod, DontObf, Obfuscate},
     util::new_sig,
     Block, BlockTarget, Func, FunctionBody, Memory, MemoryArg, Module, Operator, SignatureData,
     Type,
 };
+use alloc::{borrow::ToOwned, collections::BTreeMap};
 use anyhow::Context;
-
+use core::mem;
 // use crate_ast::{
 //     add_op,
 //     fcopy::{obf_mod, DontObf, Obfuscate},
 //     Builder, Expr,
 // };
-
 #[derive(Default, Clone, Copy)]
 pub struct Reload<T, F> {
     pub wrapped: T,

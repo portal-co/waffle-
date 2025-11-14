@@ -1,24 +1,19 @@
+use crate::{
+    cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, util::results_ref_2, Block,
+    BlockTarget, Export, Func, FuncDecl, FunctionBody, Import, ImportKind, Module, Operator, Type,
+    Value, ValueDef,
+};
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use anyhow::Context;
 use core::{
     default,
     mem::{replace, take},
     sync::atomic::AtomicUsize,
-};
-
-use anyhow::Context;
-
-use crate::{
-    cfg::CFGInfo,
-    passes::{basic_opt::value_is_pure},
-    util::results_ref_2,
-    util::new_sig,
-    Block, BlockTarget, Export, Func, FuncDecl, FunctionBody, Import, ImportKind, Module, Operator,
-    Type, Value, ValueDef,
 };
 fn manifest_of(
     m: &Module,
@@ -113,7 +108,6 @@ impl<'a> Importify<'a> {
             Some(a) => Ok(*a),
         }
         // .try_insert(k, |k| {
-
         // .map(|a| *a)
     }
     pub fn translate(

@@ -1,9 +1,6 @@
 //! Intermediate representation for Wasm.
-
-use alloc::collections::BTreeSet;
-
 use crate::{declare_entity, entity::EntityRef};
-
+use alloc::collections::BTreeSet;
 pub trait Subtypes {
     fn subtypes(
         &self,
@@ -12,7 +9,6 @@ pub trait Subtypes {
         vsigs: &BTreeSet<(Signature, Signature)>,
     ) -> bool;
 }
-
 impl Subtypes for Signature {
     fn subtypes(
         &self,
@@ -146,7 +142,6 @@ impl Subtypes for HeapType {
         }
     }
 }
-
 #[non_exhaustive]
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -159,7 +154,6 @@ impl Subtypes for HeapType {
 ///
 /// Every SSA value in a function body has a `Type`, unless it is a
 /// tuple (multi-value or zero-value result).
-
 pub enum Type {
     /// A 32-bit integer. Signedness is unspecified: individual
     /// operators specify how they handle sign.
@@ -240,7 +234,6 @@ pub enum StorageType {
     I8,
     I16,
 }
-
 impl StorageType {
     pub fn unpack(self) -> Type {
         match self {
@@ -250,7 +243,6 @@ impl StorageType {
         }
     }
 }
-
 impl From<wasmparser::ValType> for Type {
     fn from(ty: wasmparser::ValType) -> Self {
         match ty {
@@ -306,7 +298,6 @@ impl From<wasmparser::RefType> for WithNullable<HeapType> {
         }
     }
 }
-
 impl core::fmt::Display for Type {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -324,7 +315,6 @@ impl core::fmt::Display for Type {
         }
     }
 }
-
 impl core::fmt::Display for HeapType {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -335,7 +325,6 @@ impl core::fmt::Display for HeapType {
         }
     }
 }
-
 impl From<Type> for wasm_encoder::ValType {
     fn from(ty: Type) -> wasm_encoder::ValType {
         match ty {
@@ -348,7 +337,6 @@ impl From<Type> for wasm_encoder::ValType {
         }
     }
 }
-
 impl From<WithMutablility<StorageType>> for wasm_encoder::FieldType {
     fn from(value: WithMutablility<StorageType>) -> Self {
         wasm_encoder::FieldType {
@@ -361,7 +349,6 @@ impl From<WithMutablility<StorageType>> for wasm_encoder::FieldType {
         }
     }
 }
-
 impl From<WithNullable<HeapType>> for wasm_encoder::RefType {
     fn from(ty: WithNullable<HeapType>) -> wasm_encoder::RefType {
         match &ty.value {
@@ -376,9 +363,7 @@ impl From<WithNullable<HeapType>> for wasm_encoder::RefType {
         }
     }
 }
-
 // Per-module index spaces:
-
 // A signature (list of parameter types and list of return types) in
 // the module.
 declare_entity!(Signature, "sig");
@@ -393,14 +378,12 @@ declare_entity!(Memory, "memory");
 // A control tag in the module
 declare_entity!(ControlTag, "control_tag");
 // Per-function index spaces:
-
 // A basic block in one function body.
 declare_entity!(Block, "block");
 // A local variable (storage slot) in one function body.
 declare_entity!(Local, "local");
 // An SSA value in one function body.
 declare_entity!(Value, "v");
-
 mod module;
 pub use module::*;
 mod func;

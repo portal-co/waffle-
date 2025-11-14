@@ -1,14 +1,12 @@
-use alloc::collections::BTreeMap;
-use core::default;
-
-use alloc::vec;
-use alloc::vec::Vec;
-use anyhow::Context;
-
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, FunctionBody, Operator,
     ValueDef,
 };
+use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
+use anyhow::Context;
+use core::default;
 #[derive(Default)]
 pub struct Kts {
     pub blocks: BTreeMap<Block, Block>,

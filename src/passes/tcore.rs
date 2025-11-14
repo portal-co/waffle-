@@ -2,9 +2,8 @@ use alloc::borrow::ToOwned;
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec;
 use alloc::vec::Vec;
-use core::mem::take;
-
 use anyhow::{Context, Ok};
+use core::mem::take;
 // use fcopy::obf_mod;
 // use waffle_ast::{
 //     bulk_memory_lowering::{Reload, Warp},
@@ -19,7 +18,6 @@ use crate::{
     Operator, Signature, Table, Terminator, Type, ValueDef,
 };
 use crate::{SignatureData, Value};
-
 // use crate::fcopy::DontObf;
 // pub use waffle_ast::fcopy;
 // use waffle_ast::fcopy::DontObf;
@@ -560,7 +558,6 @@ pub fn tcore_pass(
         b.recompute_edges();
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

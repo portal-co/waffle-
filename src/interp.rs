@@ -1,23 +1,18 @@
 //! Waffle IR interpreter.
-
 use crate::entity::{EntityRef, PerEntity};
 use crate::ir::*;
 use crate::ops::Operator;
-use smallvec::{smallvec, SmallVec};
-
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::HashMap;
-
+use smallvec::{smallvec, SmallVec};
 // mod wasi;
-
 /// How large do we allow a Wasm memory to be when interpreting? Limit
 /// the size somewhat (apply an implementation limit) so we do not
 /// have unreasonably large state.
 const MAX_PAGES: usize = 2048; // 2048 * 64KiB = 128MiB
-
 /// Context for the IR interpreter. Corresponds roughly to Wasm module
 /// state.
 pub struct InterpContext {
@@ -33,20 +28,17 @@ pub struct InterpContext {
     pub import_hander:
         Arc<dyn Fn(&mut InterpContext, &mut Module<'_>, &str, &[ConstVal]) -> InterpResult>,
 }
-
 /// The state of one interpreter memory.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct InterpMemory {
     pub data: Vec<u8>,
     pub max_pages: usize,
 }
-
 /// The state of one interpreter table.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct InterpTable {
     pub elements: Vec<Func>,
 }
-
 /// One stack frame in the interpreted execution context.
 #[derive(Debug, Clone, Default)]
 pub struct InterpStackFrame {
@@ -54,7 +46,6 @@ pub struct InterpStackFrame {
     cur_block: Block,
     values: HashMap<Value, SmallVec<[ConstVal; 2]>>,
 }
-
 /// The result of an interpreter session.
 #[derive(Clone, Debug)]
 pub enum InterpResult {
@@ -65,7 +56,6 @@ pub enum InterpResult {
     /// The module ran out of fuel.
     OutOfFuel,
 }
-
 /// A constant concrete value during interpretation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum ConstVal {
@@ -77,10 +67,8 @@ pub enum ConstVal {
     None,
     Ref(Option<Func>),
 }
-
 /// Representation of multiple result values.
 type MultiVal = SmallVec<[ConstVal; 2]>;
-
 impl InterpResult {
     /// Extract the return value(s), if normal return, otherwise
     /// produce an error.
@@ -91,7 +79,6 @@ impl InterpResult {
         }
     }
 }
-
 impl InterpContext {
     /// Construct a new interpreter context for the given module.
     pub fn new(module: &Module<'_>) -> anyhow::Result<Self> {
@@ -113,7 +100,6 @@ impl InterpContext {
             }
             memories[memory] = interp_mem;
         }
-
         let mut tables = PerEntity::default();
         for (table, data) in module.tables.entries() {
             let interp_table = InterpTable {
@@ -121,7 +107,6 @@ impl InterpContext {
             };
             tables[table] = interp_table;
         }
-
         let mut globals = PerEntity::default();
         for (global, data) in module.globals.entries() {
             globals[global] = match data.ty {
@@ -132,7 +117,6 @@ impl InterpContext {
                 _ => unimplemented!(),
             };
         }
-
         Ok(InterpContext {
             memories,
             tables,
@@ -142,7 +126,6 @@ impl InterpContext {
             import_hander: Arc::new(|_, _, _, _| todo!()),
         })
     }
-
     /// Call the given function with the given args, running the
     /// interpreter until fuel is exhausted or the function returns.
     pub fn call(&mut self, module: &Module<'_>, mut func: Func, args: &[ConstVal]) -> InterpResult {
@@ -160,37 +143,31 @@ impl InterpContext {
                 FuncDecl::Body(_, _, body) => body,
                 FuncDecl::None => panic!("FuncDecl::None in call()"),
             };
-
             log::trace!(
                 "Interp: entering func {}:\n{}\n",
                 func,
                 body.display_verbose("| ", Some(module))
             );
             log::trace!("args: {:?}", args);
-
             let mut frame = InterpStackFrame {
                 func,
                 cur_block: body.entry,
                 values: HashMap::new(),
             };
-
             for (&arg, &(_, blockparam)) in args.iter().zip(body.blocks[body.entry].params.iter()) {
                 log::trace!("Entry block param {} gets arg value {:?}", blockparam, arg);
                 frame.values.insert(blockparam, smallvec![arg]);
             }
-
             loop {
                 self.fuel -= 1;
                 if self.fuel == 0 {
                     return InterpResult::OutOfFuel;
                 }
-
                 loop {
                     self.fuel -= 1;
                     if self.fuel == 0 {
                         return InterpResult::OutOfFuel;
                     }
-
                     log::trace!("Interpreting block {}", frame.cur_block);
                     for (inst_idx, &inst) in body.blocks[frame.cur_block]
                         .insts
@@ -300,11 +277,9 @@ impl InterpContext {
                                 unreachable!();
                             }
                         };
-
                         log::trace!("Inst {} gets result {:?}", inst, result);
                         frame.values.insert(inst, result);
                     }
-
                     match &body.blocks[frame.cur_block].terminator {
                         crate::Terminator::UB => {
                             return InterpResult::OutOfFuel;
@@ -423,7 +398,6 @@ impl InterpContext {
             // break 'redo;
         }
     }
-
     fn call_import(
         &mut self,
         module: &mut Module<'_>,
@@ -436,7 +410,6 @@ impl InterpContext {
         return rs;
     }
 }
-
 impl InterpStackFrame {
     fn apply_target(&mut self, body: &FunctionBody, target: &BlockTarget) {
         // Collect blockparam args.
@@ -461,7 +434,6 @@ impl InterpStackFrame {
         self.cur_block = target.block;
     }
 }
-
 impl ConstVal {
     pub fn as_u32(self) -> Option<u32> {
         match self {
@@ -469,7 +441,6 @@ impl ConstVal {
             _ => None,
         }
     }
-
     pub fn meet(a: Option<ConstVal>, b: Option<ConstVal>) -> Option<ConstVal> {
         match (a, b) {
             (None, None) => None,
@@ -479,7 +450,6 @@ impl ConstVal {
         }
     }
 }
-
 /// Constant-evaluate the given operator with the given arguments,
 /// returning a constant result if possible to know.
 pub fn const_eval(
@@ -570,7 +540,6 @@ pub fn const_eval(
         (Operator::I64GeU, [ConstVal::I64(a), ConstVal::I64(b)]) => {
             Some(ConstVal::I32(if a >= b { 1 } else { 0 }))
         }
-
         (Operator::F32Eq, [ConstVal::F32(a), ConstVal::F32(b)]) => {
             Some(ConstVal::I32(if f32::from_bits(*a) == f32::from_bits(*b) {
                 1
@@ -613,7 +582,6 @@ pub fn const_eval(
                 0
             }))
         }
-
         (Operator::F64Eq, [ConstVal::F64(a), ConstVal::F64(b)]) => {
             Some(ConstVal::I32(if f64::from_bits(*a) == f64::from_bits(*b) {
                 1
@@ -656,11 +624,9 @@ pub fn const_eval(
                 0
             }))
         }
-
         (Operator::I32Clz, [ConstVal::I32(x)]) => Some(ConstVal::I32(x.leading_zeros())),
         (Operator::I32Ctz, [ConstVal::I32(x)]) => Some(ConstVal::I32(x.trailing_zeros())),
         (Operator::I32Popcnt, [ConstVal::I32(x)]) => Some(ConstVal::I32(x.count_ones())),
-
         (Operator::I32Add, [ConstVal::I32(a), ConstVal::I32(b)]) => {
             Some(ConstVal::I32(a.wrapping_add(*b)))
         }
@@ -700,11 +666,9 @@ pub fn const_eval(
         (Operator::I32Rotr, [ConstVal::I32(a), ConstVal::I32(b)]) => {
             Some(ConstVal::I32(a.rotate_right(*b & 0x1f)))
         }
-
         (Operator::I64Clz, [ConstVal::I64(x)]) => Some(ConstVal::I64(x.leading_zeros() as u64)),
         (Operator::I64Ctz, [ConstVal::I64(x)]) => Some(ConstVal::I64(x.trailing_zeros() as u64)),
         (Operator::I64Popcnt, [ConstVal::I64(x)]) => Some(ConstVal::I64(x.count_ones() as u64)),
-
         (Operator::I64Add, [ConstVal::I64(a), ConstVal::I64(b)]) => {
             Some(ConstVal::I64(a.wrapping_add(*b)))
         }
@@ -744,7 +708,6 @@ pub fn const_eval(
         (Operator::I64Rotr, [ConstVal::I64(a), ConstVal::I64(b)]) => {
             Some(ConstVal::I64(a.rotate_right((*b as u32) & 0x3f)))
         }
-
         (Operator::F32Abs, [ConstVal::F32(a)]) => {
             Some(ConstVal::F32(f32::from_bits(*a).abs().to_bits()))
         }
@@ -787,7 +750,6 @@ pub fn const_eval(
         (Operator::F32Copysign, [ConstVal::F32(a), ConstVal::F32(b)]) => Some(ConstVal::F32(
             f32::copysign(f32::from_bits(*a), f32::from_bits(*b)).to_bits(),
         )),
-
         (Operator::F64Abs, [ConstVal::F64(a)]) => {
             Some(ConstVal::F64(f64::from_bits(*a).abs().to_bits()))
         }
@@ -830,9 +792,7 @@ pub fn const_eval(
         (Operator::F64Copysign, [ConstVal::F64(a), ConstVal::F64(b)]) => Some(ConstVal::F64(
             f64::copysign(f64::from_bits(*a), f64::from_bits(*b)).to_bits(),
         )),
-
         (Operator::I32WrapI64, [ConstVal::I64(a)]) => Some(ConstVal::I32(*a as u32)),
-
         (Operator::I32TruncF32S, [ConstVal::F32(a)]) => {
             let a = f32::from_bits(*a);
             if a >= (i32::MIN as f32) && a <= (i32::MAX as f32) {
@@ -865,7 +825,6 @@ pub fn const_eval(
                 None
             }
         }
-
         (Operator::I64TruncF32S, [ConstVal::F32(a)]) => {
             let a = f32::from_bits(*a);
             if a >= (i64::MIN as f32) && a <= (i64::MAX as f32) {
@@ -898,7 +857,6 @@ pub fn const_eval(
                 None
             }
         }
-
         (Operator::I32TruncSatF32S, [ConstVal::F32(a)]) => {
             let a = f32::from_bits(*a);
             Some(ConstVal::I32(if a.is_nan() {
@@ -931,7 +889,6 @@ pub fn const_eval(
                 a.min(u32::MAX as f64).max(0.0) as u32
             }))
         }
-
         (Operator::I64TruncSatF32S, [ConstVal::F32(a)]) => {
             let a = f32::from_bits(*a);
             Some(ConstVal::I64(if a.is_nan() {
@@ -964,7 +921,6 @@ pub fn const_eval(
                 a.min(u64::MAX as f64).max(0.0) as u64
             }))
         }
-
         (Operator::F32ConvertI32S, [ConstVal::I32(a)]) => {
             Some(ConstVal::F32((*a as i32 as f32).to_bits()))
         }
@@ -977,7 +933,6 @@ pub fn const_eval(
         (Operator::F32ConvertI64U, [ConstVal::I64(a)]) => {
             Some(ConstVal::F32((*a as f32).to_bits()))
         }
-
         (Operator::F64ConvertI32S, [ConstVal::I32(a)]) => {
             Some(ConstVal::F64((*a as i32 as f64).to_bits()))
         }
@@ -990,19 +945,16 @@ pub fn const_eval(
         (Operator::F64ConvertI64U, [ConstVal::I64(a)]) => {
             Some(ConstVal::F64((*a as f64).to_bits()))
         }
-
         (Operator::F32DemoteF64, [ConstVal::F64(a)]) => {
             Some(ConstVal::F32((f64::from_bits(*a) as f32).to_bits()))
         }
         (Operator::F64PromoteF32, [ConstVal::F32(a)]) => {
             Some(ConstVal::F64((f32::from_bits(*a) as f64).to_bits()))
         }
-
         (Operator::F32ReinterpretI32, [ConstVal::I32(a)]) => Some(ConstVal::F32(*a)),
         (Operator::F64ReinterpretI64, [ConstVal::I64(a)]) => Some(ConstVal::F64(*a)),
         (Operator::I32ReinterpretF32, [ConstVal::F32(a)]) => Some(ConstVal::I32(*a)),
         (Operator::I64ReinterpretF64, [ConstVal::F64(a)]) => Some(ConstVal::I64(*a)),
-
         (Operator::I32Extend8S, [ConstVal::I32(a)]) => Some(ConstVal::I32(*a as i8 as i32 as u32)),
         (Operator::I32Extend16S, [ConstVal::I32(a)]) => {
             Some(ConstVal::I32(*a as i16 as i32 as u32))
@@ -1018,12 +970,10 @@ pub fn const_eval(
             Some(ConstVal::I64(*a as i32 as i64 as u64))
         }
         (Operator::I64ExtendI32U, [ConstVal::I32(a)]) => Some(ConstVal::I64(*a as u64)),
-
         (Operator::Select, [x, y, ConstVal::I32(k)]) => Some(if *k != 0 { *x } else { *y }),
         (Operator::TypedSelect { .. }, [x, y, ConstVal::I32(k)]) => {
             Some(if *k != 0 { *x } else { *y })
         }
-
         (Operator::GlobalGet { global_index }, []) => {
             ctx.map(|global| global.globals[*global_index])
         }
@@ -1031,7 +981,6 @@ pub fn const_eval(
             global.globals[*global_index] = *x;
             ConstVal::None
         }),
-
         (Operator::TableGet { table_index }, [ConstVal::I32(i)]) => ctx.and_then(|global| {
             Some(ConstVal::Ref(
                 global.tables[*table_index]
@@ -1058,15 +1007,12 @@ pub fn const_eval(
                 .extend((0..*i).map(|a| Func::default()));
             Some(ConstVal::I32(0))
         }),
-
         (Operator::TableSize { table_index }, []) => {
             ctx.map(|global| ConstVal::I32(global.tables[*table_index].elements.len() as u32))
         }
-
         (Operator::MemorySize { mem }, []) => {
             ctx.map(|global| ConstVal::I32((global.memories[*mem].data.len() / WASM_PAGE) as u32))
         }
-
         (Operator::MemoryGrow { mem }, [ConstVal::I32(amount)]) => ctx.and_then(|global| {
             let cur_pages = global.memories[*mem].data.len() / WASM_PAGE;
             let new_pages = cur_pages + (*amount as usize);
@@ -1077,10 +1023,8 @@ pub fn const_eval(
                 Some(ConstVal::I32(cur_pages as u32))
             }
         }),
-
         (Operator::Nop, []) => Some(ConstVal::None),
         (Operator::Unreachable, []) => None,
-
         (Operator::I32Load { memory }, [ConstVal::I32(addr)]) => ctx.and_then(|global| {
             let addr = addr.checked_add(memory.offset as u32)?;
             if addr.checked_add(4)? > global.memories[memory.memory].data.len() as u32 {
@@ -1301,54 +1245,44 @@ pub fn const_eval(
         _ => None,
     }
 }
-
 pub(crate) fn read_u8(mem: &InterpMemory, addr: u32) -> u8 {
     let addr = addr as usize;
     mem.data[addr]
 }
-
 pub(crate) fn read_u16(mem: &InterpMemory, addr: u32) -> u16 {
     use core::convert::TryInto;
     let addr = addr as usize;
     u16::from_le_bytes(mem.data[addr..(addr + 2)].try_into().unwrap())
 }
-
 pub(crate) fn read_u32(mem: &InterpMemory, addr: u32) -> u32 {
     use core::convert::TryInto;
     let addr = addr as usize;
     u32::from_le_bytes(mem.data[addr..(addr + 4)].try_into().unwrap())
 }
-
 pub(crate) fn read_u64(mem: &InterpMemory, addr: u32) -> u64 {
     use core::convert::TryInto;
     let addr = addr as usize;
     u64::from_le_bytes(mem.data[addr..(addr + 8)].try_into().unwrap())
 }
-
 pub(crate) fn write_u8(mem: &mut InterpMemory, addr: u32, data: u8) {
     let addr = addr as usize;
     mem.data[addr] = data;
 }
-
 pub(crate) fn write_u16(mem: &mut InterpMemory, addr: u32, data: u16) {
     let addr = addr as usize;
     mem.data[addr..(addr + 2)].copy_from_slice(&data.to_le_bytes()[..]);
 }
-
 pub(crate) fn write_u32(mem: &mut InterpMemory, addr: u32, data: u32) {
     let addr = addr as usize;
     mem.data[addr..(addr + 4)].copy_from_slice(&data.to_le_bytes()[..]);
 }
-
 pub(crate) fn write_u64(mem: &mut InterpMemory, addr: u32, data: u64) {
     let addr = addr as usize;
     mem.data[addr..(addr + 8)].copy_from_slice(&data.to_le_bytes()[..]);
 }
-
 // Min/max implementations with proper handling for negative-zero (as
 // distinct from positive-zero): see
 // https://github.com/wasmi-labs/wasmi/blob/6d3729c17e6d8bcabb8cd7fed0f6278f17f94e06/crates/core/src/value.rs#L575.
-
 fn f32_min(a: f32, b: f32) -> f32 {
     if a < b {
         a

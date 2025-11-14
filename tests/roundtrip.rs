@@ -1,8 +1,6 @@
 //! Integration test to ensure that roundtripping works.
-
 use portal_pc_waffle::{FrontendOptions, Module};
 use std::path::PathBuf;
-
 fn get_wats() -> Vec<PathBuf> {
     let test_dir = std::env::current_dir()
         .unwrap()
@@ -18,7 +16,6 @@ fn get_wats() -> Vec<PathBuf> {
     ret.sort(); // Deterministic test order.
     ret
 }
-
 #[test]
 fn idempotent_roundtrips() {
     for wat in get_wats() {

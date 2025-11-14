@@ -1,11 +1,9 @@
 //! Pass to remove empty blocks.
-
 use crate::entity::EntityRef;
 use crate::ir::{Block, BlockTarget, FunctionBody, Terminator};
 use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;
-
 /// Determines whether a block (i) has no blockparams, and (ii) is
 /// solely a jump to another block. We can remove these blocks.
 ///
@@ -26,10 +24,8 @@ fn block_is_empty_jump(body: &FunctionBody, block: Block) -> Option<BlockTarget>
         &Terminator::Br { ref target } => target,
         _ => return None,
     };
-
     Some(target.clone())
 }
-
 fn rewrite_target(
     forwardings: &[Option<BlockTarget>],
     target: &BlockTarget,
@@ -39,13 +35,11 @@ fn rewrite_target(
     }
     forwardings[target.block.index()].clone()
 }
-
 pub(crate) fn run(body: &mut FunctionBody) {
     log::trace!(
         "empty_blocks: running on func:\n{}\n",
         body.display_verbose("| ", None)
     );
-
     // Identify empty blocks, and to where they should forward.
     let forwardings = body
         .blocks
@@ -58,7 +52,6 @@ pub(crate) fn run(body: &mut FunctionBody) {
             }
         })
         .collect::<Vec<_>>();
-
     // Rewrite every target according to a forwarding (or potentially
     // a chain of composed forwardings).
     for block_data in body.blocks.values_mut() {
@@ -69,10 +62,8 @@ pub(crate) fn run(body: &mut FunctionBody) {
             }
         });
     }
-
     // Recompute preds/succs.
     body.recompute_edges();
-
     log::trace!(
         "empty_blocks: finished:\n{}\n",
         body.display_verbose("| ", None)

@@ -3,7 +3,6 @@
 //! through blockparams. This makes some other transforms easier
 //! because it removes the need to worry about adding blockparams when
 //! mutating the CFG (all possible blockparams are already there!).
-
 use crate::cfg::CFGInfo;
 use crate::entity::PerEntity;
 use crate::ir::{Block, FunctionBody, Value, ValueDef};
@@ -12,11 +11,9 @@ use alloc::collections::BTreeSet;
 use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::{HashMap, HashSet};
-
 pub(crate) fn run(body: &mut FunctionBody, cut_blocks: Option<HashSet<Block>>, cfg: &CFGInfo) {
     MaxSSAPass::new(cut_blocks).run(body, cfg);
 }
-
 struct MaxSSAPass {
     /// Blocks at which all live values must cross through blockparams
     /// (or if None, then all blocks).
@@ -28,7 +25,6 @@ struct MaxSSAPass {
     /// of value.
     value_map: HashMap<(Block, Value), Value>,
 }
-
 impl MaxSSAPass {
     fn new(cut_blocks: Option<HashSet<Block>>) -> Self {
         Self {
@@ -37,14 +33,12 @@ impl MaxSSAPass {
             value_map: HashMap::new(),
         }
     }
-
     fn run(mut self, body: &mut FunctionBody, cfg: &CFGInfo) {
         for block in body.blocks.iter() {
             self.visit(body, cfg, block);
         }
         self.update(body);
     }
-
     fn visit(&mut self, body: &mut FunctionBody, cfg: &CFGInfo, block: Block) {
         // For each use in the block, process the use. Collect all
         // uses first to deduplicate and allow more efficient
@@ -70,12 +64,10 @@ impl MaxSSAPass {
             let u = body.resolve_alias(u);
             uses.insert(u);
         });
-
         for u in uses {
             self.visit_use(body, cfg, block, u);
         }
     }
-
     fn visit_use(&mut self, body: &mut FunctionBody, cfg: &CFGInfo, block: Block, value: Value) {
         if self.value_map.contains_key(&(block, value)) {
             return;
@@ -84,12 +76,10 @@ impl MaxSSAPass {
             return;
         }
         self.new_args[block].push(value);
-
         // Create a placeholder value.
         let ty = body.values[value].ty(&body.type_pool).unwrap();
         let blockparam = body.add_blockparam(block, ty);
         self.value_map.insert((block, value), blockparam);
-
         // Recursively visit preds and use the value there, to ensure
         // they have the value available as well.
         for i in 0..body.blocks[block].preds.len() {
@@ -98,7 +88,6 @@ impl MaxSSAPass {
             let pred = body.blocks[block].preds[i];
             self.visit_use(body, cfg, pred, value);
         }
-
         // If all preds have the same value, and this is not a
         // cut-block, rewrite the blockparam to an alias instead.
         if !self.is_cut_block(block) {
@@ -116,14 +105,12 @@ impl MaxSSAPass {
             }
         }
     }
-
     fn is_cut_block(&self, block: Block) -> bool {
         self.cut_blocks
             .as_ref()
             .map(|cut_blocks| cut_blocks.contains(&block))
             .unwrap_or(true)
     }
-
     fn update_branch_args(&mut self, body: &mut FunctionBody) {
         for (block, blockdata) in body.blocks.entries_mut() {
             blockdata.terminator.update_targets(|target| {
@@ -138,7 +125,6 @@ impl MaxSSAPass {
             });
         }
     }
-
     fn update_uses(&mut self, body: &mut FunctionBody, block: Block) {
         let resolve = |body: &FunctionBody, value: Value| {
             let value = body.resolve_alias(value);
@@ -147,7 +133,6 @@ impl MaxSSAPass {
                 .copied()
                 .unwrap_or(value)
         };
-
         for i in 0..body.blocks[block].insts.len() {
             let inst = body.blocks[block].insts[i].value;
             let mut def = core::mem::take(&mut body.values[inst]);
@@ -176,7 +161,6 @@ impl MaxSSAPass {
         });
         body.blocks[block].terminator = term;
     }
-
     fn update(&mut self, body: &mut FunctionBody) {
         self.update_branch_args(body);
         for block in body.blocks.iter() {
@@ -184,7 +168,6 @@ impl MaxSSAPass {
         }
     }
 }
-
 fn iter_all_same<Item: PartialEq + Eq + Copy, I: Iterator<Item = Item>>(iter: I) -> Option<Item> {
     let mut item = None;
     for val in iter {

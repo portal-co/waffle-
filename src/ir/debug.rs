@@ -1,5 +1,4 @@
 //! Debug info (currently, source-location maps).
-
 use crate::declare_entity;
 use crate::entity::EntityVec;
 // use addr2line::gimli;
@@ -9,10 +8,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::hash_map::Entry as HashEntry;
 use hashbrown::HashMap;
-
 declare_entity!(SourceFile, "file");
 declare_entity!(SourceLoc, "loc");
-
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct Debug {
     /// Interned source-file names, indexed by a `SourceFile` entity
@@ -24,19 +21,16 @@ pub struct Debug {
     pub source_locs: EntityVec<SourceLoc, SourceLocData>,
     source_loc_dedup: HashMap<SourceLocData, SourceLoc>,
 }
-
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
 /// A "source location": a filename (interned to an ID), a line, and a
 /// column.
-
 pub struct SourceLocData {
     pub file: SourceFile,
     pub line: u32,
     pub col: u32,
 }
-
 impl Debug {
     /// Intern a filename to an ID.
     pub fn intern_file(&mut self, path: &str) -> SourceFile {
@@ -47,7 +41,6 @@ impl Debug {
         self.source_file_dedup.insert(path.to_owned(), id);
         id
     }
-
     /// Intern a location (line and column) in an already-interned
     /// filename.
     pub fn intern_loc(&mut self, file: SourceFile, line: u32, col: u32) -> SourceLoc {
@@ -61,11 +54,9 @@ impl Debug {
         }
     }
 }
-
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 /// A map from ranges of offsets in the original Wasm file to source
 /// locations.
-
 pub struct DebugMap {
     /// Offset of code section relative to the Wasm file start.
     pub code_offset: u32,
@@ -73,7 +64,6 @@ pub struct DebugMap {
     /// relative to the code section.
     pub tuples: Vec<(u32, u32, SourceLoc)>,
 }
-
 impl DebugMap {
     // pub(crate) fn from_dwarf<R: gimli::Reader>(
     //     // dwarf: gimli::Dwarf<R>,
@@ -83,7 +73,6 @@ impl DebugMap {
     // anyhow::bail!("todo: reimplement or use no_std dwarf")
     // let ctx = addr2line::Context::from_dwarf(dwarf)?;
     // let mut tuples = vec![];
-
     // let mut locs = ctx.find_location_range(0, u64::MAX).unwrap();
     // while let Some((start, len, loc)) = locs.next() {
     //     let file = debug.intern_file(loc.file.unwrap_or(""));
@@ -92,7 +81,6 @@ impl DebugMap {
     //     tuples.push((start as u32, len as u32, loc));
     // }
     // tuples.sort();
-
     // let mut last = 0;
     // tuples.retain(|&(start, len, _)| {
     //     let retain = start >= last;
@@ -101,7 +89,6 @@ impl DebugMap {
     //     }
     //     retain
     // });
-
     // Ok(DebugMap {
     //     code_offset,
     //     tuples,

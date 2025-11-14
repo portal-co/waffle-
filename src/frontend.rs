@@ -1,7 +1,5 @@
 //! Frontend: convert Wasm to IR.
-
 #![allow(dead_code)]
-
 use crate::entity::EntityRef;
 use crate::errors::FrontendError;
 use crate::ir::*;
@@ -17,7 +15,6 @@ use core::convert::TryFrom;
 use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet};
 use log::trace;
 use wasmparser::{BlockType, DataKind, ExternalKind, KnownCustom, Name, Parser, Payload, TypeRef};
-
 /// Options to control the Wasm-to-bytecode translation process.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FrontendOptions {
@@ -25,7 +22,6 @@ pub struct FrontendOptions {
     /// present.
     pub debug: bool,
 }
-
 /// Convert the given bytecode to a `Module`.
 pub(crate) fn wasm_to_ir<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Result<Module<'a>> {
     let mut module = Module::with_orig_bytes(bytes);
@@ -47,15 +43,12 @@ pub(crate) fn wasm_to_ir<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Resu
     //     gimli::LocationLists::new(extra_sections.debug_loc, extra_sections.debug_loclists);
     // dwarf.ranges =
     //     gimli::RangeLists::new(extra_sections.debug_ranges, extra_sections.debug_rnglists);
-
     // if options.debug {
     //     let debug_map = DebugMap::from_dwarf(dwarf, &mut module.debug, extra_sections.code_offset)?;
     //     module.debug_map = debug_map;
     // }
-
     Ok(module)
 }
-
 fn parse_init_expr<'a>(init_expr: &wasmparser::ConstExpr<'a>) -> Result<Option<u64>> {
     let operators = init_expr
         .get_operators_reader()
@@ -81,7 +74,6 @@ fn parse_init_expr<'a>(init_expr: &wasmparser::ConstExpr<'a>) -> Result<Option<u
         ))),
     })
 }
-
 #[derive(Default)]
 struct ExtraSections {
     // debug_loc: gimli::DebugLoc<gimli::EndianSlice<'a, gimli::LittleEndian>>,
@@ -90,7 +82,6 @@ struct ExtraSections {
     // debug_rnglists: gimli::DebugRngLists<gimli::EndianSlice<'a, gimli::LittleEndian>>,
     code_offset: u32,
 }
-
 fn handle_payload<'a>(
     module: &mut Module<'a>,
     payload: Payload<'a>,
@@ -164,7 +155,6 @@ fn handle_payload<'a>(
                         });
                         ImportKind::ControlTag(tag)
                     }
-
                     t => {
                         bail!(FrontendError::UnsupportedFeature(format!(
                             "Unknown import type: {:?}",
@@ -220,7 +210,6 @@ fn handle_payload<'a>(
         Payload::CodeSectionEntry(body) => {
             let func_idx = Func::new(*next_func);
             *next_func += 1;
-
             let sig = module.funcs[func_idx].sig();
             let name = module.funcs[func_idx].name().to_owned();
             module.funcs[func_idx] = FuncDecl::Lazy(sig, name, body);
@@ -393,7 +382,6 @@ fn handle_payload<'a>(
                                 funcs
                             }
                         };
-
                         let table_items = module.tables[table].func_elements.as_mut().unwrap();
                         let new_size = offset.checked_add(funcs.len()).ok_or_else(|| {
                             FrontendError::TooLarge(format!(
@@ -425,15 +413,12 @@ fn handle_payload<'a>(
             log::warn!("Skipping section: {:?}", payload);
         }
     }
-
     Ok(())
 }
-
 struct DebugLocReader<'a> {
     code_offset: u32,
     locs: &'a [(u32, u32, SourceLoc)],
 }
-
 impl<'a> DebugLocReader<'a> {
     fn new(module: &'a Module, func_offset_in_file: u32) -> Self {
         let code_offset = module.debug_map.code_offset;
@@ -459,7 +444,6 @@ impl<'a> DebugLocReader<'a> {
             locs: &module.debug_map.tuples[start..],
         }
     }
-
     fn get_loc(&mut self, offset: usize) -> SourceLoc {
         let address = u32::try_from(offset).unwrap() - self.code_offset;
         while self.locs.len() > 0 {
@@ -475,16 +459,13 @@ impl<'a> DebugLocReader<'a> {
         SourceLoc::invalid()
     }
 }
-
 pub(crate) fn parse_body<'a>(
     module: &'a Module,
     my_sig: Signature,
     body: &mut wasmparser::FunctionBody,
 ) -> Result<FunctionBody> {
     let mut ret: FunctionBody = FunctionBody::default();
-
     let mut debug_locs = DebugLocReader::new(module, body.range().start as u32);
-
     let SignatureData::Func {
         params,
         returns,
@@ -494,7 +475,6 @@ pub(crate) fn parse_body<'a>(
         anyhow::bail!("invalid sig")
     };
     ret.shared = *shared;
-
     for &param in &params[..] {
         ret.locals.push(param.into());
     }
@@ -502,7 +482,6 @@ pub(crate) fn parse_body<'a>(
     for &r in &returns[..] {
         ret.rets.push(r.into());
     }
-
     let mut locals = body.get_locals_reader()?;
     for _ in 0..locals.get_count() {
         let (count, ty) = locals.read()?;
@@ -511,19 +490,16 @@ pub(crate) fn parse_body<'a>(
         }
     }
     let locals = ret.locals.clone();
-
     trace!(
         "Parsing function body: locals = {:?} sig = {:?}",
         ret.locals,
         module.signatures[my_sig]
     );
-
     let mut builder = FunctionBodyBuilder::new(module, my_sig, &mut ret);
     let entry = Block::new(0);
     builder.body.entry = entry;
     builder.locals.seal_block_preds(entry, &mut builder.body);
     builder.locals.start_block(entry);
-
     for (arg_idx, &arg_ty) in params.iter().enumerate() {
         let local_idx = Local::new(arg_idx);
         builder.body.add_blockparam(entry, arg_ty);
@@ -532,13 +508,11 @@ pub(crate) fn parse_body<'a>(
         builder.locals.declare(local_idx, arg_ty);
         builder.locals.set(local_idx, value);
     }
-
     let n_args = params.len();
     for (offset, local_ty) in locals.values().enumerate() {
         let local_idx = Local::new(n_args + offset);
         builder.locals.declare(local_idx, *local_ty);
     }
-
     let ops = body.get_operators_reader()?;
     for item in ops.into_iter_with_offsets() {
         let (op, offset) = item?;
@@ -549,11 +523,9 @@ pub(crate) fn parse_body<'a>(
             builder.handle_op_unreachable(op)?;
         }
     }
-
     if builder.reachable {
         builder.handle_op(wasmparser::Operator::Return, SourceLoc::invalid())?;
     }
-
     for block in builder.body.blocks.iter() {
         log::trace!("checking if block is sealed: {}", block);
         debug_assert!(builder.locals.is_sealed(block));
@@ -561,12 +533,9 @@ pub(crate) fn parse_body<'a>(
     for value in builder.body.values.values() {
         debug_assert!(!matches!(value, &ValueDef::Placeholder(_)));
     }
-
     trace!("Final function body:{:?}", ret);
-
     Ok(ret)
 }
-
 /// State used to construct SSA from Wasm locals.
 #[derive(Debug, Clone, Default)]
 struct LocalTracker {
@@ -587,20 +556,17 @@ struct LocalTracker {
     /// Blockparams (phis) that are still `Placeholder`.
     incomplete_phis: FxHashMap<Block, Vec<(Local, Value)>>,
 }
-
 impl LocalTracker {
     pub fn declare(&mut self, local: Local, ty: Type) {
         let was_present = self.types.insert(local, ty).is_some();
         assert!(!was_present);
     }
-
     pub fn start_block(&mut self, block: Block) {
         log::trace!("start_block: block {}", block);
         assert!(!self.in_block);
         self.in_block = true;
         self.cur_block = block;
     }
-
     pub fn finish_block(&mut self, reachable: bool) {
         if !self.in_block {
             assert!(!reachable);
@@ -623,7 +589,6 @@ impl LocalTracker {
         }
         self.in_block = false;
     }
-
     pub fn seal_block_preds(&mut self, block: Block, body: &mut FunctionBody) {
         log::trace!("seal_block_preds: block {}", block);
         let not_sealed = self.block_sealed.insert(block);
@@ -636,16 +601,13 @@ impl LocalTracker {
             self.compute_blockparam(body, block, local, phi_value);
         }
     }
-
     fn is_sealed(&self, block: Block) -> bool {
         self.block_sealed.contains(&block)
     }
-
     pub fn set(&mut self, local: Local, value: Value) {
         log::trace!("set: local {} value {:?}", local, value);
         self.in_cur_block.insert(local, value);
     }
-
     fn get_in_block(&mut self, body: &mut FunctionBody, at_block: Block, local: Local) -> Value {
         log::trace!(
             "get_in_block: at_block {} local {} cur_block {}",
@@ -654,14 +616,12 @@ impl LocalTracker {
             self.cur_block
         );
         let ty = body.locals[local];
-
         if self.cur_block == at_block {
             if let Some(&value) = self.in_cur_block.get(&local) {
                 log::trace!(" -> {:?}", value);
                 return value;
             }
         }
-
         if self.is_sealed(at_block) {
             if let Some(end_mapping) = self.block_end.get(&at_block) {
                 if let Some(&value) = end_mapping.get(&local) {
@@ -669,13 +629,11 @@ impl LocalTracker {
                     return value;
                 }
             }
-
             if body.blocks[at_block].preds.is_empty() {
                 let value = self.create_default_value(body, ty, at_block);
                 log::trace!(" -> created default: {:?}", value);
                 return value;
             }
-
             let placeholder = body.add_placeholder(ty);
             body.mark_value_as_local(placeholder, local);
             if at_block == self.cur_block {
@@ -696,7 +654,6 @@ impl LocalTracker {
                     return value;
                 }
             }
-
             let placeholder = body.add_placeholder(ty);
             body.mark_value_as_local(placeholder, local);
             if at_block == self.cur_block {
@@ -715,15 +672,12 @@ impl LocalTracker {
                 .entry(at_block)
                 .or_insert_with(|| vec![])
                 .push((local, placeholder));
-
             placeholder
         }
     }
-
     pub fn get(&mut self, body: &mut FunctionBody, local: Local) -> Value {
         self.get_in_block(body, self.cur_block, local)
     }
-
     fn create_default_value(
         &mut self,
         body: &mut FunctionBody,
@@ -746,7 +700,6 @@ impl LocalTracker {
         );
         val
     }
-
     fn compute_blockparam(
         &mut self,
         body: &mut FunctionBody,
@@ -774,7 +727,6 @@ impl LocalTracker {
             );
             results.push(pred_value);
         }
-
         let mut non_self = results.iter().filter(|&&v| v != value);
         let trivial_alias = match non_self.next() {
             None => None,
@@ -783,7 +735,6 @@ impl LocalTracker {
             }
             Some(_) => None,
         };
-
         if let Some(v) = trivial_alias {
             log::trace!(
                 "compute_blockparam: block {} local {} value {:?}: alias to {:?}",
@@ -824,7 +775,6 @@ impl LocalTracker {
         }
     }
 }
-
 /// State used to build an SSA CFG from Wasm structured control flow
 /// with locals.
 #[derive(Debug)]
@@ -838,7 +788,6 @@ struct FunctionBodyBuilder<'a, 'b> {
     ctrl_stack: Vec<Frame>,
     op_stack: Vec<(Type, Value)>,
 }
-
 /// A frame in the Wasm control stack, mapping to IR entities for
 /// associated label targets and block-parameter values.
 #[derive(Clone, Debug)]
@@ -875,7 +824,6 @@ enum Frame {
         merge_reachable: bool,
     },
 }
-
 impl Frame {
     fn start_depth(&self) -> usize {
         match self {
@@ -885,7 +833,6 @@ impl Frame {
             | Frame::Else { start_depth, .. } => *start_depth,
         }
     }
-
     fn br_args(&self) -> &[Type] {
         match self {
             Frame::Block { results, .. }
@@ -894,7 +841,6 @@ impl Frame {
             Frame::Loop { params, .. } => &params[..],
         }
     }
-
     fn br_target(&self) -> Block {
         match self {
             Frame::Block { out, .. } => *out,
@@ -902,7 +848,6 @@ impl Frame {
             Frame::If { out, .. } | Frame::Else { out, .. } => *out,
         }
     }
-
     fn out(&self) -> Block {
         match self {
             Frame::Block { out, .. }
@@ -911,7 +856,6 @@ impl Frame {
             | Frame::Else { out, .. } => *out,
         }
     }
-
     fn params(&self) -> &[Type] {
         match self {
             Frame::Block { params, .. }
@@ -920,7 +864,6 @@ impl Frame {
             | Frame::Else { params, .. } => &params[..],
         }
     }
-
     fn results(&self) -> &[Type] {
         match self {
             Frame::Block { results, .. }
@@ -929,7 +872,6 @@ impl Frame {
             | Frame::Else { results, .. } => &results[..],
         }
     }
-
     fn set_reachable(&mut self) {
         match self {
             Frame::Block { out_reachable, .. } => *out_reachable = true,
@@ -943,7 +885,6 @@ impl Frame {
         }
     }
 }
-
 impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
     fn new(module: &'b Module<'a>, my_sig: Signature, body: &'b mut FunctionBody) -> Self {
         body.blocks.push(BlockDef::default());
@@ -957,7 +898,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             reachable: true,
             locals: LocalTracker::default(),
         };
-
         let SignatureData::Func {
             params,
             returns,
@@ -966,7 +906,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         else {
             todo!()
         };
-
         // Push initial implicit Block.
         let results = returns.to_vec();
         let out = ret.body.add_block();
@@ -980,7 +919,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         });
         ret
     }
-
     fn pop_n(&mut self, n: usize) -> Vec<Value> {
         assert!(self.reachable);
         let new_top = self.op_stack.len() - n;
@@ -991,12 +929,10 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         self.op_stack.truncate(new_top);
         ret
     }
-
     fn pop_1(&mut self) -> Value {
         assert!(self.reachable);
         self.op_stack.pop().unwrap().1
     }
-
     fn block_results(&mut self, tys: &[Type], start_depth: usize, at_block: Block) -> Vec<Value> {
         if self.op_stack.len() < start_depth + tys.len() {
             tys.iter()
@@ -1009,43 +945,35 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.pop_n(tys.len())
         }
     }
-
     fn handle_op(&mut self, op: wasmparser::Operator<'a>, loc: SourceLoc) -> Result<()> {
         trace!("handle_op: {:?}", op);
         trace!("op_stack = {:?}", self.op_stack);
         trace!("ctrl_stack = {:?}", self.ctrl_stack);
         trace!("locals = {:?}", self.locals);
-
         debug_assert!(self.reachable);
-
         if self.handle_ctrl_op(op.clone())? {
             return Ok(());
         }
-
         match &op {
             wasmparser::Operator::Unreachable => {
                 self.emit_unreachable();
             }
-
             wasmparser::Operator::LocalGet { local_index } => {
                 let local_index = Local::from(*local_index);
                 let ty = self.body.locals[local_index];
                 let value = self.locals.get(&mut self.body, local_index);
                 self.op_stack.push((ty, value));
             }
-
             wasmparser::Operator::LocalSet { local_index } => {
                 let local_index = Local::from(*local_index);
                 let (_, value) = self.op_stack.pop().unwrap();
                 self.locals.set(local_index, value);
             }
-
             wasmparser::Operator::LocalTee { local_index } => {
                 let local_index = Local::from(*local_index);
                 let (_ty, value) = *self.op_stack.last().unwrap();
                 self.locals.set(local_index, value);
             }
-
             wasmparser::Operator::Call { .. }
             | wasmparser::Operator::CallIndirect { .. }
             | wasmparser::Operator::Select
@@ -1464,13 +1392,10 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             | wasmparser::Operator::RefFunc { .. } => {
                 self.emit(Operator::try_from(&op).unwrap(), loc)?
             }
-
             wasmparser::Operator::Nop => {}
-
             wasmparser::Operator::Drop => {
                 let _ = self.pop_1();
             }
-
             wasmparser::Operator::Br { relative_depth }
             | wasmparser::Operator::BrIf { relative_depth } => {
                 let cond = match &op {
@@ -1507,7 +1432,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     }
                 }
             }
-
             wasmparser::Operator::BrTable { targets } => {
                 // Get the selector index.
                 let index = self.pop_1();
@@ -1534,7 +1458,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 self.locals.finish_block(self.reachable);
                 self.reachable = false;
             }
-
             wasmparser::Operator::Return => {
                 let SignatureData::Func {
                     params, returns, ..
@@ -1602,22 +1525,16 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 op
             ))),
         }
-
         Ok(())
     }
-
     fn handle_op_unreachable(&mut self, op: wasmparser::Operator<'a>) -> Result<()> {
         trace!("handle_op_unreachable: {:?}", op);
         trace!("op_stack = {:?}", self.op_stack);
         trace!("ctrl_stack = {:?}", self.ctrl_stack);
-
         debug_assert!(!self.reachable);
-
         self.handle_ctrl_op(op)?;
-
         Ok(())
     }
-
     fn handle_ctrl_op(&mut self, op: wasmparser::Operator<'a>) -> Result<bool> {
         log::trace!(
             "handle_ctrl_op: op {:?} reachable {} cur_block {}",
@@ -1754,7 +1671,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     }
                 }
             }
-
             wasmparser::Operator::Block { blockty } => {
                 let (params, results) = self.block_params_and_results(*blockty);
                 let out = self.body.add_block();
@@ -1772,7 +1688,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     out_reachable: false,
                 });
             }
-
             wasmparser::Operator::Loop { blockty } => {
                 let (params, results) = self.block_params_and_results(*blockty);
                 let header = self.body.add_block();
@@ -1798,7 +1713,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     results,
                 });
             }
-
             wasmparser::Operator::If { blockty } => {
                 let (params, results) = self.block_params_and_results(*blockty);
                 let if_true = self.body.add_block();
@@ -1837,7 +1751,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 self.locals.finish_block(self.reachable);
                 self.locals.start_block(if_true);
             }
-
             wasmparser::Operator::Else => {
                 if let Frame::If {
                     start_depth,
@@ -1874,20 +1787,16 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     )));
                 }
             }
-
             _ => return Ok(false),
         }
-
         Ok(true)
     }
-
     fn add_block_params(&mut self, block: Block, tys: &[Type]) {
         log::trace!("add_block_params: block {} tys {:?}", block, tys);
         for &ty in tys {
             self.body.add_blockparam(block, ty);
         }
     }
-
     fn block_params_and_results(&self, ty: BlockType) -> (Vec<Type>, Vec<Type>) {
         match ty {
             BlockType::Empty => (vec![], vec![]),
@@ -1904,12 +1813,10 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
         }
     }
-
     fn relative_frame(&mut self, relative_depth: u32) -> &mut Frame {
         let index = self.ctrl_stack.len() - 1 - relative_depth as usize;
         &mut self.ctrl_stack[index]
     }
-
     fn emit_branch(&mut self, target: Block, args: &[Value]) {
         log::trace!(
             "emit_branch: cur_block {:?} target {} args {:?}",
@@ -1927,7 +1834,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 .set_terminator(self.cur_block, Terminator::Br { target });
         }
     }
-
     fn emit_cond_branch(
         &mut self,
         cond: Value,
@@ -1963,7 +1869,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             );
         }
     }
-
     fn emit_br_table(
         &mut self,
         index: Value,
@@ -1988,13 +1893,11 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                     BlockTarget { block, args }
                 })
                 .collect();
-
             let default_args = args;
             let default = BlockTarget {
                 block: default_target,
                 args: default_args,
             };
-
             self.body.set_terminator(
                 self.cur_block,
                 Terminator::Select {
@@ -2005,7 +1908,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             );
         }
     }
-
     fn emit_ret(&mut self, values: &[Value]) {
         log::trace!(
             "emit_ret: cur_block {} reachable {} values {:?}",
@@ -2020,7 +1922,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.reachable = false;
         }
     }
-
     fn emit_term(&mut self, t: Terminator) {
         log::trace!(
             "emit_term: cur_block {} reachable {} terminator {:?}",
@@ -2033,7 +1934,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.reachable = false;
         }
     }
-
     fn emit_unreachable(&mut self) {
         log::trace!(
             "emit_unreachable: cur_block {} reachable {}",
@@ -2046,7 +1946,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.reachable = false;
         }
     }
-
     fn push_block_params(&mut self, num_params: usize) {
         log::trace!(
             "push_block_params: cur_block {:?}, {} params",
@@ -2059,20 +1958,16 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.op_stack.push((ty, value));
         }
     }
-
     fn emit(&mut self, op: Operator, loc: SourceLoc) -> Result<()> {
         let inputs = op_inputs(self.module, Some(&self.op_stack[..]), &op)?;
         let outputs = op_outputs(self.module, Some(&self.op_stack[..]), &op)?;
-
         log::trace!(
             "emit into block {:?}: op {:?} inputs {:?}",
             self.cur_block,
             op,
             inputs
         );
-
         let n_outputs = outputs.len();
-
         let input_operands = self.body.arg_pool.allocate(inputs.len(), Value::invalid());
         let args = &mut self.body.arg_pool[input_operands];
         for (i, &input) in inputs.into_iter().enumerate().rev() {
@@ -2082,23 +1977,19 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         }
         log::trace!(" -> operands: {:?}", input_operands);
         log::trace!(" -> ty {:?}", outputs);
-
         let outputs_list = if n_outputs == 1 {
             self.body.single_type_list(outputs[0])
         } else {
             self.body.type_pool.from_iter(outputs.iter().cloned())
         };
-
         let value = self
             .body
             .add_value(ValueDef::Operator(op, input_operands, outputs_list));
         log::trace!(" -> value: {:?}", value);
-
         if self.reachable {
             self.body.append_to_block(self.cur_block, value);
         }
         self.body.source_locs[value] = loc;
-
         if n_outputs == 1 {
             let output_ty = outputs[0];
             self.op_stack.push((output_ty, value));
@@ -2114,7 +2005,6 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
                 log::trace!(" -> pick {}: {:?} ty {:?}", i, pick, output_ty);
             }
         }
-
         Ok(())
     }
 }

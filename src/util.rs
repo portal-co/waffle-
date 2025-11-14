@@ -1,6 +1,5 @@
-use alloc::{borrow::ToOwned, vec::Vec};
-
 use crate::*;
+use alloc::{borrow::ToOwned, vec::Vec};
 pub fn add_start(m: &mut Module, tf: Func) {
     let s = SignatureData::Func {
         params: vec![],
@@ -46,7 +45,6 @@ pub fn new_sig(m: &mut Module, s: SignatureData) -> Signature {
     }
     return m.signatures.push(s);
 }
-
 pub fn results_ref_2(f: &mut FunctionBody, c: Value) -> Vec<Value> {
     let c = f.resolve_and_update_alias(c);
     let b = f.value_blocks[c];
@@ -63,6 +61,5 @@ pub fn results_ref_2(f: &mut FunctionBody, c: Value) -> Vec<Value> {
         f.append_to_block(b, w);
         v.push(w);
     }
-
     return v;
 }

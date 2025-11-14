@@ -1,5 +1,4 @@
 //! Basic optimizations: GVN and constant-propagation/folding.
-
 use crate::cfg::CFGInfo;
 use crate::interp::{const_eval, ConstVal};
 use crate::ir::*;
@@ -20,7 +19,6 @@ pub struct OptOptions {
     pub inline_refs: bool,
     pub ub_vaccum: bool,
 }
-
 impl core::default::Default for OptOptions {
     fn default() -> Self {
         OptOptions {
@@ -32,7 +30,6 @@ impl core::default::Default for OptOptions {
         }
     }
 }
-
 pub(crate) fn basic_opt(body: &mut FunctionBody, cfg: &CFGInfo, options: &OptOptions) {
     loop {
         let mut pass = BasicOptPass {
@@ -47,7 +44,6 @@ pub(crate) fn basic_opt(body: &mut FunctionBody, cfg: &CFGInfo, options: &OptOpt
         }
     }
 }
-
 #[derive(Debug)]
 struct BasicOptPass<'a> {
     map: ScopedMap<ValueDef, Value>,
@@ -55,25 +51,21 @@ struct BasicOptPass<'a> {
     options: &'a OptOptions,
     changed: bool,
 }
-
 impl<'a> DomtreePass for BasicOptPass<'a> {
     fn enter(&mut self, block: Block, body: &mut FunctionBody) {
         self.map.push_level();
         self.optimize(block, body);
     }
-
     fn leave(&mut self, _block: Block, _body: &mut FunctionBody) {
         self.map.pop_level();
     }
 }
-
 pub fn value_is_pure(value: Value, body: &FunctionBody) -> bool {
     match body.values[value] {
         ValueDef::Operator(op, ..) if op.is_pure() => true,
         _ => false,
     }
 }
-
 fn value_is_const(value: Value, body: &FunctionBody) -> ConstVal {
     match body.values[value] {
         ValueDef::Operator(Operator::I32Const { value }, _, _) => ConstVal::I32(value),
@@ -83,7 +75,6 @@ fn value_is_const(value: Value, body: &FunctionBody) -> ConstVal {
         _ => ConstVal::None,
     }
 }
-
 fn const_op(val: ConstVal) -> Operator {
     match val {
         ConstVal::I32(value) => Operator::I32Const { value },
@@ -93,7 +84,6 @@ fn const_op(val: ConstVal) -> Operator {
         _ => unreachable!(),
     }
 }
-
 fn remove_all_from_vec<T: Clone>(v: &mut Vec<T>, indices: &[usize]) {
     let mut out = 0;
     let mut indices_i = 0;
@@ -108,10 +98,8 @@ fn remove_all_from_vec<T: Clone>(v: &mut Vec<T>, indices: &[usize]) {
             indices_i += 1;
         }
     }
-
     v.truncate(out);
 }
-
 impl<'a> BasicOptPass<'a> {
     fn optimize(&mut self, block: Block, body: &mut FunctionBody) {
         if self.options.redundant_blockparams && block != body.entry {
@@ -139,7 +127,6 @@ impl<'a> BasicOptPass<'a> {
                     const_val = ConstVal::meet(const_val, Some(value_is_const(input, body)));
                 }
                 let const_val = const_val.unwrap();
-
                 assert!(inputs.len() > 0);
                 if inputs.iter().all(|x| *x == inputs[0]) {
                     // All inputs are the same value; remove the
@@ -158,15 +145,12 @@ impl<'a> BasicOptPass<'a> {
                     blockparams_to_remove.push(i);
                 }
             }
-
             if !const_insts_to_insert.is_empty() || !blockparams_to_remove.is_empty() {
                 self.changed = true;
             }
-
             for inst in const_insts_to_insert {
                 body.blocks[block].insts.insert(0, ValueRecord::core(inst));
             }
-
             remove_all_from_vec(&mut body.blocks[block].params, &blockparams_to_remove[..]);
             for (&pred, &pos) in self.cfg.preds[block]
                 .iter()
@@ -182,7 +166,6 @@ impl<'a> BasicOptPass<'a> {
                 body.blocks[block].insts.clear();
             }
         }
-
         // Pass over instructions, updating in place.
         let mut i = 0;
         while i < body.blocks[block].insts.len() {
@@ -190,7 +173,6 @@ impl<'a> BasicOptPass<'a> {
             i += 1;
             if value_is_pure(inst, body) {
                 let mut value = body.values[inst].clone();
-
                 // Resolve aliases in the arg lists.
                 match &mut value {
                     &mut ValueDef::Operator(_, args, _) => {
@@ -208,7 +190,6 @@ impl<'a> BasicOptPass<'a> {
                     }
                     _ => {}
                 }
-
                 //Try to inline references
                 if self.options.inline_refs {
                     if let ValueDef::Operator(op, args, tys) = &value {
@@ -234,7 +215,6 @@ impl<'a> BasicOptPass<'a> {
                         }
                     }
                 }
-
                 // Try to constant-propagate.
                 if self.options.cprop {
                     if let ValueDef::Operator(op, args, ..) = &value {
@@ -291,7 +271,6 @@ impl<'a> BasicOptPass<'a> {
                         }
                     }
                 }
-
                 if self.options.gvn {
                     // GVN: look for already-existing copies of this
                     // value.

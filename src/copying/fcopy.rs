@@ -1,16 +1,13 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use hashbrown::HashMap;
-
 // use libc::key_t;
-
+use crate::util::new_sig;
 use crate::{
     cfg::CFGInfo, entity::EntityRef, pool::ListRef, Block, BlockTarget, FrontendOptions, Func,
     FunctionBody, Memory, MemoryArg, Module, Operator, Signature, SignatureData, Terminator, Type,
     Value, ValueDef,
 };
-
-use crate::util::new_sig;
 use alloc::vec;
 use alloc::vec::Vec;
 pub trait Obfuscate {

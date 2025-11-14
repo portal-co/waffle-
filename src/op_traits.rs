@@ -1,5 +1,4 @@
 //! Metadata on operators.
-
 use crate::entity::EntityRef;
 use crate::ir::{Module, Type, Value};
 use crate::{MemoryArg, Operator, SignatureData};
@@ -8,7 +7,6 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::{Context, Result};
-
 /// Given a module and an existing operand stack for context, provide
 /// the type(s) that a given operator requires as inputs.
 pub fn op_inputs(
@@ -18,7 +16,6 @@ pub fn op_inputs(
 ) -> Result<Cow<'static, [Type]>> {
     match op {
         &Operator::Unreachable | &Operator::Nop => Ok(Cow::Borrowed(&[])),
-
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
             let SignatureData::Func {
@@ -40,7 +37,6 @@ pub fn op_inputs(
             params.push(Type::I32);
             Ok(params.into())
         }
-
         &Operator::Select => {
             let Some(op_stack) = op_stack else {
                 anyhow::bail!("selects cannot be typed with no stack");
@@ -49,10 +45,8 @@ pub fn op_inputs(
             Ok(vec![val_ty, val_ty, Type::I32].into())
         }
         &Operator::TypedSelect { ty } => Ok(vec![ty, ty, Type::I32].into()),
-
         &Operator::GlobalGet { .. } => Ok(Cow::Borrowed(&[])),
         &Operator::GlobalSet { global_index } => Ok(vec![module.globals[global_index].ty].into()),
-
         Operator::I32Load { memory }
         | Operator::I64Load { memory }
         | Operator::F32Load { memory }
@@ -73,7 +67,6 @@ pub fn op_inputs(
                 Ok(Cow::Borrowed(&[Type::I32]))
             }
         }
-
         Operator::I32Store { memory } => Ok(if module.memories[memory.memory].memory64 {
             Cow::Borrowed(&[Type::I64, Type::I32])
         } else {
@@ -119,12 +112,10 @@ pub fn op_inputs(
         } else {
             Cow::Borrowed(&[Type::I32, Type::I64])
         }),
-
         Operator::I32Const { .. }
         | Operator::I64Const { .. }
         | Operator::F32Const { .. }
         | Operator::F64Const { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::I32Eqz => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::I32Eq
         | Operator::I32Ne
@@ -136,9 +127,7 @@ pub fn op_inputs(
         | Operator::I32LeU
         | Operator::I32GeS
         | Operator::I32GeU => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
-
         Operator::I64Eqz => Ok(Cow::Borrowed(&[Type::I64])),
-
         Operator::I64Eq
         | Operator::I64Ne
         | Operator::I64LtS
@@ -149,25 +138,21 @@ pub fn op_inputs(
         | Operator::I64LeU
         | Operator::I64GeS
         | Operator::I64GeU => Ok(Cow::Borrowed(&[Type::I64, Type::I64])),
-
         Operator::F32Eq
         | Operator::F32Ne
         | Operator::F32Lt
         | Operator::F32Gt
         | Operator::F32Le
         | Operator::F32Ge => Ok(Cow::Borrowed(&[Type::F32, Type::F32])),
-
         Operator::F64Eq
         | Operator::F64Ne
         | Operator::F64Lt
         | Operator::F64Gt
         | Operator::F64Le
         | Operator::F64Ge => Ok(Cow::Borrowed(&[Type::F64, Type::F64])),
-
         Operator::I32Clz | Operator::I32Ctz | Operator::I32Popcnt => {
             Ok(Cow::Borrowed(&[Type::I32]))
         }
-
         Operator::I32Add
         | Operator::I32Sub
         | Operator::I32Mul
@@ -183,11 +168,9 @@ pub fn op_inputs(
         | Operator::I32ShrU
         | Operator::I32Rotl
         | Operator::I32Rotr => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
-
         Operator::I64Clz | Operator::I64Ctz | Operator::I64Popcnt => {
             Ok(Cow::Borrowed(&[Type::I64]))
         }
-
         Operator::I64Add
         | Operator::I64Sub
         | Operator::I64Mul
@@ -203,7 +186,6 @@ pub fn op_inputs(
         | Operator::I64ShrU
         | Operator::I64Rotl
         | Operator::I64Rotr => Ok(Cow::Borrowed(&[Type::I64, Type::I64])),
-
         Operator::F32Abs
         | Operator::F32Neg
         | Operator::F32Ceil
@@ -211,7 +193,6 @@ pub fn op_inputs(
         | Operator::F32Trunc
         | Operator::F32Nearest
         | Operator::F32Sqrt => Ok(Cow::Borrowed(&[Type::F32])),
-
         Operator::F32Add
         | Operator::F32Sub
         | Operator::F32Mul
@@ -219,7 +200,6 @@ pub fn op_inputs(
         | Operator::F32Min
         | Operator::F32Max
         | Operator::F32Copysign => Ok(Cow::Borrowed(&[Type::F32, Type::F32])),
-
         Operator::F64Abs
         | Operator::F64Neg
         | Operator::F64Ceil
@@ -227,7 +207,6 @@ pub fn op_inputs(
         | Operator::F64Trunc
         | Operator::F64Nearest
         | Operator::F64Sqrt => Ok(Cow::Borrowed(&[Type::F64])),
-
         Operator::F64Add
         | Operator::F64Sub
         | Operator::F64Mul
@@ -235,7 +214,6 @@ pub fn op_inputs(
         | Operator::F64Min
         | Operator::F64Max
         | Operator::F64Copysign => Ok(Cow::Borrowed(&[Type::F64, Type::F64])),
-
         Operator::I32WrapI64 => Ok(Cow::Borrowed(&[Type::I64])),
         Operator::I32TruncF32S => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::I32TruncF32U => Ok(Cow::Borrowed(&[Type::F32])),
@@ -306,7 +284,6 @@ pub fn op_inputs(
         } else {
             Cow::Borrowed(&[Type::I32])
         }),
-
         Operator::V128Load { memory } => {
             if module.memories[memory.memory].memory64 {
                 Ok(Cow::Borrowed(&[Type::I64]))
@@ -412,7 +389,6 @@ pub fn op_inputs(
                 Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
             }
         }
-
         Operator::V128Load16Lane { memory, .. } => {
             if module.memories[memory.memory].memory64 {
                 Ok(Cow::Borrowed(&[Type::I64, Type::V128]))
@@ -462,7 +438,6 @@ pub fn op_inputs(
                 Ok(Cow::Borrowed(&[Type::I32, Type::V128]))
             }
         }
-
         Operator::V128Const { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I8x16Shuffle { .. } => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16ExtractLaneS { .. } => Ok(Cow::Borrowed(&[Type::V128])),
@@ -479,7 +454,6 @@ pub fn op_inputs(
         Operator::F32x4ReplaceLane { .. } => Ok(Cow::Borrowed(&[Type::V128, Type::F32])),
         Operator::F64x2ExtractLane { .. } => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2ReplaceLane { .. } => Ok(Cow::Borrowed(&[Type::V128, Type::F64])),
-
         Operator::I8x16Swizzle => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16Splat => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::I16x8Splat => Ok(Cow::Borrowed(&[Type::I32])),
@@ -487,7 +461,6 @@ pub fn op_inputs(
         Operator::I64x2Splat => Ok(Cow::Borrowed(&[Type::I64])),
         Operator::F32x4Splat => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::F64x2Splat => Ok(Cow::Borrowed(&[Type::F64])),
-
         Operator::I8x16Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16LtS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
@@ -498,7 +471,6 @@ pub fn op_inputs(
         Operator::I8x16LeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16GeS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16GeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I16x8Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8LtS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
@@ -509,7 +481,6 @@ pub fn op_inputs(
         Operator::I16x8LeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8GeS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8GeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I32x4Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4LtS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
@@ -520,28 +491,24 @@ pub fn op_inputs(
         Operator::I32x4LeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4GeS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4GeU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I64x2Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2LtS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2GtS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2LeS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2GeS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::F32x4Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4Lt => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4Gt => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4Le => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4Ge => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::F64x2Eq => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2Ne => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2Lt => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2Gt => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2Le => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2Ge => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::V128Not => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128And => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::V128AndNot => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
@@ -549,7 +516,6 @@ pub fn op_inputs(
         Operator::V128Xor => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::V128Bitselect => Ok(Cow::Borrowed(&[Type::V128, Type::V128, Type::V128])),
         Operator::V128AnyTrue => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I8x16Abs => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Neg => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Popcnt => Ok(Cow::Borrowed(&[Type::V128])),
@@ -571,7 +537,6 @@ pub fn op_inputs(
         Operator::I8x16MaxS => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16MaxU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I8x16AvgrU => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I16x8ExtAddPairwiseI8x16S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8ExtAddPairwiseI8x16U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8Abs => Ok(Cow::Borrowed(&[Type::V128])),
@@ -604,7 +569,6 @@ pub fn op_inputs(
         Operator::I16x8ExtMulHighI8x16S => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8ExtMulLowI8x16U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I16x8ExtMulHighI8x16U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I32x4ExtAddPairwiseI16x8S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4ExtAddPairwiseI16x8U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4Abs => Ok(Cow::Borrowed(&[Type::V128])),
@@ -630,7 +594,6 @@ pub fn op_inputs(
         Operator::I32x4ExtMulHighI16x8S => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4ExtMulLowI16x8U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I32x4ExtMulHighI16x8U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I64x2Abs => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2Neg => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2AllTrue => Ok(Cow::Borrowed(&[Type::V128])),
@@ -649,7 +612,6 @@ pub fn op_inputs(
         Operator::I64x2ExtMulHighI32x4S => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2ExtMulLowI32x4U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::I64x2ExtMulHighI32x4U => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::F32x4Ceil => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Floor => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Trunc => Ok(Cow::Borrowed(&[Type::V128])),
@@ -665,7 +627,6 @@ pub fn op_inputs(
         Operator::F32x4Max => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4PMin => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F32x4PMax => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::F64x2Ceil => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Floor => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Trunc => Ok(Cow::Borrowed(&[Type::V128])),
@@ -681,10 +642,8 @@ pub fn op_inputs(
         Operator::F64x2Max => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2PMin => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
         Operator::F64x2PMax => Ok(Cow::Borrowed(&[Type::V128, Type::V128])),
-
         Operator::I32x4TruncSatF32x4S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4TruncSatF32x4U => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F32x4ConvertI32x4S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4ConvertI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4TruncSatF64x2SZero => Ok(Cow::Borrowed(&[Type::V128])),
@@ -693,7 +652,6 @@ pub fn op_inputs(
         Operator::F64x2ConvertLowI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4DemoteF64x2Zero => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::CallRef { sig_index } => {
             let SignatureData::Func {
                 params, returns, ..
@@ -731,7 +689,6 @@ pub fn op_inputs(
                 Ok(Cow::Borrowed(&[Type::I32, Type::I32, Type::I32]))
             }
         }
-
         Operator::MemoryAtomicNotify { memarg } => {
             if module.memories[memarg.memory].memory64 {
                 Ok(Cow::Borrowed(&[Type::I64, Type::I32]))
@@ -1232,7 +1189,6 @@ pub fn op_inputs(
         ])),
     }
 }
-
 /// Given a module and an existing operand stack for context, provide
 /// the type(s) that a given operator provides as outputs.
 pub fn op_outputs(
@@ -1242,7 +1198,6 @@ pub fn op_outputs(
 ) -> Result<Cow<'static, [Type]>> {
     match op {
         &Operator::Unreachable | &Operator::Nop => Ok(Cow::Borrowed(&[])),
-
         &Operator::Call { function_index } => {
             let sig = module.funcs[function_index].sig();
             let SignatureData::Func {
@@ -1262,7 +1217,6 @@ pub fn op_outputs(
             };
             Ok(Vec::from(returns.clone()).into())
         }
-
         &Operator::Select => {
             let Some(op_stack) = op_stack else {
                 anyhow::bail!("selects cannot be typed with no stack");
@@ -1273,7 +1227,6 @@ pub fn op_outputs(
         &Operator::TypedSelect { ty } => Ok(vec![ty].into()),
         &Operator::GlobalGet { global_index } => Ok(vec![module.globals[global_index].ty].into()),
         &Operator::GlobalSet { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::I32Load { .. }
         | Operator::I32Load8S { .. }
         | Operator::I32Load8U { .. }
@@ -1286,7 +1239,6 @@ pub fn op_outputs(
         | Operator::I64Load16U { .. }
         | Operator::I64Load32S { .. }
         | Operator::I64Load32U { .. } => Ok(Cow::Borrowed(&[Type::I64])),
-
         Operator::I32AtomicLoad { .. }
         | Operator::I32AtomicLoad8U { .. }
         | Operator::I32AtomicLoad16U { .. } => Ok(Cow::Borrowed(&[Type::I32])),
@@ -1294,10 +1246,8 @@ pub fn op_outputs(
         | Operator::I64AtomicLoad8U { .. }
         | Operator::I64AtomicLoad16U { .. }
         | Operator::I64AtomicLoad32U { .. } => Ok(Cow::Borrowed(&[Type::I64])),
-
         Operator::F32Load { .. } => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::F64Load { .. } => Ok(Cow::Borrowed(&[Type::F64])),
-
         Operator::I32Store { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64Store { .. } => Ok(Cow::Borrowed(&[])),
         Operator::F32Store { .. } => Ok(Cow::Borrowed(&[])),
@@ -1307,7 +1257,6 @@ pub fn op_outputs(
         Operator::I64Store8 { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64Store16 { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64Store32 { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::I32AtomicStore { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64AtomicStore { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I32AtomicStore8 { .. } => Ok(Cow::Borrowed(&[])),
@@ -1315,12 +1264,10 @@ pub fn op_outputs(
         Operator::I64AtomicStore8 { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64AtomicStore16 { .. } => Ok(Cow::Borrowed(&[])),
         Operator::I64AtomicStore32 { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::I32Const { .. } => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::I64Const { .. } => Ok(Cow::Borrowed(&[Type::I64])),
         Operator::F32Const { .. } => Ok(Cow::Borrowed(&[Type::F32])),
         Operator::F64Const { .. } => Ok(Cow::Borrowed(&[Type::F64])),
-
         Operator::I32Eqz
         | Operator::I32Eq
         | Operator::I32Ne
@@ -1355,7 +1302,6 @@ pub fn op_outputs(
         | Operator::F64Gt
         | Operator::F64Le
         | Operator::F64Ge => Ok(Cow::Borrowed(&[Type::I32])),
-
         Operator::I32Clz
         | Operator::I32Ctz
         | Operator::I32Popcnt
@@ -1374,7 +1320,6 @@ pub fn op_outputs(
         | Operator::I32ShrU
         | Operator::I32Rotl
         | Operator::I32Rotr => Ok(Cow::Borrowed(&[Type::I32])),
-
         Operator::I64Clz
         | Operator::I64Ctz
         | Operator::I64Popcnt
@@ -1393,7 +1338,6 @@ pub fn op_outputs(
         | Operator::I64ShrU
         | Operator::I64Rotl
         | Operator::I64Rotr => Ok(Cow::Borrowed(&[Type::I64])),
-
         Operator::F32Abs
         | Operator::F32Neg
         | Operator::F32Ceil
@@ -1408,7 +1352,6 @@ pub fn op_outputs(
         | Operator::F32Min
         | Operator::F32Max
         | Operator::F32Copysign => Ok(Cow::Borrowed(&[Type::F32])),
-
         Operator::F64Abs
         | Operator::F64Neg
         | Operator::F64Ceil
@@ -1423,7 +1366,6 @@ pub fn op_outputs(
         | Operator::F64Min
         | Operator::F64Max
         | Operator::F64Copysign => Ok(Cow::Borrowed(&[Type::F64])),
-
         Operator::I32WrapI64 => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::I32TruncF32S => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::I32TruncF32U => Ok(Cow::Borrowed(&[Type::I32])),
@@ -1484,7 +1426,6 @@ pub fn op_outputs(
         }),
         Operator::MemoryCopy { .. } => Ok(Cow::Borrowed(&[])),
         Operator::MemoryFill { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::V128Load { .. } => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128Load8x8S { .. } => Ok(Cow::Borrowed(&[Type::I32])),
         Operator::V128Load8x8U { .. } => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1507,7 +1448,6 @@ pub fn op_outputs(
         Operator::V128Store16Lane { .. } => Ok(Cow::Borrowed(&[])),
         Operator::V128Store32Lane { .. } => Ok(Cow::Borrowed(&[])),
         Operator::V128Store64Lane { .. } => Ok(Cow::Borrowed(&[])),
-
         Operator::V128Const { .. } => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Shuffle { .. } => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16ExtractLaneS { .. } => Ok(Cow::Borrowed(&[Type::I32])),
@@ -1524,7 +1464,6 @@ pub fn op_outputs(
         Operator::F32x4ReplaceLane { .. } => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2ExtractLane { .. } => Ok(Cow::Borrowed(&[Type::F64])),
         Operator::F64x2ReplaceLane { .. } => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I8x16Swizzle => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Splat => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8Splat => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1532,7 +1471,6 @@ pub fn op_outputs(
         Operator::I64x2Splat => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Splat => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Splat => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I8x16Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16LtS => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1543,7 +1481,6 @@ pub fn op_outputs(
         Operator::I8x16LeU => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16GeS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16GeU => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I16x8Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8LtS => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1554,7 +1491,6 @@ pub fn op_outputs(
         Operator::I16x8LeU => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8GeS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8GeU => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I32x4Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4LtS => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1565,28 +1501,24 @@ pub fn op_outputs(
         Operator::I32x4LeU => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4GeS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4GeU => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I64x2Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2LtS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2GtS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2LeS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2GeS => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F32x4Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Lt => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Gt => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Le => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Ge => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F64x2Eq => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Ne => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Lt => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Gt => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Le => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Ge => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::V128Not => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128And => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128AndNot => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1594,7 +1526,6 @@ pub fn op_outputs(
         Operator::V128Xor => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128Bitselect => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::V128AnyTrue => Ok(Cow::Borrowed(&[Type::I32])),
-
         Operator::I8x16Abs => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Neg => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16Popcnt => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1616,7 +1547,6 @@ pub fn op_outputs(
         Operator::I8x16MaxS => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16MaxU => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I8x16AvgrU => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I16x8ExtAddPairwiseI8x16S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8ExtAddPairwiseI8x16U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8Abs => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1649,7 +1579,6 @@ pub fn op_outputs(
         Operator::I16x8ExtMulHighI8x16S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8ExtMulLowI8x16U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I16x8ExtMulHighI8x16U => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I32x4ExtAddPairwiseI16x8S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4ExtAddPairwiseI16x8U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4Abs => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1675,7 +1604,6 @@ pub fn op_outputs(
         Operator::I32x4ExtMulHighI16x8S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4ExtMulLowI16x8U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4ExtMulHighI16x8U => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I64x2Abs => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2Neg => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2AllTrue => Ok(Cow::Borrowed(&[Type::I32])),
@@ -1694,7 +1622,6 @@ pub fn op_outputs(
         Operator::I64x2ExtMulHighI32x4S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2ExtMulLowI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I64x2ExtMulHighI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F32x4Ceil => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Floor => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4Trunc => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1710,7 +1637,6 @@ pub fn op_outputs(
         Operator::F32x4Max => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4PMin => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4PMax => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F64x2Ceil => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Floor => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2Trunc => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1726,10 +1652,8 @@ pub fn op_outputs(
         Operator::F64x2Max => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2PMin => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2PMax => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::I32x4TruncSatF32x4S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4TruncSatF32x4U => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::F32x4ConvertI32x4S => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4ConvertI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::I32x4TruncSatF64x2SZero => Ok(Cow::Borrowed(&[Type::V128])),
@@ -1738,7 +1662,6 @@ pub fn op_outputs(
         Operator::F64x2ConvertLowI32x4U => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F32x4DemoteF64x2Zero => Ok(Cow::Borrowed(&[Type::V128])),
         Operator::F64x2PromoteLowF32x4 => Ok(Cow::Borrowed(&[Type::V128])),
-
         Operator::CallRef { sig_index } => {
             let SignatureData::Func {
                 params, returns, ..
@@ -1758,7 +1681,6 @@ pub fn op_outputs(
             .into())
         }
         Operator::RefNull { ty } => Ok(vec![ty.clone()].into()),
-
         Operator::MemoryAtomicNotify { memarg } => Ok(Cow::Borrowed(&[Type::I32])), //=> visit_memory_atomic_notify
         Operator::MemoryAtomicWait32 { memarg } => Ok(Cow::Borrowed(&[Type::I32])), //=> visit_memory_atomic_wait32
         Operator::MemoryAtomicWait64 { memarg } => Ok(Cow::Borrowed(&[Type::I32])), //=> visit_memory_atomic_wait64
@@ -1880,7 +1802,6 @@ pub fn op_outputs(
         &Operator::RefCast { ty } => Ok(Cow::Owned(vec![ty])),
     }
 }
-
 /// Side-effects that an operator may have.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SideEffect {
@@ -1906,24 +1827,19 @@ pub enum SideEffect {
     All,
     AtomicStuff,
 }
-
 impl Operator {
     /// What side-effects can this operator have?
     pub fn effects(&self) -> &'static [SideEffect] {
         use SideEffect::*;
-
         match self {
             &Operator::Unreachable => &[Trap],
             &Operator::Nop => &[],
-
             &Operator::Call { .. } => &[All],
             &Operator::CallIndirect { .. } => &[All],
-
             &Operator::Select => &[],
             &Operator::TypedSelect { .. } => &[],
             &Operator::GlobalGet { .. } => &[ReadGlobal],
             &Operator::GlobalSet { .. } => &[WriteGlobal],
-
             Operator::I32Load { .. }
             | Operator::I32Load8S { .. }
             | Operator::I32Load8U { .. }
@@ -1938,7 +1854,6 @@ impl Operator {
             | Operator::I64Load32U { .. }
             | Operator::F32Load { .. }
             | Operator::F64Load { .. } => &[Trap, ReadMem],
-
             Operator::I32Store { .. }
             | Operator::I64Store { .. }
             | Operator::F32Store { .. }
@@ -1948,12 +1863,10 @@ impl Operator {
             | Operator::I64Store8 { .. }
             | Operator::I64Store16 { .. }
             | Operator::I64Store32 { .. } => &[Trap, WriteMem],
-
             Operator::I32Const { .. }
             | Operator::I64Const { .. }
             | Operator::F32Const { .. }
             | Operator::F64Const { .. } => &[],
-
             Operator::I32Eqz
             | Operator::I32Eq
             | Operator::I32Ne
@@ -1988,7 +1901,6 @@ impl Operator {
             | Operator::F64Gt
             | Operator::F64Le
             | Operator::F64Ge => &[],
-
             Operator::I32Clz
             | Operator::I32Ctz
             | Operator::I32Popcnt
@@ -2003,11 +1915,9 @@ impl Operator {
             | Operator::I32ShrU
             | Operator::I32Rotl
             | Operator::I32Rotr => &[],
-
             Operator::I32DivS | Operator::I32DivU | Operator::I32RemS | Operator::I32RemU => {
                 &[Trap]
             }
-
             Operator::I64Clz
             | Operator::I64Ctz
             | Operator::I64Popcnt
@@ -2022,11 +1932,9 @@ impl Operator {
             | Operator::I64ShrU
             | Operator::I64Rotl
             | Operator::I64Rotr => &[],
-
             Operator::I64DivS | Operator::I64DivU | Operator::I64RemS | Operator::I64RemU => {
                 &[Trap]
             }
-
             Operator::F32Abs
             | Operator::F32Neg
             | Operator::F32Ceil
@@ -2041,7 +1949,6 @@ impl Operator {
             | Operator::F32Min
             | Operator::F32Max
             | Operator::F32Copysign => &[],
-
             Operator::F64Abs
             | Operator::F64Neg
             | Operator::F64Ceil
@@ -2056,7 +1963,6 @@ impl Operator {
             | Operator::F64Min
             | Operator::F64Max
             | Operator::F64Copysign => &[],
-
             Operator::I32WrapI64 => &[],
             Operator::I32TruncF32S => &[Trap],
             Operator::I32TruncF32U => &[Trap],
@@ -2103,7 +2009,6 @@ impl Operator {
             Operator::MemoryGrow { .. } => &[WriteMem, Trap],
             Operator::MemoryCopy { .. } => &[Trap, ReadMem, WriteMem],
             Operator::MemoryFill { .. } => &[Trap, WriteMem],
-
             Operator::V128Load { .. } => &[Trap, ReadMem],
             Operator::V128Load8x8S { .. } => &[Trap, ReadMem],
             Operator::V128Load8x8U { .. } => &[Trap, ReadMem],
@@ -2126,7 +2031,6 @@ impl Operator {
             Operator::V128Store16Lane { .. } => &[Trap, WriteMem],
             Operator::V128Store32Lane { .. } => &[Trap, WriteMem],
             Operator::V128Store64Lane { .. } => &[Trap, WriteMem],
-
             Operator::V128Const { .. } => &[],
             Operator::I8x16Shuffle { .. } => &[],
             Operator::I8x16ExtractLaneS { .. } => &[],
@@ -2143,7 +2047,6 @@ impl Operator {
             Operator::F32x4ReplaceLane { .. } => &[],
             Operator::F64x2ExtractLane { .. } => &[],
             Operator::F64x2ReplaceLane { .. } => &[],
-
             Operator::I8x16Swizzle => &[],
             Operator::I8x16Splat => &[],
             Operator::I16x8Splat => &[],
@@ -2151,7 +2054,6 @@ impl Operator {
             Operator::I64x2Splat => &[],
             Operator::F32x4Splat => &[],
             Operator::F64x2Splat => &[],
-
             Operator::I8x16Eq => &[],
             Operator::I8x16Ne => &[],
             Operator::I8x16LtS => &[],
@@ -2162,7 +2064,6 @@ impl Operator {
             Operator::I8x16LeU => &[],
             Operator::I8x16GeS => &[],
             Operator::I8x16GeU => &[],
-
             Operator::I16x8Eq => &[],
             Operator::I16x8Ne => &[],
             Operator::I16x8LtS => &[],
@@ -2173,7 +2074,6 @@ impl Operator {
             Operator::I16x8LeU => &[],
             Operator::I16x8GeS => &[],
             Operator::I16x8GeU => &[],
-
             Operator::I32x4Eq => &[],
             Operator::I32x4Ne => &[],
             Operator::I32x4LtS => &[],
@@ -2184,28 +2084,24 @@ impl Operator {
             Operator::I32x4LeU => &[],
             Operator::I32x4GeS => &[],
             Operator::I32x4GeU => &[],
-
             Operator::I64x2Eq => &[],
             Operator::I64x2Ne => &[],
             Operator::I64x2LtS => &[],
             Operator::I64x2GtS => &[],
             Operator::I64x2LeS => &[],
             Operator::I64x2GeS => &[],
-
             Operator::F32x4Eq => &[],
             Operator::F32x4Ne => &[],
             Operator::F32x4Lt => &[],
             Operator::F32x4Gt => &[],
             Operator::F32x4Le => &[],
             Operator::F32x4Ge => &[],
-
             Operator::F64x2Eq => &[],
             Operator::F64x2Ne => &[],
             Operator::F64x2Lt => &[],
             Operator::F64x2Gt => &[],
             Operator::F64x2Le => &[],
             Operator::F64x2Ge => &[],
-
             Operator::V128Not => &[],
             Operator::V128And => &[],
             Operator::V128AndNot => &[],
@@ -2213,7 +2109,6 @@ impl Operator {
             Operator::V128Xor => &[],
             Operator::V128Bitselect => &[],
             Operator::V128AnyTrue => &[],
-
             Operator::I8x16Abs => &[],
             Operator::I8x16Neg => &[],
             Operator::I8x16Popcnt => &[],
@@ -2235,7 +2130,6 @@ impl Operator {
             Operator::I8x16MaxS => &[],
             Operator::I8x16MaxU => &[],
             Operator::I8x16AvgrU => &[],
-
             Operator::I16x8ExtAddPairwiseI8x16S => &[],
             Operator::I16x8ExtAddPairwiseI8x16U => &[],
             Operator::I16x8Abs => &[],
@@ -2268,7 +2162,6 @@ impl Operator {
             Operator::I16x8ExtMulHighI8x16S => &[],
             Operator::I16x8ExtMulLowI8x16U => &[],
             Operator::I16x8ExtMulHighI8x16U => &[],
-
             Operator::I32x4ExtAddPairwiseI16x8S => &[],
             Operator::I32x4ExtAddPairwiseI16x8U => &[],
             Operator::I32x4Abs => &[],
@@ -2294,7 +2187,6 @@ impl Operator {
             Operator::I32x4ExtMulHighI16x8S => &[],
             Operator::I32x4ExtMulLowI16x8U => &[],
             Operator::I32x4ExtMulHighI16x8U => &[],
-
             Operator::I64x2Abs => &[],
             Operator::I64x2Neg => &[],
             Operator::I64x2AllTrue => &[],
@@ -2313,7 +2205,6 @@ impl Operator {
             Operator::I64x2ExtMulHighI32x4S => &[],
             Operator::I64x2ExtMulLowI32x4U => &[],
             Operator::I64x2ExtMulHighI32x4U => &[],
-
             Operator::F32x4Ceil => &[],
             Operator::F32x4Floor => &[],
             Operator::F32x4Trunc => &[],
@@ -2329,7 +2220,6 @@ impl Operator {
             Operator::F32x4Max => &[],
             Operator::F32x4PMin => &[],
             Operator::F32x4PMax => &[],
-
             Operator::F64x2Ceil => &[],
             Operator::F64x2Floor => &[],
             Operator::F64x2Trunc => &[],
@@ -2345,10 +2235,8 @@ impl Operator {
             Operator::F64x2Max => &[],
             Operator::F64x2PMin => &[],
             Operator::F64x2PMax => &[],
-
             Operator::I32x4TruncSatF32x4S => &[],
             Operator::I32x4TruncSatF32x4U => &[],
-
             Operator::F32x4ConvertI32x4S => &[],
             Operator::F32x4ConvertI32x4U => &[],
             Operator::I32x4TruncSatF64x2SZero => &[],
@@ -2357,12 +2245,10 @@ impl Operator {
             Operator::F64x2ConvertLowI32x4U => &[],
             Operator::F32x4DemoteF64x2Zero => &[],
             Operator::F64x2PromoteLowF32x4 => &[],
-
             Operator::CallRef { .. } => &[All],
             Operator::RefIsNull => &[],
             Operator::RefFunc { .. } => &[],
             Operator::RefNull { ty } => &[],
-
             Operator::MemoryAtomicNotify { memarg } => &[AtomicStuff], //=> visit_memory_atomic_notify
             Operator::MemoryAtomicWait32 { memarg } => &[AtomicStuff], //=> visit_memory_atomic_wait32
             Operator::MemoryAtomicWait64 { memarg } => &[AtomicStuff], //=> visit_memory_atomic_wait64
@@ -2444,12 +2330,10 @@ impl Operator {
             Operator::RefCast { ty } => &[Trap],
         }
     }
-
     /// Is the operator pure (has no side-effects)?
     pub fn is_pure(&self) -> bool {
         self.effects().is_empty()
     }
-
     /// Is the operator a direct or indirect call?
     pub fn is_call(&self) -> bool {
         match self {
@@ -2459,7 +2343,6 @@ impl Operator {
             _ => false,
         }
     }
-
     /// Does the operator access (read or write) memory?
     pub fn accesses_memory(&self) -> bool {
         self.effects().iter().any(|e| match e {
@@ -2467,7 +2350,6 @@ impl Operator {
             _ => false,
         })
     }
-
     /// Is the operator an ordinary memory load?
     ///
     /// Note that this does not include all opcodes that read memory
@@ -2515,7 +2397,6 @@ impl Operator {
             _ => false,
         }
     }
-
     /// Is the operator an ordinary memory store?
     ///
     /// Note that this does not include all opcodes that write memory
@@ -2544,7 +2425,6 @@ impl Operator {
             _ => false,
         }
     }
-
     /// Call `f` on the operator's `MemoryArg`, if it has one.
     pub fn update_memory_arg<F: FnMut(&mut MemoryArg)>(&mut self, mut f: F) {
         match self {
@@ -2596,30 +2476,25 @@ impl Operator {
             _ => {}
         }
     }
-
     /// Is the operator capable of trapping?
     pub fn can_trap(&self) -> bool {
         self.effects().contains(&SideEffect::Trap)
     }
 }
-
 impl core::fmt::Display for Operator {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             &Operator::Unreachable => write!(f, "unreachable")?,
             &Operator::Nop => write!(f, "nop")?,
-
             &Operator::Call { function_index } => write!(f, "call<{}>", function_index)?,
             &Operator::CallIndirect {
                 sig_index,
                 table_index,
             } => write!(f, "call_indirect<{}, {}>", sig_index, table_index)?,
-
             &Operator::Select => write!(f, "select")?,
             &Operator::TypedSelect { ty } => write!(f, "typed_select<{}>", ty)?,
             &Operator::GlobalGet { global_index, .. } => write!(f, "global_get<{}>", global_index)?,
             &Operator::GlobalSet { global_index, .. } => write!(f, "global_set<{}>", global_index)?,
-
             Operator::I32Load { memory } => write!(f, "i32load<{}>", memory)?,
             Operator::I32Load8S { memory } => write!(f, "i32load8s<{}>", memory)?,
             Operator::I32Load8U { memory } => write!(f, "i32load8u<{}>", memory)?,
@@ -2634,7 +2509,6 @@ impl core::fmt::Display for Operator {
             Operator::I64Load32U { memory } => write!(f, "i64load32u<{}>", memory)?,
             Operator::F32Load { memory } => write!(f, "f32load<{}>", memory)?,
             Operator::F64Load { memory } => write!(f, "f64load<{}>", memory)?,
-
             Operator::I32Store { memory } => write!(f, "i32store<{}>", memory)?,
             Operator::I64Store { memory } => write!(f, "i64store<{}>", memory)?,
             Operator::F32Store { memory } => write!(f, "f32store<{}>", memory)?,
@@ -2644,12 +2518,10 @@ impl core::fmt::Display for Operator {
             Operator::I64Store8 { memory } => write!(f, "i64store8<{}>", memory)?,
             Operator::I64Store16 { memory } => write!(f, "i64store16<{}>", memory)?,
             Operator::I64Store32 { memory } => write!(f, "i64store32<{}>", memory)?,
-
             Operator::I32Const { value } => write!(f, "i32const<{}>", value)?,
             Operator::I64Const { value } => write!(f, "i64const<{}>", value)?,
             Operator::F32Const { value } => write!(f, "f32const<{}>", value)?,
             Operator::F64Const { value } => write!(f, "f64const<{}>", value)?,
-
             Operator::I32Eqz => write!(f, "i32eqz")?,
             Operator::I32Eq => write!(f, "i32eq")?,
             Operator::I32Ne => write!(f, "i32ne")?,
@@ -2684,7 +2556,6 @@ impl core::fmt::Display for Operator {
             Operator::F64Gt => write!(f, "f64gt")?,
             Operator::F64Le => write!(f, "f64le")?,
             Operator::F64Ge => write!(f, "f64ge")?,
-
             Operator::I32Clz => write!(f, "i32clz")?,
             Operator::I32Ctz => write!(f, "i32ctz")?,
             Operator::I32Popcnt => write!(f, "i32popcnt")?,
@@ -2699,12 +2570,10 @@ impl core::fmt::Display for Operator {
             Operator::I32ShrU => write!(f, "i32shru")?,
             Operator::I32Rotl => write!(f, "i32rotl")?,
             Operator::I32Rotr => write!(f, "i32rotr")?,
-
             Operator::I32DivS => write!(f, "i32divs")?,
             Operator::I32DivU => write!(f, "i32divu")?,
             Operator::I32RemS => write!(f, "i32rems")?,
             Operator::I32RemU => write!(f, "i32remu")?,
-
             Operator::I64Clz => write!(f, "i64clz")?,
             Operator::I64Ctz => write!(f, "i64ctz")?,
             Operator::I64Popcnt => write!(f, "i64popcnt")?,
@@ -2719,12 +2588,10 @@ impl core::fmt::Display for Operator {
             Operator::I64ShrU => write!(f, "i64shru")?,
             Operator::I64Rotl => write!(f, "i64rotl")?,
             Operator::I64Rotr => write!(f, "i64rotr")?,
-
             Operator::I64DivS => write!(f, "i64divs")?,
             Operator::I64DivU => write!(f, "i64divu")?,
             Operator::I64RemS => write!(f, "i64rems")?,
             Operator::I64RemU => write!(f, "i64remu")?,
-
             Operator::F32Abs => write!(f, "f32abs")?,
             Operator::F32Neg => write!(f, "f32neg")?,
             Operator::F32Ceil => write!(f, "f32ceil")?,
@@ -2739,7 +2606,6 @@ impl core::fmt::Display for Operator {
             Operator::F32Min => write!(f, "f32min")?,
             Operator::F32Max => write!(f, "f32max")?,
             Operator::F32Copysign => write!(f, "f32copysign")?,
-
             Operator::F64Abs => write!(f, "f64abs")?,
             Operator::F64Neg => write!(f, "f64neg")?,
             Operator::F64Ceil => write!(f, "f64ceil")?,
@@ -2754,7 +2620,6 @@ impl core::fmt::Display for Operator {
             Operator::F64Min => write!(f, "f64min")?,
             Operator::F64Max => write!(f, "f64max")?,
             Operator::F64Copysign => write!(f, "f64copysign")?,
-
             Operator::I32WrapI64 => write!(f, "i32wrapi64")?,
             Operator::I32TruncF32S => write!(f, "i32truncf32s")?,
             Operator::I32TruncF32U => write!(f, "i32truncf32u")?,
@@ -2803,7 +2668,6 @@ impl core::fmt::Display for Operator {
                 write!(f, "memory_copy<{}, {}>", dst_mem, src_mem)?
             }
             Operator::MemoryFill { mem } => write!(f, "memory_fill<{}>", mem)?,
-
             Operator::V128Load { memory } => write!(f, "v128load<{}>", memory)?,
             Operator::V128Load8x8S { memory } => write!(f, "v128load8x8s<{}>", memory)?,
             Operator::V128Load8x8U { memory } => write!(f, "v128load8x8u<{}>", memory)?,
@@ -2842,7 +2706,6 @@ impl core::fmt::Display for Operator {
             Operator::V128Store64Lane { memory, lane } => {
                 write!(f, "v128store64lane<{}, {}>", memory, lane)?
             }
-
             Operator::V128Const { value } => write!(f, "v128const<{}>", value)?,
             Operator::I8x16Shuffle { lanes } => write!(f, "i8x16shuffle<{:?}>", lanes)?,
             Operator::I8x16ExtractLaneS { lane } => write!(f, "i8x16extractlanes<{}>", lane)?,
@@ -2859,7 +2722,6 @@ impl core::fmt::Display for Operator {
             Operator::F32x4ReplaceLane { lane } => write!(f, "f32x4replacelane<{}>", lane)?,
             Operator::F64x2ExtractLane { lane } => write!(f, "f64x2extractlane<{}>", lane)?,
             Operator::F64x2ReplaceLane { lane } => write!(f, "f64x2replacelane<{}>", lane)?,
-
             Operator::I8x16Swizzle => write!(f, "i8x16swizzle")?,
             Operator::I8x16Splat => write!(f, "i8x16splat")?,
             Operator::I16x8Splat => write!(f, "i16x8splat")?,
@@ -2867,7 +2729,6 @@ impl core::fmt::Display for Operator {
             Operator::I64x2Splat => write!(f, "i64x2splat")?,
             Operator::F32x4Splat => write!(f, "f32x4splat")?,
             Operator::F64x2Splat => write!(f, "f64x2splat")?,
-
             Operator::I8x16Eq => write!(f, "i8x16eq")?,
             Operator::I8x16Ne => write!(f, "i8x16ne")?,
             Operator::I8x16LtS => write!(f, "i8x16lts")?,
@@ -2878,7 +2739,6 @@ impl core::fmt::Display for Operator {
             Operator::I8x16LeU => write!(f, "i8x16leu")?,
             Operator::I8x16GeS => write!(f, "i8x16ges")?,
             Operator::I8x16GeU => write!(f, "i8x16geu")?,
-
             Operator::I16x8Eq => write!(f, "i16x8eq")?,
             Operator::I16x8Ne => write!(f, "i16x8ne")?,
             Operator::I16x8LtS => write!(f, "i16x8lts")?,
@@ -2889,7 +2749,6 @@ impl core::fmt::Display for Operator {
             Operator::I16x8LeU => write!(f, "i16x8leu")?,
             Operator::I16x8GeS => write!(f, "i16x8ges")?,
             Operator::I16x8GeU => write!(f, "i16x8geu")?,
-
             Operator::I32x4Eq => write!(f, "i32x4eq")?,
             Operator::I32x4Ne => write!(f, "i32x4ne")?,
             Operator::I32x4LtS => write!(f, "i32x4lts")?,
@@ -2900,28 +2759,24 @@ impl core::fmt::Display for Operator {
             Operator::I32x4LeU => write!(f, "i32x4leu")?,
             Operator::I32x4GeS => write!(f, "i32x4ges")?,
             Operator::I32x4GeU => write!(f, "i32x4geu")?,
-
             Operator::I64x2Eq => write!(f, "i64x2eq")?,
             Operator::I64x2Ne => write!(f, "i64x2ne")?,
             Operator::I64x2LtS => write!(f, "i64x2lts")?,
             Operator::I64x2GtS => write!(f, "i64x2gts")?,
             Operator::I64x2LeS => write!(f, "i64x2les")?,
             Operator::I64x2GeS => write!(f, "i64x2ges")?,
-
             Operator::F32x4Eq => write!(f, "f32x4eq")?,
             Operator::F32x4Ne => write!(f, "f32x4ne")?,
             Operator::F32x4Lt => write!(f, "f32x4lt")?,
             Operator::F32x4Gt => write!(f, "f32x2gt")?,
             Operator::F32x4Le => write!(f, "f32x4le")?,
             Operator::F32x4Ge => write!(f, "f32x4ge")?,
-
             Operator::F64x2Eq => write!(f, "f64x2eq")?,
             Operator::F64x2Ne => write!(f, "f64x2ne")?,
             Operator::F64x2Lt => write!(f, "f64x2lt")?,
             Operator::F64x2Gt => write!(f, "f64x2gt")?,
             Operator::F64x2Le => write!(f, "f64x2le")?,
             Operator::F64x2Ge => write!(f, "f64x2ge")?,
-
             Operator::V128Not => write!(f, "v128not")?,
             Operator::V128And => write!(f, "v128and")?,
             Operator::V128AndNot => write!(f, "v128andnot")?,
@@ -2929,7 +2784,6 @@ impl core::fmt::Display for Operator {
             Operator::V128Xor => write!(f, "v128xor")?,
             Operator::V128Bitselect => write!(f, "v128bitselect")?,
             Operator::V128AnyTrue => write!(f, "v128anytrue")?,
-
             Operator::I8x16Abs => write!(f, "i8x16abs")?,
             Operator::I8x16Neg => write!(f, "i8x16neg")?,
             Operator::I8x16Popcnt => write!(f, "i8x16popcnt")?,
@@ -2951,7 +2805,6 @@ impl core::fmt::Display for Operator {
             Operator::I8x16MaxS => write!(f, "i8x16maxs")?,
             Operator::I8x16MaxU => write!(f, "i8x16maxu")?,
             Operator::I8x16AvgrU => write!(f, "i8x16avgru")?,
-
             Operator::I16x8ExtAddPairwiseI8x16S => write!(f, "i16x8extaddpairwisei8x16s")?,
             Operator::I16x8ExtAddPairwiseI8x16U => write!(f, "i16x8extaddpairwisei8x16u")?,
             Operator::I16x8Abs => write!(f, "i16x8abs")?,
@@ -2984,7 +2837,6 @@ impl core::fmt::Display for Operator {
             Operator::I16x8ExtMulHighI8x16S => write!(f, "i16x8extmulhighi8x16s")?,
             Operator::I16x8ExtMulLowI8x16U => write!(f, "i16x8extmullowi8x16u")?,
             Operator::I16x8ExtMulHighI8x16U => write!(f, "i16x8extmulhighi8x16u")?,
-
             Operator::I32x4ExtAddPairwiseI16x8S => write!(f, "i32x4extaddpairwisei16x8s")?,
             Operator::I32x4ExtAddPairwiseI16x8U => write!(f, "i32x4extaddpairwisei16x8u")?,
             Operator::I32x4Abs => write!(f, "i32x4abs")?,
@@ -3010,7 +2862,6 @@ impl core::fmt::Display for Operator {
             Operator::I32x4ExtMulHighI16x8S => write!(f, "i32x4extmulhighi16x8s")?,
             Operator::I32x4ExtMulLowI16x8U => write!(f, "i32x4extmullowi16x8u")?,
             Operator::I32x4ExtMulHighI16x8U => write!(f, "i32x4extmulhighi16x8u")?,
-
             Operator::I64x2Abs => write!(f, "i64x2abs")?,
             Operator::I64x2Neg => write!(f, "i64x2neg")?,
             Operator::I64x2AllTrue => write!(f, "i64x2alltrue")?,
@@ -3029,7 +2880,6 @@ impl core::fmt::Display for Operator {
             Operator::I64x2ExtMulHighI32x4S => write!(f, "i64x2extmulhighi32x4s")?,
             Operator::I64x2ExtMulLowI32x4U => write!(f, "i64x2extmullowi32x4u")?,
             Operator::I64x2ExtMulHighI32x4U => write!(f, "i64x2extmulhighi32x4u")?,
-
             Operator::F32x4Ceil => write!(f, "f32x4ceil")?,
             Operator::F32x4Floor => write!(f, "f32x4floor")?,
             Operator::F32x4Trunc => write!(f, "f32x4trunc")?,
@@ -3045,7 +2895,6 @@ impl core::fmt::Display for Operator {
             Operator::F32x4Max => write!(f, "f32x4max")?,
             Operator::F32x4PMin => write!(f, "f32x4pmin")?,
             Operator::F32x4PMax => write!(f, "f32x4pmax")?,
-
             Operator::F64x2Ceil => write!(f, "f64x2ceil")?,
             Operator::F64x2Floor => write!(f, "f64x2floor")?,
             Operator::F64x2Trunc => write!(f, "f64x2trunc")?,
@@ -3061,10 +2910,8 @@ impl core::fmt::Display for Operator {
             Operator::F64x2Max => write!(f, "f64x2max")?,
             Operator::F64x2PMin => write!(f, "f64x2pmin")?,
             Operator::F64x2PMax => write!(f, "f64x2pmax")?,
-
             Operator::I32x4TruncSatF32x4S => write!(f, "i32x4truncsatf32x4s")?,
             Operator::I32x4TruncSatF32x4U => write!(f, "i32x4truncsatf32x4u")?,
-
             Operator::F32x4ConvertI32x4S => write!(f, "f32x4converti32x4s")?,
             Operator::F32x4ConvertI32x4U => write!(f, "f32x4converti32x4u")?,
             Operator::I32x4TruncSatF64x2SZero => write!(f, "i32x4truncsatf64x2szero")?,
@@ -3073,12 +2920,10 @@ impl core::fmt::Display for Operator {
             Operator::F64x2ConvertLowI32x4U => write!(f, "f64x2convertlowi32x4u")?,
             Operator::F32x4DemoteF64x2Zero => write!(f, "f32x4demotef64x2zero")?,
             Operator::F64x2PromoteLowF32x4 => write!(f, "f64x2promotelowf32x4")?,
-
             Operator::CallRef { sig_index } => write!(f, "call_ref<{}>", sig_index)?,
             Operator::RefIsNull => write!(f, "ref_is_null")?,
             Operator::RefFunc { func_index } => write!(f, "ref_func<{}>", func_index)?,
             Operator::RefNull { ty } => write!(f, "ref_null<{}>", ty)?,
-
             Operator::MemoryAtomicNotify { memarg } => write!(f, "memory_atomic_notify<{memarg}>")?, //=> visit_memory_atomic_notify
             Operator::MemoryAtomicWait32 { memarg } => write!(f, "memory_atomic_wait32<{memarg}>")?, //=> visit_memory_atomic_wait32
             Operator::MemoryAtomicWait64 { memarg } => write!(f, "memory_atomic_wait64<{memarg}>")?, //=> visit_memory_atomic_wait64
@@ -3208,7 +3053,6 @@ impl core::fmt::Display for Operator {
             Operator::I64AtomicRmw32CmpxchgU { memarg } => {
                 write!(f, "i32atomic_rmw32Cmpxchgu<{memarg}>")?
             } //=> visit_i64_atomic_rmw32_Cmpxchg_u
-
             Operator::StructNew { sig } => write!(f, "struct_new<{sig}>")?,
             Operator::StructGet { sig, idx } => write!(f, "struct_get<{sig}@{idx}>")?,
             Operator::StructSet { sig, idx } => write!(f, "struct_set<{sig}@{idx}>")?,
@@ -3222,11 +3066,9 @@ impl core::fmt::Display for Operator {
             Operator::RefTest { ty } => write!(f, "ref_test<{ty}>")?,
             Operator::RefCast { ty } => write!(f, "ref_cast<{ty}>")?,
         }
-
         Ok(())
     }
 }
-
 /// Should we rematerialize this operator when generating Wasm
 /// bytecode?
 pub(crate) fn op_rematerialize(op: &Operator) -> bool {
@@ -3241,7 +3083,6 @@ pub(crate) fn op_rematerialize(op: &Operator) -> bool {
         _ => false,
     }
 }
-
 pub fn rewrite_mem<V, E>(
     o: &mut Operator,
     v: &mut [V],
@@ -3279,7 +3120,6 @@ pub fn rewrite_mem<V, E>(
             Ok(())
         }
         Operator::MemoryFill { mem } => go(mem, Some(&mut v[0])),
-
         Operator::V128Load { memory } => go(&mut memory.memory, Some(&mut v[0])),
         Operator::V128Load8x8S { memory } => go(&mut memory.memory, Some(&mut v[0])),
         Operator::V128Load8x8U { memory } => go(&mut memory.memory, Some(&mut v[0])),
@@ -3302,7 +3142,6 @@ pub fn rewrite_mem<V, E>(
         Operator::V128Store16Lane { memory, .. } => go(&mut memory.memory, Some(&mut v[0])),
         Operator::V128Store32Lane { memory, .. } => go(&mut memory.memory, Some(&mut v[0])),
         Operator::V128Store64Lane { memory, .. } => go(&mut memory.memory, Some(&mut v[0])),
-
         Operator::MemoryAtomicNotify { memarg } => go(&mut memarg.memory, Some(&mut v[0])), //=> visit_memory_atomic_notify
         Operator::MemoryAtomicWait32 { memarg } => go(&mut memarg.memory, Some(&mut v[0])), //=> visit_memory_atomic_wait32
         Operator::MemoryAtomicWait64 { memarg } => go(&mut memarg.memory, Some(&mut v[0])), //=> visit_memory_atomic_wait64
@@ -3401,7 +3240,6 @@ pub fn mem_count(o: &Operator) -> usize {
         Operator::MemoryGrow { mem } => 1,
         Operator::MemoryCopy { dst_mem, src_mem } => 2,
         Operator::MemoryFill { mem } => 1,
-
         Operator::V128Load { memory } => 1,
         Operator::V128Load8x8S { memory } => 1,
         Operator::V128Load8x8U { memory } => 1,
@@ -3455,7 +3293,6 @@ pub fn memory_arg(o: &Operator) -> Option<&MemoryArg> {
         Operator::I64Store8 { memory } => Some(memory),
         Operator::I64Store16 { memory } => Some(memory),
         Operator::I64Store32 { memory } => Some(memory),
-
         Operator::V128Load { memory } => Some(memory),
         Operator::V128Load8x8S { memory } => Some(memory),
         Operator::V128Load8x8U { memory } => Some(memory),
@@ -3544,7 +3381,6 @@ pub fn memory_arg(o: &Operator) -> Option<&MemoryArg> {
         Operator::I64AtomicRmw8CmpxchgU { memarg } => Some(memarg), // => visit_i64_atomic_rmw8_cmpxchg_u
         Operator::I64AtomicRmw16CmpxchgU { memarg } => Some(memarg), // => visit_i64_atomic_rmw16_cmpxchg_u
         Operator::I64AtomicRmw32CmpxchgU { memarg } => Some(memarg), //=> visit_i64_atomic_rmw32_c
-
         _ => None,
     }
 }

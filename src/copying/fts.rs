@@ -1,10 +1,8 @@
 use alloc::collections::{BTreeMap, BTreeSet};
-use core::{default, iter::once};
-
 use anyhow::Context;
 use arena_traits::IndexAlloc;
+use core::{default, iter::once};
 // use rayon::iter::{once, ParallelIterator};
-
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, Block, BlockTarget, Func,
     FuncDecl, FunctionBody, Module, Operator, SignatureData, ValueDef,

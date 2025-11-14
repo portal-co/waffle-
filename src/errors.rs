@@ -11,11 +11,9 @@ pub enum FrontendError {
     /// An internal error occurred.
     Internal(String),
 }
-
 impl core::fmt::Display for FrontendError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         core::fmt::Debug::fmt(self, f)
     }
 }
-
 impl core::error::Error for FrontendError {}

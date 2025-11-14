@@ -1,6 +1,5 @@
 //! Treeification: placing some values "under" others if only used
 //! once, to generate more AST-like Wasm code.
-
 use crate::entity::EntityRef;
 use crate::ir::{FunctionBody, Value, ValueDef};
 use crate::Operator;
@@ -8,11 +7,9 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
 use hashbrown::{HashMap, HashSet};
-
 /// One "argument slot" of an operator defining a value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ValueArg(Value, u16);
-
 #[derive(Clone, Debug)]
 pub struct Trees {
     /// Is a value placed "under" the given arg slot of the given
@@ -24,7 +21,6 @@ pub struct Trees {
     /// Values that are regenerated every time they are used.
     pub remat: HashSet<Value>,
 }
-
 fn is_remat(op: &Operator) -> bool {
     // Only ops with no args can be always-rematerialized.
     match op {
@@ -35,14 +31,12 @@ fn is_remat(op: &Operator) -> bool {
         _ => false,
     }
 }
-
 impl Trees {
     pub fn compute(body: &FunctionBody) -> Trees {
         let mut owner = HashMap::default();
         let mut owned = HashMap::default();
         let mut remat = HashSet::default();
         let mut multi_use: HashSet<Value> = HashSet::default();
-
         for block_def in body.blocks.values() {
             let mut last_non_pure = None;
             for value in &block_def.insts {
@@ -59,7 +53,6 @@ impl Trees {
                             remat.insert(value.value);
                             continue;
                         }
-
                         // For each of the args, if the value is produced
                         // by a single-output op and is movable, and is
                         // not already recorded in `multi_use`, place it
@@ -80,7 +73,6 @@ impl Trees {
                                 owned.insert(value_arg, arg);
                             }
                         }
-
                         if !op.is_pure() {
                             last_non_pure = Some(value.value);
                         }
@@ -103,21 +95,18 @@ impl Trees {
                 }
             });
         }
-
         Trees {
             owner,
             owned,
             remat,
         }
     }
-
     fn is_single_output_op(body: &FunctionBody, value: Value) -> Option<Operator> {
         match &body.values[value] {
             &ValueDef::Operator(op, _, ref tys) if tys.len() == 1 => Some(op),
             _ => None,
         }
     }
-
     fn is_movable(body: &FunctionBody, value: Value) -> bool {
         Self::is_single_output_op(body, value)
             .map(|op| op.is_pure())

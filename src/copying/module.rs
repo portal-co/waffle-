@@ -1,5 +1,12 @@
+use super::fcopy::{clone_fn, DontObf};
+use super::kts::Kts;
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
+use crate::{
+    entity::EntityRef, i2x, x2i, ControlTag, ExportKind, Func, FuncDecl, FunctionBody, Global,
+    ImportKind, Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type,
+    ValueDef,
+};
 use crate::{HeapType, StorageType, WithNullable};
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet};
@@ -16,18 +23,8 @@ use core::{
 };
 use hashbrown::HashMap;
 use paste::paste;
-
-use crate::{
-    entity::EntityRef, i2x, x2i, ControlTag, ExportKind, Func, FuncDecl, FunctionBody, Global,
-    ImportKind, Memory, Module, Operator, Signature, SignatureData, Table, TableData, Type,
-    ValueDef,
-};
-
-use super::fcopy::{clone_fn, DontObf};
-use super::kts::Kts;
 #[derive(Eq, PartialEq, Clone, Hash)]
 pub struct IKW(pub ImportKind);
-
 pub struct State<I, G = bool> {
     cache: HashMap<IKW, ImportKind>,
     fun_cache: BTreeMap<Func, Func>,
@@ -39,7 +36,6 @@ pub struct State<I, G = bool> {
     pub invasive: G,
     // pub(crate) tm: crate::td::TM,
 }
-
 impl<I, G> State<I, G> {
     pub fn new(importmap: I, tables: BTreeSet<Table>, invasive: G) -> Self {
         return Self {
@@ -62,7 +58,6 @@ pub struct Copier<A, B, S> {
 }
 impl<A, B: Deref, S> Deref for Copier<A, B, S> {
     type Target = B::Target;
-
     fn deref(&self) -> &Self::Target {
         &*self.dest
     }
@@ -120,7 +115,6 @@ pub trait Imports {
 #[repr(transparent)]
 #[derive(Clone, Debug, Copy)]
 pub struct ImportFn<F>(pub F);
-
 pub fn import_fn(
     a: impl FnMut(
         &mut Module<'_>,
@@ -131,7 +125,6 @@ pub fn import_fn(
 ) -> impl Imports {
     ImportFn(a)
 }
-
 impl<
         F: FnMut(
             &mut Module<'_>,
@@ -216,7 +209,7 @@ impl<
     }
     pub fn render_imports(&mut self) -> anyhow::Result<()> {
         for i in self.src.imports.clone() {
-            let ImportKind::Func(_) = &i.kind else{
+            let ImportKind::Func(_) = &i.kind else {
                 continue;
             };
             self.translate_import(i.kind.clone())?;
@@ -521,7 +514,6 @@ impl<
     translator!(Func);
     translator!(ControlTag);
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;

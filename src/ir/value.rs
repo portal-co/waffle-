@@ -1,10 +1,8 @@
 use super::{Block, Type, Value};
 use crate::pool::{ListPool, ListRef};
 use crate::Operator;
-
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 /// A definition of an SSA value.
-
 pub enum ValueDef {
     /// This value is a block parameter of the given block, with the
     /// given parameter position/index, and the given type.
@@ -31,7 +29,6 @@ pub enum ValueDef {
     #[default]
     None,
 }
-
 impl ValueDef {
     /// Get the type of this value. Requires the type-pool. If this
     /// value is an operator with zero or multiple result types, this
@@ -46,7 +43,6 @@ impl ValueDef {
             _ => None,
         }
     }
-
     /// Get the tuple of types of this value.
     pub fn tys<'a>(&'a self, types: &'a ListPool<Type>) -> &'a [Type] {
         match self {
@@ -57,7 +53,6 @@ impl ValueDef {
             _ => &[],
         }
     }
-
     /// Visit all other values used by this value with the given
     /// visitor function.
     pub fn visit_uses<F: FnMut(Value)>(&self, arg_pool: &ListPool<Value>, mut f: F) {
@@ -74,7 +69,6 @@ impl ValueDef {
             &ValueDef::None => panic!(),
         }
     }
-
     /// Visit and update all other values used by this value with the
     /// given visitor function.
     pub fn update_uses<F: FnMut(&mut Value)>(&mut self, arg_pool: &mut ListPool<Value>, mut f: F) {

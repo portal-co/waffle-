@@ -9,7 +9,6 @@ use alloc::vec::Vec;
 use core::iter::{empty, once};
 use either::Either;
 use ssa_traits::Val;
-
 impl cfg_traits::Func for FunctionBody {
     type Block = Block;
     type Blocks = EntityVec<Block, BlockDef>;
@@ -19,20 +18,16 @@ impl cfg_traits::Func for FunctionBody {
     fn blocks_mut(&mut self) -> &mut Self::Blocks {
         &mut self.blocks
     }
-
     fn entry(&self) -> Self::Block {
         self.entry
     }
 }
 impl ssa_traits::Func for FunctionBody {
     type Value = Value;
-
     type Values = EntityVec<Value, ValueDef>;
-
     fn values(&self) -> &Self::Values {
         &self.values
     }
-
     fn values_mut(&mut self) -> &mut Self::Values {
         &mut self.values
     }
@@ -44,7 +39,6 @@ impl ssa_traits::HasValues<FunctionBody> for ListRef<Value> {
     ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a> {
         Box::new(f.arg_pool[*self].iter().cloned())
     }
-
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
@@ -71,7 +65,6 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
             ValueDef::None => Either::Left(None.into_iter()),
         })
     }
-
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
@@ -92,10 +85,8 @@ impl ssa_traits::HasValues<FunctionBody> for ValueDef {
 }
 impl ssa_traits::op::OpValue<FunctionBody, Operator> for ValueDef {
     type Residue = ValueDef;
-
     type Capture = ListRef<Value>;
     type Spit = Vec<Type>;
-
     fn disasm(
         self,
         f: &mut FunctionBody,
@@ -105,22 +96,17 @@ impl ssa_traits::op::OpValue<FunctionBody, Operator> for ValueDef {
             s => Err(s),
         }
     }
-
     fn of(f: &mut FunctionBody, o: Operator, c: Self::Capture, s: Self::Spit) -> Option<Self> {
         Some(Self::Operator(o, c, f.type_pool.from_iter(s.into_iter())))
     }
-
     fn lift(f: &mut FunctionBody, r: Self::Residue) -> Option<Self> {
         Some(r)
     }
 }
 impl ssa_traits::op::OpValue<FunctionBody, u32> for ValueDef {
     type Residue = ValueDef;
-
     type Capture = Val<FunctionBody>;
-
     type Spit = Type;
-
     fn disasm(
         self,
         f: &mut FunctionBody,
@@ -130,22 +116,18 @@ impl ssa_traits::op::OpValue<FunctionBody, u32> for ValueDef {
             s => Err(s),
         }
     }
-
     fn of(f: &mut FunctionBody, o: u32, c: Self::Capture, s: Self::Spit) -> Option<Self> {
         Some(Self::PickOutput(c.0, o, s))
     }
-
     fn lift(f: &mut FunctionBody, r: Self::Residue) -> Option<Self> {
         Some(r)
     }
 }
 impl cfg_traits::Block<FunctionBody> for BlockDef {
     type Terminator = Terminator;
-
     fn term(&self) -> &Self::Terminator {
         &self.terminator
     }
-
     fn term_mut(&mut self) -> &mut Self::Terminator {
         &mut self.terminator
     }
@@ -154,7 +136,6 @@ impl ssa_traits::Block<FunctionBody> for BlockDef {
     fn insts(&self) -> impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> {
         self.insts.iter().map(|a| &a.value).cloned()
     }
-
     fn add_inst(
         func: &mut FunctionBody,
         key: <FunctionBody as cfg_traits::Func>::Block,
@@ -163,22 +144,18 @@ impl ssa_traits::Block<FunctionBody> for BlockDef {
         func.append_to_block(key, v)
     }
 }
-
 impl cfg_traits::Target<FunctionBody> for BlockTarget {
     fn block(&self) -> <FunctionBody as cfg_traits::Func>::Block {
         self.block
     }
-
     fn block_mut(&mut self) -> &mut <FunctionBody as cfg_traits::Func>::Block {
         &mut self.block
     }
 }
-
 impl ssa_traits::Target<FunctionBody> for BlockTarget {
     fn push_value(&mut self, v: <FunctionBody as ssa_traits::Func>::Value) {
         self.args.push(v)
     }
-
     fn from_values_and_block(
         a: impl Iterator<Item = <FunctionBody as ssa_traits::Func>::Value>,
         k: <FunctionBody as cfg_traits::Func>::Block,
@@ -191,14 +168,12 @@ impl ssa_traits::Target<FunctionBody> for BlockTarget {
 }
 impl cfg_traits::Term<FunctionBody> for BlockTarget {
     type Target = BlockTarget;
-
     fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
     {
         Box::new(core::iter::once(self))
     }
-
     fn targets_mut<'a>(
         &'a mut self,
     ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
@@ -215,7 +190,6 @@ impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
     ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a> {
         Box::new(self.args.iter().cloned())
     }
-
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,
@@ -228,7 +202,6 @@ impl ssa_traits::HasValues<FunctionBody> for BlockTarget {
 }
 impl cfg_traits::Term<FunctionBody> for Terminator {
     type Target = BlockTarget;
-
     fn targets<'a>(&'a self) -> Box<(dyn core::iter::Iterator<Item = &'a crate::BlockTarget> + 'a)>
     where
         FunctionBody: 'a,
@@ -253,7 +226,6 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
             Terminator::None | Terminator::UB => Either::Left(None.into_iter()),
         })
     }
-
     fn targets_mut<'a>(
         &'a mut self,
     ) -> Box<(dyn core::iter::Iterator<Item = &'a mut crate::BlockTarget> + 'a)>
@@ -322,7 +294,6 @@ impl ssa_traits::HasValues<FunctionBody> for Terminator {
             Terminator::None | Terminator::UB => Either::Left(empty()),
         })
     }
-
     fn values_mut<'a>(
         &'a mut self,
         g: &'a mut FunctionBody,

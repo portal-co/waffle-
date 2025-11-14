@@ -147,7 +147,6 @@
 //! (i.e., a loop exit edge) if the exited loop has a
 //! side-entrance; this is the only way in which we can have a
 //! merge-point between different copies of the same subgraph.
-
 use crate::entity::EntityRef;
 use crate::{cfg::CFGInfo, cfg::RPOIndex, entity::PerEntity, Block, FunctionBody, Value, ValueDef};
 use alloc::borrow::Cow;
@@ -156,19 +155,16 @@ use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet, HashSet};
 use smallvec::SmallVec;
-
 pub struct Reducifier<'a> {
     body: &'a FunctionBody,
     cfg: CFGInfo,
     blocks: PerEntity<Block, BlockState>,
 }
-
 #[derive(Debug, Clone, Default)]
 struct BlockState {
     headers: FxHashSet<Block>,
     is_header: bool,
 }
-
 impl<'a> Reducifier<'a> {
     pub fn new(body: &'a FunctionBody) -> Reducifier<'a> {
         let cfg = CFGInfo::new(body);
@@ -178,7 +174,6 @@ impl<'a> Reducifier<'a> {
             blocks: PerEntity::default(),
         }
     }
-
     pub fn run(&mut self) -> Cow<'a, FunctionBody> {
         // First, compute all of the loop header-sets.
         // - Start by computing RPO.
@@ -189,7 +184,6 @@ impl<'a> Reducifier<'a> {
         //   stack of headers when we entered their regions and
         //   enforcing LIFO by extending appropriately.
         let cfg = CFGInfo::new(&self.body);
-
         for (rpo, &block) in cfg.rpo.entries() {
             for &succ in &self.body.blocks[block].succs {
                 let succ_rpo = cfg.rpo_pos[succ].unwrap();
@@ -202,7 +196,6 @@ impl<'a> Reducifier<'a> {
                 }
             }
         }
-
         let mut header_stack = vec![];
         for &block in cfg.rpo.values() {
             while let Some(innermost) = header_stack.last() {
@@ -215,12 +208,10 @@ impl<'a> Reducifier<'a> {
             if self.blocks[block].is_header {
                 header_stack.push(block);
             }
-
             for &header in &header_stack {
                 self.blocks[block].headers.insert(header);
             }
         }
-
         // Now, check whether any irreducible edges exist: edges from
         // B1 to B2 where headers(B2) - headers(B1) - {B2} is not
         // empty (i.e., the edge jumps into a new loop -- adds a new
@@ -239,11 +230,9 @@ impl<'a> Reducifier<'a> {
                 }
             }
         }
-
         if irreducible_headers.is_empty() {
             return Cow::Borrowed(self.body);
         }
-
         if log::log_enabled!(log::Level::Trace) {
             for block in self.body.blocks.iter() {
                 let mut headers = self.blocks[block]
@@ -255,9 +244,7 @@ impl<'a> Reducifier<'a> {
                 log::trace!("* {}: header set {:?}", block, headers);
             }
         }
-
         // Now, in the irreducible case, "elaborate" the CFG.
-
         // First do limited conversion to max-SSA to fix up references
         // across contexts.
         let mut cut_blocks = HashSet::default();
@@ -281,14 +268,11 @@ impl<'a> Reducifier<'a> {
                 }
             }
         }
-
         let mut new_body = self.body.clone();
         let cfg = CFGInfo::new(&new_body);
         crate::passes::maxssa::run(&mut new_body, Some(cut_blocks), &cfg);
         crate::passes::resolve_aliases::run(&mut new_body);
-
         log::trace!("after max-SSA run:\n{}\n", new_body.display("| ", None));
-
         // Implicitly, context {} has an identity-map from old block
         // number to new block number. We use the map only for
         // non-empty contexts.
@@ -297,13 +281,11 @@ impl<'a> Reducifier<'a> {
         context_map.insert(vec![], 0);
         let mut block_map: FxHashMap<(usize, Block), Block> = FxHashMap::default();
         let mut value_map: FxHashMap<(usize, Value), Value> = FxHashMap::default();
-
         // List of (ctx, new block) tuples for duplicated code.
         let mut cloned_blocks: Vec<(usize, Block)> = vec![];
         // Map from block in new body to (ctx, orig block) target, to
         // allow updating terminators.
         let mut terminators: FxHashMap<Block, Vec<(usize, Block)>> = FxHashMap::default();
-
         let mut queue: VecDeque<(usize, Block)> = VecDeque::new();
         let mut visited: FxHashSet<(usize, Block)> = FxHashSet::default();
         queue.push_back((0, new_body.entry));
@@ -315,7 +297,6 @@ impl<'a> Reducifier<'a> {
                 ctx,
                 contexts[ctx]
             );
-
             // If this is a non-default context, replicate the block.
             let new_block = if ctx != 0 {
                 log::trace!("cloning block {} in new context", block);
@@ -326,10 +307,8 @@ impl<'a> Reducifier<'a> {
                     let blockparam = new_body.add_blockparam(new_block, ty);
                     value_map.insert((ctx, val), blockparam);
                 }
-
                 block_map.insert((ctx, block), new_block);
                 cloned_blocks.push((ctx, new_block));
-
                 // Copy over all value definitions, but don't rewrite
                 // args yet -- we'll do a separate pass for that.
                 let insts = new_body.blocks[block].insts.clone();
@@ -343,16 +322,13 @@ impl<'a> Reducifier<'a> {
                         value
                     });
                 }
-
                 // Copy over the terminator but don't update yet --
                 // we'll do that later too.
                 new_body.blocks[new_block].terminator = new_body.blocks[block].terminator.clone();
-
                 new_block
             } else {
                 block
             };
-
             // For every terminator, determine the target context:
             //
             // let ToContext = headers(To) & !{To} & (FromContext U !headers(From))
@@ -382,16 +358,13 @@ impl<'a> Reducifier<'a> {
                     contexts[ctx],
                     contexts[to_ctx]
                 );
-
                 term.push((to_ctx, succ));
-
                 if visited.insert((to_ctx, succ)) {
                     log::trace!("enqueue block {} ctx {}", succ, to_ctx);
                     queue.push_back((to_ctx, succ));
                 }
             }
         }
-
         // Second pass: rewrite args, and set up terminators. Both
         // happen in a second pass so that we have the block- and
         // value-map available for all blocks and values, regardless
@@ -413,12 +386,10 @@ impl<'a> Reducifier<'a> {
                     _ => unreachable!(),
                 }
             }
-
             new_body.blocks[new_block]
                 .terminator
                 .update_uses(|u| *u = value_map.get(&(ctx, *u)).cloned().unwrap_or(*u));
         }
-
         for (block, block_def) in new_body.blocks.entries_mut() {
             log::trace!("processing terminators for block {}", block);
             let terms = match terminators.get(&block) {
@@ -436,31 +407,23 @@ impl<'a> Reducifier<'a> {
                     .unwrap_or(to_orig_block);
             });
         }
-
         new_body.recompute_edges();
-
         log::trace!("After duplication:\n{}\n", new_body.display("| ", None));
-
         new_body.validate().unwrap();
         new_body.verify_reducible().unwrap();
-
         Cow::Owned(new_body)
     }
 }
-
 #[cfg(test)]
 mod test {
-    use alloc::string::ToString;
-
     use super::*;
     use crate::{
         entity::EntityRef, BlockTarget, FuncDecl, Module, Operator, SignatureData, Terminator, Type,
     };
-
+    use alloc::string::ToString;
     #[test]
     fn test_irreducible() {
         let _ = env_logger::try_init();
-
         let mut module = Module::empty();
         let sig = module.signatures.push(SignatureData::Func {
             params: vec![Type::I32, Type::I64, Type::F64],
@@ -468,16 +431,13 @@ mod test {
             shared: false,
         });
         let mut body = FunctionBody::new(&module, sig);
-
         let block1 = body.entry;
         let block2 = body.add_block();
         let block3 = body.add_block();
         let block4 = body.add_block();
-
         let arg0 = body.blocks[block1].params[0].1;
         let arg1 = body.blocks[block1].params[1].1;
         let arg2 = body.blocks[block1].params[2].1;
-
         body.set_terminator(
             block1,
             Terminator::CondBr {
@@ -492,24 +452,20 @@ mod test {
                 },
             },
         );
-
         let block2_param = body.add_blockparam(block2, Type::I64);
         let block3_param = body.add_blockparam(block3, Type::F64);
-
         let block2_param_cast = body.add_op(
             block2,
             Operator::F64ReinterpretI64,
             &[block2_param],
             &[Type::F64],
         );
-
         let block3_param_cast = body.add_op(
             block3,
             Operator::I64ReinterpretF64,
             &[block3_param],
             &[Type::I64],
         );
-
         body.set_terminator(
             block2,
             Terminator::Br {
@@ -533,25 +489,18 @@ mod test {
                 },
             },
         );
-
         body.set_terminator(
             block4,
             Terminator::Return {
                 values: vec![block3_param_cast],
             },
         );
-
         log::debug!("Body:\n{}", body.display("| ", Some(&module)));
-
         body.validate().unwrap();
-
         let mut reducifier = Reducifier::new(&body);
         let new_body = reducifier.run();
-
         new_body.validate().unwrap();
-
         log::debug!("Reducified body:\n{}", body.display("| ", Some(&module)));
-
         let cfg = CFGInfo::new(&new_body);
         for (block, def) in new_body.blocks.entries() {
             for &succ in &def.succs {
@@ -562,7 +511,6 @@ mod test {
                 }
             }
         }
-
         // Now ensure we can generate a Wasm module (with reducible
         // control flow).
         module

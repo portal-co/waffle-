@@ -8,7 +8,6 @@
 //!   2022 (Functional Pearl). https://dl.acm.org/doi/10.1145/3547621
 //!
 //! for more details on how this algorithm works.
-
 use crate::cfg::CFGInfo;
 use crate::entity::EntityRef;
 use crate::ir::{Block, BlockTarget, FunctionBody, Terminator, Type, Value};
@@ -17,7 +16,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
 use hashbrown::HashSet;
-
 #[derive(Clone, Debug)]
 pub enum WasmBlock<'a> {
     /// A Wasm block that has the given contents and whose label jumps
@@ -73,7 +71,6 @@ pub enum WasmBlock<'a> {
     /// An unreachable instruction.
     Unreachable,
 }
-
 /// A Wasm branch target label: number of scopes outward to branch to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WasmLabel(u32);
@@ -88,7 +85,6 @@ impl WasmLabel {
         self.0
     }
 }
-
 pub struct Context<'a, 'b> {
     body: &'a FunctionBody,
     cfg: &'b CFGInfo,
@@ -103,14 +99,12 @@ pub struct Context<'a, 'b> {
     // - Stack of merge-node-children lists.
     merge_node_children: Vec<Vec<Block>>,
 }
-
 #[derive(Clone, Copy, Debug)]
 enum CtrlEntry {
     Block { out: Block },
     Loop { header: Block },
     IfThenElse,
 }
-
 impl CtrlEntry {
     fn label(&self) -> Block {
         match self {
@@ -120,7 +114,6 @@ impl CtrlEntry {
         }
     }
 }
-
 #[derive(Clone, Copy, Debug)]
 enum StackEntry<'a> {
     DomSubtree(Block),
@@ -136,7 +129,6 @@ enum StackEntry<'a> {
         prefix: usize,
     },
 }
-
 impl<'a, 'b> Context<'a, 'b> {
     pub fn new(body: &'a FunctionBody, cfg: &'b CFGInfo) -> anyhow::Result<Self> {
         let (merge_nodes, loop_headers) = Self::compute_merge_nodes_and_loop_headers(body, cfg)?;
@@ -151,7 +143,6 @@ impl<'a, 'b> Context<'a, 'b> {
             merge_node_children: vec![],
         })
     }
-
     fn compute_merge_nodes_and_loop_headers(
         body: &FunctionBody,
         cfg: &CFGInfo,
@@ -159,7 +150,6 @@ impl<'a, 'b> Context<'a, 'b> {
         let mut loop_headers = HashSet::new();
         let mut branched_once = HashSet::new();
         let mut merge_nodes = HashSet::new();
-
         for (block_rpo, &block) in cfg.rpo.entries() {
             for &succ in &body.blocks[block].succs {
                 log::trace!(
@@ -192,7 +182,6 @@ impl<'a, 'b> Context<'a, 'b> {
                 }
             }
         }
-
         // Make any `select` target a "merge node" too, so it gets its
         // own block.
         for &block in cfg.rpo.values() {
@@ -208,10 +197,8 @@ impl<'a, 'b> Context<'a, 'b> {
                 merge_nodes.insert(default.block);
             }
         }
-
         Ok((merge_nodes, loop_headers))
     }
-
     pub fn compute(mut self) -> Vec<WasmBlock<'a>> {
         self.result.push(vec![]);
         self.process_stack
@@ -221,7 +208,6 @@ impl<'a, 'b> Context<'a, 'b> {
         }
         self.result.pop().unwrap()
     }
-
     fn process(&mut self, entry: StackEntry<'a>) {
         match entry {
             StackEntry::DomSubtree(block) => {
@@ -254,7 +240,6 @@ impl<'a, 'b> Context<'a, 'b> {
             }
         }
     }
-
     fn handle_dom_subtree(&mut self, block: Block) {
         let mut merge_node_children = self
             .cfg
@@ -264,20 +249,16 @@ impl<'a, 'b> Context<'a, 'b> {
         // Sort merge nodes so highest RPO number comes first.
         merge_node_children
             .sort_unstable_by_key(|&block| core::cmp::Reverse(self.cfg.rpo_pos[block]));
-
         let is_loop_header = self.loop_headers.contains(&block);
-
         log::trace!(
             "handle_dom_subtree: block {} merge_nodes {:?} loop_header {}",
             block,
             merge_node_children,
             is_loop_header
         );
-
         // `merge_node_children` stack entry is popped by `EndDomSubtree`.
         self.merge_node_children.push(merge_node_children);
         self.process_stack.push(StackEntry::EndDomSubtree);
-
         if is_loop_header {
             // Control stack and block-list-result-stack entries are
             // popped by `FinishLoop`.
@@ -291,11 +272,9 @@ impl<'a, 'b> Context<'a, 'b> {
             self.process_stack.push(StackEntry::NodeWithin(block, 0));
         }
     }
-
     fn end_dom_subtree(&mut self) {
         self.merge_node_children.pop();
     }
-
     fn finish_loop(&mut self, header: Block) {
         self.ctrl_stack.pop();
         let body = self.result.pop().unwrap();
@@ -304,7 +283,6 @@ impl<'a, 'b> Context<'a, 'b> {
             .unwrap()
             .push(WasmBlock::Loop { body, header });
     }
-
     fn resolve_target(ctrl_stack: &[CtrlEntry], target: Block) -> WasmLabel {
         log::trace!("resolve_target: {} in stack {:?}", target, ctrl_stack);
         WasmLabel(
@@ -318,7 +296,6 @@ impl<'a, 'b> Context<'a, 'b> {
             .expect("More than 2^32 frames"),
         )
     }
-
     fn do_branch(&mut self, source: Block, target: &'a BlockTarget, prefix: usize) {
         let into = self.result.last_mut().unwrap();
         log::trace!("do_branch: {} -> {:?}", source, target);
@@ -349,7 +326,6 @@ impl<'a, 'b> Context<'a, 'b> {
                 .push(StackEntry::DomSubtree(target.block));
         }
     }
-
     fn do_branch_select(
         &mut self,
         selector: Value,
@@ -365,7 +341,6 @@ impl<'a, 'b> Context<'a, 'b> {
                 .collect::<Vec<_>>(),
             default: WasmLabel::new(targets.len()),
         }];
-
         let mut extra = targets.len() + 1;
         for target in targets.iter().chain(core::iter::once(default)) {
             extra -= 1;
@@ -385,10 +360,8 @@ impl<'a, 'b> Context<'a, 'b> {
             ];
             body = outer_body;
         }
-
         into.extend(body.into_iter());
     }
-
     fn do_blockparam_transfer(
         from: &'a [Value],
         to: &'a [(Type, Value)],
@@ -397,7 +370,6 @@ impl<'a, 'b> Context<'a, 'b> {
     ) {
         into.push(WasmBlock::BlockParams { from, to, prefix });
     }
-
     fn finish_block(&mut self, out: Block) {
         self.ctrl_stack.pop();
         let body = self.result.pop().unwrap();
@@ -406,11 +378,9 @@ impl<'a, 'b> Context<'a, 'b> {
             .unwrap()
             .push(WasmBlock::Block { body, out });
     }
-
     fn else_(&mut self) {
         self.result.push(vec![]);
     }
-
     fn finish_if(&mut self, cond: Value) {
         let else_body = self.result.pop().unwrap();
         let if_body = self.result.pop().unwrap();
@@ -421,13 +391,11 @@ impl<'a, 'b> Context<'a, 'b> {
             if_false: else_body,
         });
     }
-
     fn node_within(&mut self, block: Block, merge_node_start: usize) {
         let merge_nodes = self.merge_node_children.last().unwrap();
         log::trace!("node_within: block {} merge_nodes {:?}", block, merge_nodes);
         let merge_nodes = &merge_nodes[merge_node_start..];
         let into = self.result.last_mut().unwrap();
-
         if let Some(&first) = merge_nodes.first() {
             // Post-`first` body.
             self.process_stack.push(StackEntry::DomSubtree(first));

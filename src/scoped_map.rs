@@ -26,14 +26,12 @@
 //! complex data structure, and is unnecessary for our use-cases. In
 //! particular, we use this for GVN, where if a key already exists, we
 //! use it rather than setting it again in a more nested scope.
-
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::hash::Hash;
 use hashbrown::HashMap;
-
 /// A scoped hashmap: a key-value map with "push" and "pop" operations
 /// and the ability to quickly remove mappings created at a given
 /// level when popping.
@@ -43,13 +41,11 @@ pub struct ScopedMap<K: Hash + Eq + Clone + Debug, V: Clone + Debug> {
     gen: u32,
     gen_by_level: Vec<u32>,
 }
-
 impl<K: Hash + Eq + Clone + Debug, V: Clone + Debug> core::default::Default for ScopedMap<K, V> {
     fn default() -> Self {
         ScopedMap::new()
     }
 }
-
 /// An entry in the scoped hashmap.
 #[derive(Clone, Debug)]
 struct ScopedMapEntry<V: Clone + Debug> {
@@ -61,7 +57,6 @@ struct ScopedMapEntry<V: Clone + Debug> {
     /// The value associated with this key.
     value: V,
 }
-
 impl<K: Hash + Eq + Clone + Debug, V: Clone + Debug> ScopedMap<K, V> {
     /// Create an empty scoped hashmap.
     pub fn new() -> ScopedMap<K, V> {
@@ -71,19 +66,16 @@ impl<K: Hash + Eq + Clone + Debug, V: Clone + Debug> ScopedMap<K, V> {
             gen_by_level: vec![0],
         }
     }
-
     /// Create a new sub-level.
     pub fn push_level(&mut self) {
         self.gen += 1;
         self.gen_by_level.push(self.gen);
     }
-
     /// Pop the current level, removing all mappings created at this
     /// level.
     pub fn pop_level(&mut self) {
         self.gen_by_level.pop();
     }
-
     /// Insert a mapping, associating it with the current level, and
     /// overwriting if one already exists.
     pub fn insert(&mut self, k: K, v: V) {
@@ -96,7 +88,6 @@ impl<K: Hash + Eq + Clone + Debug, V: Clone + Debug> ScopedMap<K, V> {
             },
         );
     }
-
     /// Get the mapping for the given key, if any.
     pub fn get(&self, k: &K) -> Option<&V> {
         self.map.get(k).and_then(|entry| {

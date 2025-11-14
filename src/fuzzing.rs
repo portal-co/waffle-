@@ -1,7 +1,5 @@
 //! Fuzzing-specific utilities.
-
 use libfuzzer_sys::arbitrary;
-
 /// Should this module be rejected early during fuzzing due to an
 /// unsupported feature?
 ///
@@ -49,14 +47,11 @@ pub fn reject(bytes: &[u8]) -> bool {
             _ => {}
         }
     }
-
     if !has_start || !has_global_set || num_globals < 1 {
         return true;
     }
-
     false
 }
-
 /// Get the configuration that we expect fuzzing targets to use to
 /// generate modules with `wasm_smith`.
 fn fuzzing_config() -> wasm_smith::Config {
@@ -79,12 +74,10 @@ fn fuzzing_config() -> wasm_smith::Config {
         ..Default::default()
     }
 }
-
 /// A wrapper around `Module` that uses `arbitrary` to generate new
 /// modules.
 #[derive(Debug)]
 pub struct ArbitraryModule(pub wasm_smith::Module);
-
 impl<'a> arbitrary::Arbitrary<'a> for ArbitraryModule {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         Ok(Self(wasm_smith::Module::new(fuzzing_config(), u)?))

@@ -1,11 +1,7 @@
-use core::mem::take;
-
-use alloc::collections::btree_set::BTreeSet;
-
-use crate::{FunctionBody, Module, Terminator};
-
 use super::inline::{inline_mod, InlineCfg};
-
+use crate::{FunctionBody, Module, Terminator};
+use alloc::collections::btree_set::BTreeSet;
+use core::mem::take;
 pub fn vaccum(f: &mut FunctionBody) {
     let mut work = true;
     while work {

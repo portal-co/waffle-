@@ -1,16 +1,14 @@
-use alloc::collections::BTreeMap;
-use core::default;
-
-use alloc::borrow::ToOwned;
-use alloc::vec;
-use alloc::vec::Vec;
-use anyhow::Context;
-use arena_traits::IndexAlloc;
-
 use crate::{
     cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
     HeapType, Operator, Type, ValueDef, WithNullable,
 };
+use alloc::borrow::ToOwned;
+use alloc::collections::BTreeMap;
+use alloc::vec;
+use alloc::vec::Vec;
+use anyhow::Context;
+use arena_traits::IndexAlloc;
+use core::default;
 #[derive(Default)]
 pub struct Frint {
     pub blocks: BTreeMap<(Block, Vec<Option<Func>>), Block>,

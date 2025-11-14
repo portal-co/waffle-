@@ -8,9 +8,7 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::iter::empty;
-
 // use super::reload::{ImportedCfg, ImportedMemoriesToFunc};
-
 pub fn fuse_iter(m: &mut Module, x: impl Iterator<Item = (usize, u8)>, mem: Memory) {
     let null = new_sig(
         m,
@@ -146,7 +144,6 @@ impl Cfg for All {
         true
     }
 }
-
 pub struct ImportsOnly {}
 impl Cfg for ImportsOnly {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool {

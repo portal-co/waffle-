@@ -1,5 +1,4 @@
 //! Displaying IR.
-
 use super::{FuncDecl, FunctionBody, Module, SourceLoc, ValueDef};
 use crate::entity::EntityRef;
 use alloc::borrow::ToOwned;
@@ -7,7 +6,6 @@ use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::{Display, Formatter, Result as FmtResult};
 use hashbrown::HashMap;
-
 /// A wrapper around a `FunctionBody` together with some auxiliary
 /// information to perform a pretty-print of that function.
 pub struct FunctionBodyDisplay<'a> {
@@ -16,7 +14,6 @@ pub struct FunctionBodyDisplay<'a> {
     pub(crate) verbose: bool,
     pub(crate) module: Option<&'a Module<'a>>,
 }
-
 impl<'a> Display for FunctionBodyDisplay<'a> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         let arg_tys = self
@@ -39,7 +36,6 @@ impl<'a> Display for FunctionBodyDisplay<'a> {
             arg_tys.join(", "),
             ret_tys.join(", ")
         )?;
-
         for (value, value_def) in self.body.values.entries() {
             match value_def {
                 ValueDef::Operator(op, args, tys) if self.verbose => writeln!(
@@ -79,7 +75,6 @@ impl<'a> Display for FunctionBodyDisplay<'a> {
                 _ => {}
             }
         }
-
         for (block_id, block) in self.body.blocks.entries() {
             let block_params = block
                 .params
@@ -169,17 +164,13 @@ impl<'a> Display for FunctionBodyDisplay<'a> {
             }
             writeln!(f, "{}    {}", self.indent, block.terminator)?;
         }
-
         writeln!(f, "{}}}", self.indent)?;
-
         Ok(())
     }
 }
-
 pub struct ModuleDisplay<'a> {
     pub(crate) module: &'a Module<'a>,
 }
-
 impl<'a> Display for ModuleDisplay<'a> {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         writeln!(f, "module {{")?;

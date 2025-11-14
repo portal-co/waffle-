@@ -1,6 +1,5 @@
 //! Localification: a simple form of register allocation that picks
 //! locations for SSA values in Wasm locals.
-
 use crate::backend::treeify::Trees;
 use crate::cfg::CFGInfo;
 use crate::entity::{EntityVec, PerEntity};
@@ -11,28 +10,23 @@ use alloc::vec::Vec;
 use core::ops::Range;
 use hashbrown::{HashMap, HashSet};
 use smallvec::{smallvec, SmallVec};
-
 #[derive(Clone, Debug, Default)]
 pub struct Localifier {
     pub values: PerEntity<Value, SmallVec<[Local; 2]>>,
     pub locals: EntityVec<Local, Type>,
 }
-
 impl Localifier {
     pub fn compute(body: &FunctionBody, cfg: &CFGInfo, trees: &Trees) -> Self {
         Context::new(body, cfg, trees).compute()
     }
 }
-
 struct Context<'a> {
     body: &'a FunctionBody,
     cfg: &'a CFGInfo,
     trees: &'a Trees,
     results: Localifier,
-
     /// Precise liveness for each block: live Values at the end.
     block_end_live: PerEntity<Block, HashSet<Value>>,
-
     /// Liveranges for each Value, in an arbitrary index space
     /// (concretely, the span of first to last instruction visit step
     /// index in an RPO walk over the function body).
@@ -40,7 +34,6 @@ struct Context<'a> {
     /// Number of points.
     points: usize,
 }
-
 trait Visitor {
     fn visit_use(&mut self, _: Value) {}
     fn visit_def(&mut self, _: Value) {}
@@ -51,7 +44,6 @@ trait Visitor {
     fn post_params(&mut self) {}
     fn pre_params(&mut self) {}
 }
-
 struct BlockVisitor<'a, V: Visitor> {
     body: &'a FunctionBody,
     trees: &'a Trees,
@@ -75,7 +67,6 @@ impl<'a, V: Visitor> BlockVisitor<'a, V> {
             self.visit_use(u);
         });
         self.visitor.pre_term();
-
         for &inst in self.body.blocks[block].insts.iter().map(|a| &a.value).rev() {
             if self.trees.owner.contains_key(&inst) || self.trees.remat.contains(&inst) {
                 continue;
@@ -84,7 +75,6 @@ impl<'a, V: Visitor> BlockVisitor<'a, V> {
             self.visit_inst(inst, /* root = */ true);
             self.visitor.pre_inst(inst);
         }
-
         self.visitor.post_params();
         for &(_, param) in &self.body.blocks[block].params {
             self.visitor.visit_def(param);
@@ -120,17 +110,14 @@ impl<'a, V: Visitor> BlockVisitor<'a, V> {
         }
     }
 }
-
 impl<'a> Context<'a> {
     fn new(body: &'a FunctionBody, cfg: &'a CFGInfo, trees: &'a Trees) -> Self {
         let mut results = Localifier::default();
-
         // Create locals for function args.
         for &(ty, value) in &body.blocks[body.entry].params {
             let param_local = results.locals.push(ty);
             results.values[value] = smallvec![param_local];
         }
-
         Self {
             body,
             cfg,
@@ -141,7 +128,6 @@ impl<'a> Context<'a> {
             points: 0,
         }
     }
-
     fn compute_liveness(&mut self) {
         struct LivenessVisitor {
             live: HashSet<Value>,
@@ -154,7 +140,6 @@ impl<'a> Context<'a> {
                 self.live.remove(&value);
             }
         }
-
         let mut workqueue: Vec<Block> = self.cfg.rpo.values().cloned().collect();
         let mut workqueue_set: HashSet<Block> = workqueue.iter().cloned().collect();
         while let Some(block) = workqueue.pop() {
@@ -163,7 +148,6 @@ impl<'a> Context<'a> {
             let mut visitor = BlockVisitor::new(self.body, self.trees, LivenessVisitor { live });
             visitor.visit_block(block);
             let live = visitor.visitor.live;
-
             for &pred in &self.body.blocks[block].preds {
                 let pred_live = &mut self.block_end_live[pred];
                 let mut changed = false;
@@ -178,10 +162,8 @@ impl<'a> Context<'a> {
             }
         }
     }
-
     fn find_ranges(&mut self) {
         let mut point = 0;
-
         struct LiveRangeVisitor<'b> {
             point: &'b mut usize,
             live: HashMap<Value, usize>,
@@ -211,7 +193,6 @@ impl<'a> Context<'a> {
                 existing_range.end = core::cmp::max(existing_range.end, range.end);
             }
         }
-
         for &block in self.cfg.rpo.values().rev() {
             let visitor = LiveRangeVisitor {
                 live: HashMap::default(),
@@ -234,25 +215,20 @@ impl<'a> Context<'a> {
                 visitor.visitor.visit_def(live);
             }
         }
-
         self.points = point + 1;
     }
-
     fn allocate(&mut self) {
         // Sort values by ranges' starting points, then value to break ties.
         let mut ranges: Vec<(Value, core::ops::Range<usize>)> =
             self.ranges.iter().map(|(k, v)| (*k, v.clone())).collect();
         ranges.sort_unstable_by_key(|(val, range)| (range.start, *val));
-
         // Keep a list of expiring Locals by expiry point.
         let mut expiring: HashMap<usize, SmallVec<[(Type, Local); 8]>> = HashMap::new();
-
         // Iterate over allocation space, processing range starts (at
         // which point we allocate) and ends (at which point we add to
         // the freelist).
         let mut range_idx = 0;
         let mut freelist: HashMap<Type, Vec<Local>> = HashMap::new();
-
         for i in 0..self.points {
             // Process ends. (Ends are exclusive, so we do them
             // first; another range can grab the local at the same
@@ -263,7 +239,6 @@ impl<'a> Context<'a> {
                     freelist.entry(ty).or_insert_with(|| vec![]).push(local);
                 }
             }
-
             // Process starts.
             while range_idx < ranges.len() && ranges[range_idx].1.start == i {
                 let (value, range) = ranges[range_idx].clone();
@@ -274,7 +249,6 @@ impl<'a> Context<'a> {
                     range.start,
                     range.end
                 );
-
                 // If the value is an arg on block0, ignore; these
                 // already have fixed locations.
                 if let &ValueDef::BlockParam(b, _, _) = &self.body.values[value] {
@@ -282,7 +256,6 @@ impl<'a> Context<'a> {
                         continue;
                     }
                 }
-
                 // Try getting a local from the freelist; if not,
                 // allocate a new one.
                 let mut allocs = smallvec![];
@@ -303,7 +276,6 @@ impl<'a> Context<'a> {
             }
         }
     }
-
     fn compute(mut self) -> Localifier {
         self.compute_liveness();
         self.find_ranges();

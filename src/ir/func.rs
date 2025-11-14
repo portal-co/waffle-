@@ -20,13 +20,11 @@ use either::Either;
 use hashbrown::HashMap as FxHashMap;
 use hashbrown::HashSet;
 // use ssa_traits::{Term, Val};
-
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 ///
 /// `FuncDecl` represents the various forms in which we can hold a
 /// function body: not yet parsed, parsed into full IR, recompiled
 /// into new bytecode, or an import (none of the above).
-
 pub enum FuncDecl<'a> {
     /// An imported function.
     Import(Signature, String),
@@ -41,7 +39,6 @@ pub enum FuncDecl<'a> {
     #[default]
     None,
 }
-
 impl<'a> FuncDecl<'a> {
     /// Get the signature for this function.
     pub fn sig(&self) -> Signature {
@@ -53,7 +50,6 @@ impl<'a> FuncDecl<'a> {
             FuncDecl::None => panic!("No signature for FuncDecl::None"),
         }
     }
-
     /// If this function is not yet parsed to IR, do so, mutating in
     /// place.
     pub fn parse(&mut self, module: &Module) -> Result<()> {
@@ -66,7 +62,6 @@ impl<'a> FuncDecl<'a> {
             _ => Ok(()),
         }
     }
-
     /// Run the specified optimization passes on the function.
     pub fn optimize(&mut self, opts: &OptOptions) {
         match self {
@@ -76,7 +71,6 @@ impl<'a> FuncDecl<'a> {
             _ => {}
         }
     }
-
     /// Convert the function to "maximal SSA" with respect to the
     /// given cut-set of blocks, or all blocks if `None`.
     ///
@@ -96,7 +90,6 @@ impl<'a> FuncDecl<'a> {
             _ => {}
         }
     }
-
     /// Return the function body, if it exists.
     pub fn body(&self) -> Option<&FunctionBody> {
         match self {
@@ -104,7 +97,6 @@ impl<'a> FuncDecl<'a> {
             _ => None,
         }
     }
-
     /// Return the function body, if it exists, in mutable form.
     pub fn body_mut(&mut self) -> Option<&mut FunctionBody> {
         match self {
@@ -112,7 +104,6 @@ impl<'a> FuncDecl<'a> {
             _ => None,
         }
     }
-
     /// Return the name of this function.
     pub fn name(&self) -> &str {
         match self {
@@ -123,7 +114,6 @@ impl<'a> FuncDecl<'a> {
             FuncDecl::None => panic!("No name for FuncDecl::None"),
         }
     }
-
     /// Set the name of this function.
     pub fn set_name(&mut self, new_name: &str) {
         match self {
@@ -134,7 +124,6 @@ impl<'a> FuncDecl<'a> {
             FuncDecl::None => panic!("No name for FuncDecl::None"),
         }
     }
-
     /// Remove any references to a function's original bytes. This
     /// exists to assist `Module::without_orig_bytes()`, which will
     /// parse all `Lazy` `FuncDecl`s beforehand; here we just panic in
@@ -150,7 +139,6 @@ impl<'a> FuncDecl<'a> {
         }
     }
 }
-
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 /// The body of a function, as an SSA-based intermediate
 /// representation.
@@ -183,7 +171,6 @@ pub struct FunctionBody {
     ///Is this function shared
     pub shared: bool,
 }
-
 impl FunctionBody {
     /// Create a new function body with the given signature. The body
     /// will have an entry block with blockparams defined that match
@@ -226,28 +213,24 @@ impl FunctionBody {
             shared: *shared,
         }
     }
-
     /// Optimize this function given the options in `opts`.
     pub fn optimize(&mut self, opts: &OptOptions) {
         let cfg = crate::cfg::CFGInfo::new(self);
         crate::passes::basic_opt::basic_opt(self, &cfg, opts);
         crate::passes::empty_blocks::run(self);
     }
-
     /// Perform a maximal-SSA transform on this function. See comments
     /// on `FuncDecl::convert_to_max_ssa()` for more.
     pub fn convert_to_max_ssa(&mut self, cut_blocks: Option<HashSet<Block>>) {
         let cfg = crate::cfg::CFGInfo::new(self);
         crate::passes::maxssa::run(self, cut_blocks, &cfg);
     }
-
     /// Add a new, empty block and return its ID.
     pub fn add_block(&mut self) -> Block {
         let id = self.blocks.push(BlockDef::default());
         log::trace!("add_block: block {}", id);
         id
     }
-
     /// Convenience: intern a single type as a
     /// result-type-list. Caches and deduplicates to minimize
     /// type-pool growth.
@@ -258,7 +241,6 @@ impl FunctionBody {
             .entry(ty)
             .or_insert_with(|| type_pool.single(ty))
     }
-
     /// Add an edge in the succs/preds lists of the respective
     /// blocks. These edges must exist once a function has been built;
     /// they can be (re)computed in bulk with
@@ -272,7 +254,6 @@ impl FunctionBody {
         self.blocks[to].pos_in_pred_succ.push(succ_pos);
         log::trace!("add_edge: from {} to {}", from, to);
     }
-
     /// Split a given edge (disambiguated with `succ_idx` since there
     /// may be multiple edges from `from` to `to`), creating an
     /// intermediate block with an unconditional branch and carrying
@@ -281,17 +262,14 @@ impl FunctionBody {
         assert_eq!(self.blocks[from].succs[succ_idx], to);
         let pred_idx = self.blocks[from].pos_in_succ_pred[succ_idx];
         assert_eq!(self.blocks[to].preds[pred_idx], from);
-
         // Create the block itself.
         let edge_block = self.add_block();
-
         // Add blockparams.
         let mut blockparams = vec![];
         for i in 0..self.blocks[to].params.len() {
             let ty = self.blocks[to].params[i].0;
             blockparams.push(self.add_blockparam(edge_block, ty));
         }
-
         // Create an unconditional-branch terminator in the edge block.
         self.blocks[edge_block].terminator = Terminator::Br {
             target: BlockTarget {
@@ -299,27 +277,22 @@ impl FunctionBody {
                 args: blockparams,
             },
         };
-
         // Update target of from-block.
         self.blocks[from]
             .terminator
             .update_target(succ_idx, |target| target.block = edge_block);
-
         // Fill in succ/pred links on edge block.
         self.blocks[edge_block].succs.push(to);
         self.blocks[edge_block].pos_in_succ_pred.push(pred_idx);
         self.blocks[edge_block].preds.push(from);
         self.blocks[edge_block].pos_in_pred_succ.push(succ_idx);
-
         // Update `succs` in `from`, `preds` in `to`.
         self.blocks[from].succs[succ_idx] = edge_block;
         self.blocks[from].pos_in_succ_pred[succ_idx] = 0;
         self.blocks[to].preds[pred_idx] = edge_block;
         self.blocks[to].pos_in_pred_succ[pred_idx] = 0;
-
         edge_block
     }
-
     /// Recompute all successor/predecessor lists according to the
     /// edges implied by terminator instructions. Must be updated
     /// after building a function body or mutating its CFG and prior
@@ -331,7 +304,6 @@ impl FunctionBody {
             block.pos_in_succ_pred.clear();
             block.pos_in_pred_succ.clear();
         }
-
         for block in 0..self.blocks.len() {
             let block = Block::new(block);
             let terminator = self.blocks[block].terminator.clone();
@@ -340,7 +312,6 @@ impl FunctionBody {
             });
         }
     }
-
     /// Add a new value node to the function (not yet in any block)
     /// and return its SSA value number.
     pub fn add_value(&mut self, value: ValueDef) -> Value {
@@ -349,7 +320,6 @@ impl FunctionBody {
         log::trace!(" -> {}", value);
         value
     }
-
     /// Convenience method: add an operator value to the function in
     /// the given block. Creates the argument and type list(s), adds
     /// the value node, and appends the value node to the given block.
@@ -367,7 +337,6 @@ impl FunctionBody {
         self.append_to_block(block, value);
         value
     }
-
     /// Make one value an alias to another. Panics on cycles.
     pub fn set_alias(&mut self, value: Value, to: Value) {
         log::trace!("set_alias: value {:?} to {:?}", value, to);
@@ -379,14 +348,12 @@ impl FunctionBody {
         }
         self.values[value] = ValueDef::Alias(to);
     }
-
     /// Resolve the value through any alias references to the original
     /// value.
     pub fn resolve_alias(&self, value: Value) -> Value {
         if value.is_invalid() {
             return value;
         }
-
         let mut result = value;
         loop {
             if let &ValueDef::Alias(to) = &self.values[result] {
@@ -397,7 +364,6 @@ impl FunctionBody {
         }
         result
     }
-
     /// Resolve a value through alias references, updating the value
     /// definition to short-circuit the (arbitrarily long) alias chain
     /// afterward.
@@ -411,7 +377,6 @@ impl FunctionBody {
         }
         to
     }
-
     /// Add a new blockparam to the given block, returning its SSA
     /// value number.
     pub fn add_blockparam(&mut self, block: Block, ty: Type) -> Value {
@@ -421,14 +386,12 @@ impl FunctionBody {
         self.value_blocks[value] = block;
         value
     }
-
     /// Add a new `Placeholder` value that can be replaced with an
     /// actual definition later. Useful in some algorithms that
     /// follow or resolve cycles.
     pub fn add_placeholder(&mut self, ty: Type) -> Value {
         self.add_value(ValueDef::Placeholder(ty))
     }
-
     /// Convert a `Placeholder` value into a blockparam on the given
     /// block.
     pub fn replace_placeholder_with_blockparam(&mut self, block: Block, value: Value) {
@@ -440,24 +403,20 @@ impl FunctionBody {
         self.blocks[block].params.push((ty, value));
         self.values[value] = ValueDef::BlockParam(block, index as u32, ty);
     }
-
     /// Mark an SSA value as carrying the Wasm local `local`. This is
     /// useful for debugging and manually reading the IR.
     pub fn mark_value_as_local(&mut self, value: Value, local: Local) {
         self.value_locals[value] = Some(local);
     }
-
     /// Append a value record to the instruction list in a block.
     pub fn append_record_to_block(&mut self, block: Block, value: ValueRecord) {
         self.blocks[block].insts.push(value.clone());
         self.value_blocks[value.value] = block;
     }
-
     /// Append a value to the instruction list in a block.
     pub fn append_to_block(&mut self, block: Block, value: Value) {
         self.append_record_to_block(block, ValueRecord::core(value));
     }
-
     /// Set the terminator instruction on a block, updating the edge
     /// lists as well.
     pub fn set_terminator(&mut self, block: Block, terminator: Terminator) {
@@ -468,7 +427,6 @@ impl FunctionBody {
         });
         self.blocks[block].terminator = terminator;
     }
-
     /// Prety-print this function body. `indent` is prepended to each
     /// line of output. `module`, if provided, allows printing source
     /// locations as comments at each operator.
@@ -484,7 +442,6 @@ impl FunctionBody {
             module,
         }
     }
-
     /// Pretty-print this function body, with "verbose" format:
     /// includes all value nodes, even those not listed in a block's
     /// instruction list. (Roughly doubles output size.)
@@ -500,7 +457,6 @@ impl FunctionBody {
             module,
         }
     }
-
     /// Validate consistency of the IR against required invariants and properties:
     ///
     /// - Block successor and predecessor lists are accurate with
@@ -523,7 +479,6 @@ impl FunctionBody {
                 );
             }
         }
-
         // Compute the location where every value is defined.
         let mut block_inst: PerEntity<Value, Option<(Block, Option<usize>)>> = PerEntity::default();
         for (block, block_def) in self.blocks.entries() {
@@ -534,7 +489,6 @@ impl FunctionBody {
                 block_inst[inst.value] = Some((block, Some(i)));
             }
         }
-
         // Verify that every instruction uses args at legal locations
         // (same block but earlier, or a dominating block).
         let cfg = CFGInfo::new(self);
@@ -570,7 +524,6 @@ impl FunctionBody {
                     }
                 }
             };
-
             for (i, inst) in block_def.insts.iter().enumerate() {
                 let inst = inst.value;
                 match &self.values[inst] {
@@ -597,10 +550,8 @@ impl FunctionBody {
                 bad
             );
         }
-
         Ok(())
     }
-
     /// Verify that the CFG of this function is reducible. (This is
     /// not necessary to produce Wasm, as the backend can turn
     /// irreducible control flow into reducible control flow via the
@@ -624,7 +575,6 @@ impl FunctionBody {
         }
         Ok(())
     }
-
     /// Compile this function to Wasm bytecode. See
     /// `Module::to_wasm_bytes()` for the Wasm-level compilation entry
     /// point. This is mostly useful for custom per-function
@@ -633,7 +583,6 @@ impl FunctionBody {
         WasmFuncBackend::compile(self)
     }
 }
-
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BlockDef {
     /// Instructions in this block.
@@ -653,7 +602,6 @@ pub struct BlockDef {
     /// Descriptive name for the block, if any.
     pub desc: String,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ValueRecord {
@@ -664,7 +612,6 @@ pub struct ValueRecord {
     // pub default_handler: Option<Handler<HoleTarget>>,
     _private: (),
 }
-
 impl ValueRecord {
     pub fn with_value<T>(&self, f: impl FnOnce(&mut Value) -> T) -> (T, Self) {
         let mut x = self.clone();
@@ -685,22 +632,18 @@ impl ValueRecord {
         }
     }
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct BlockTarget {
     pub block: Block,
     pub args: Vec<Value>,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct HoleTarget {
     pub block: Block,
     pub args: Vec<Either<usize, Value>>,
     pub num_holes: usize,
 }
-
 pub type ExceptionTarget = HoleTarget;
-
 impl core::fmt::Display for BlockTarget {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let args = self
@@ -760,13 +703,11 @@ pub enum Terminator {
     UB,
     None,
 }
-
 impl core::default::Default for Terminator {
     fn default() -> Self {
         Terminator::None
     }
 }
-
 impl core::fmt::Display for Terminator {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
@@ -836,7 +777,6 @@ impl core::fmt::Display for Terminator {
         Ok(())
     }
 }
-
 impl Terminator {
     pub fn num_targets(&self) -> usize {
         match self {
@@ -889,7 +829,6 @@ impl Terminator {
             Terminator::ReturnCallRef { sig, args } => {}
         }
     }
-
     pub fn update_targets<F: FnMut(&mut BlockTarget)>(&mut self, mut f: F) {
         match self {
             Terminator::Return { .. } => {}
@@ -936,7 +875,6 @@ impl Terminator {
             _ => return Err(index.wrapping_sub(self.num_targets())),
         })
     }
-
     pub fn update_target<T, F: FnOnce(&mut BlockTarget) -> T>(
         &mut self,
         index: usize,
@@ -971,11 +909,9 @@ impl Terminator {
             (i, this) => return Err(i.wrapping_sub(this.num_targets())),
         })
     }
-
     pub fn visit_successors<F: FnMut(Block)>(&self, mut f: F) {
         self.visit_targets(|target| f(target.block));
     }
-
     pub fn visit_uses<F: FnMut(Value)>(&self, mut f: F) {
         self.visit_targets(|target| {
             for &arg in &target.args {
@@ -1007,7 +943,6 @@ impl Terminator {
             _ => {}
         }
     }
-
     pub fn update_uses<F: FnMut(&mut Value)>(&mut self, mut f: F) {
         self.update_targets(|target| {
             for arg in &mut target.args {

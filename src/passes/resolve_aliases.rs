@@ -1,7 +1,5 @@
 //! Resolve all aliases.
-
 use crate::{FunctionBody, ValueDef};
-
 pub fn run(body: &mut FunctionBody) {
     log::debug!(
         "Resolve aliases: running on:\n{}\n",
