@@ -19,10 +19,11 @@ description = "Wasm Analysis Framework For Lightweight Experiments"
 authors = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
 license = "Apache-2.0 WITH LLVM-exception"
 edition = "2018"
+repository = "https://github.com/portal-co/waffle-"
 
 [workspace.dependencies]
-wasmparser = { version = "0.227", default-features = false, features = ["simd"] }
-wasm-encoder = { version = "0.227", default-features = false }
+wasmparser = { version = "^0.241", default-features = false, features = ["simd"] }
+wasm-encoder = { version = "^0.241", default-features = false }
 anyhow = { version = "^1.0", default-features = false }
 
 log = { version = "0.4", default-features = false }
@@ -73,6 +74,7 @@ description.workspace = true
 authors.workspace = true 
 license.workspace = true 
 edition.workspace = true 
+repository.workspace = true
 
 [dependencies]
 waffle-entity .workspace = true
