@@ -1,10 +1,10 @@
 [package]
 name = "portal-pc-waffle"
-version.workspace = true #  = "0.5.5"
-description.workspace = true #  = "Wasm Analysis Framework For Lightweight Experiments"
-authors.workspace = true #  = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
-license.workspace = true #  = "Apache-2.0 WITH LLVM-exception"
-edition.workspace = true #  = "2018"
+version.workspace = true 
+description.workspace = true 
+authors.workspace = true 
+license.workspace = true 
+edition.workspace = true 
 
 [workspace]
 members = ["."]
@@ -17,41 +17,41 @@ license = "Apache-2.0 WITH LLVM-exception"
 edition = "2018"
 
 [dependencies]
-wasmparser .workspace = true # { version .workspace = true # "0.227", default-features .workspace = true # false, features .workspace = true # ["simd"] }
-wasm-encoder .workspace = true # { version .workspace = true # "0.227", default-features .workspace = true # false }
-anyhow .workspace = true # { version .workspace = true # "^1.0", default-features .workspace = true # false }
-log .workspace = true # { version .workspace = true # "0.4", default-features .workspace = true # false }
-smallvec .workspace = true # { version .workspace = true # "1.13", default-features .workspace = true # false }
-libfuzzer-sys ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.4", optional .workspace = true # true }
-indexmap .workspace = true # { version .workspace = true # "2.2.2", default-features .workspace = true # false }
-stacker ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.1.15", optional .workspace = true # true }
-wasm-smith ={workspace = true,optional=true} # .workspace = true # { version .workspace = true # "0.202", optional .workspace = true # true }
-paste .workspace = true # "1.0.15"
-serde .workspace = true # { version .workspace = true # "1.0.204", features .workspace = true # ["derive"] }
-either .workspace = true # { version .workspace = true # "1.13.0", features .workspace = true # ["serde"], default-features .workspace = true # false }
-arena-traits .workspace = true # "^0.2.3"
-ssa-traits ={workspace = true,optional=true} # {version.workspace = true #"^0.2.3",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"master"}
-cfg-traits ={workspace = true,optional=true} # {version.workspace = true #"^0.2.3",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"master"}
-cfg-traits-03 ={workspace = true,optional=true} # {version.workspace = true #"0.3.0-alpha.2",package.workspace = true #"cfg-traits",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"dev/0.3"}
-ssa-traits-03 ={workspace = true,optional=true} # {version.workspace = true #"0.3.0-alpha.2",package.workspace = true #"ssa-traits",optional.workspace = true #true,git.workspace = true #"https://github.com/portal-co/codegen-utils.git",branch.workspace = true #"dev/0.3"}
-lending-iterator .workspace = true # "0.1.7"
-hashbrown .workspace = true # { version .workspace = true # "0.15.2", default-features .workspace = true # false, features .workspace = true # ["alloc", "default-hasher", "equivalent", "serde"] }
-impl-trait-for-tuples .workspace = true # "0.2.3"
-sha3 .workspace = true # { version .workspace = true # "0.10.8", default-features .workspace = true # false }
+wasmparser .workspace = true 
+wasm-encoder .workspace = true 
+anyhow .workspace = true 
+log .workspace = true 
+smallvec .workspace = true 
+libfuzzer-sys ={workspace = true,optional=true} 
+indexmap .workspace = true 
+stacker ={workspace = true,optional=true} 
+wasm-smith ={workspace = true,optional=true} 
+paste .workspace = true 
+serde .workspace = true 
+either .workspace = true 
+arena-traits .workspace = true 
+ssa-traits ={workspace = true,optional=true} 
+cfg-traits ={workspace = true,optional=true} 
+cfg-traits-03 ={workspace = true,optional=true} 
+ssa-traits-03 ={workspace = true,optional=true} 
+lending-iterator .workspace = true 
+hashbrown .workspace = true 
+impl-trait-for-tuples .workspace = true 
+sha3 .workspace = true 
 
 [workspace.dependencies]
 wasmparser = { version = "0.227", default-features = false, features = ["simd"] }
 wasm-encoder = { version = "0.227", default-features = false }
 anyhow = { version = "^1.0", default-features = false }
-# structopt = "0.3"
+
 log = { version = "0.4", default-features = false }
-# env_logger = "0.11"
+
 
 smallvec = { version = "1.13", default-features = false }
-# rayon = "1.10"
-# lazy_static = "1.4"
-# libc = "0.2"
-# addr2line = "0.21"
+
+
+
+
 
 # For fuzzing only. Versions must match those in fuzz/Cargo.toml.
 libfuzzer-sys = { version = "0.4" }
