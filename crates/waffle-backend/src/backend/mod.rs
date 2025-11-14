@@ -10,6 +10,8 @@ use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
 use wasm_encoder::Encode;
+use wasm_encoder::Ieee32;
+use wasm_encoder::Ieee64;
 use wasm_encoder::{CustomSection, TagType};
 pub mod reducify;
 use reducify::Reducifier;
@@ -419,10 +421,10 @@ impl<'a> WasmFuncBackend<'a> {
                 Some(wasm_encoder::Instruction::I64Const(*value as i64))
             }
             Operator::F32Const { value } => {
-                Some(wasm_encoder::Instruction::F32Const(f32::from_bits(*value)))
+                Some(wasm_encoder::Instruction::F32Const(Ieee32::new(*value)))
             }
             Operator::F64Const { value } => {
-                Some(wasm_encoder::Instruction::F64Const(f64::from_bits(*value)))
+                Some(wasm_encoder::Instruction::F64Const(Ieee64::new(*value)))
             }
             Operator::I32Eqz => op!(I32Eqz),
             Operator::I32Eq => op!(I32Eq),
@@ -1600,8 +1602,8 @@ fn const_init(ty: Type, value: Option<u64>) -> wasm_encoder::ConstExpr {
     match ty {
         Type::I32 => wasm_encoder::ConstExpr::i32_const(bits as u32 as i32),
         Type::I64 => wasm_encoder::ConstExpr::i64_const(bits as i64),
-        Type::F32 => wasm_encoder::ConstExpr::f32_const(f32::from_bits(bits as u32)),
-        Type::F64 => wasm_encoder::ConstExpr::f64_const(f64::from_bits(bits as u64)),
+        Type::F32 => wasm_encoder::ConstExpr::f32_const(Ieee32::new(bits as u32)),
+        Type::F64 => wasm_encoder::ConstExpr::f64_const(Ieee64::new(bits as u64)),
         _ => unimplemented!(),
     }
 }
