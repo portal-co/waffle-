@@ -1,7 +1,7 @@
 [package]
-name = "waffle-passes"
+name = "waffle-passes-shared"
 version.workspace = true
-description = "Optimization passes for the WAFFLE Wasm analysis framework"
+description = "Shared passes for the WAFFLE Wasm analysis framework (used by both backend and passes)"
 authors.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -9,14 +9,10 @@ edition.workspace = true
 [dependencies]
 waffle-entity .workspace = true
 waffle-ir .workspace = true
-waffle-passes-shared .workspace = true
 anyhow .workspace = true
 log .workspace = true
 smallvec .workspace = true
 hashbrown .workspace = true
-sha3 .workspace = true
 
 [features]
 default = []
-tcore = []
-importify = []

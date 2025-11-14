@@ -40,7 +40,7 @@ pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
         if let FuncDecl::Body(s, _, b) = &mut g {
             // Convert to max SSA
             let b_cfg = CFGInfo::new(b);
-            crate::passes::maxssa::run(b, None, &b_cfg);
+            crate::waffle_passes_shared::maxssa::run(b, None, &b_cfg);
             
             let s = *s;
             let mut new = FunctionBody::new(&m, s);

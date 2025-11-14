@@ -19,9 +19,6 @@ pub mod treeify;
 use treeify::Trees;
 pub mod localify;
 use localify::Localifier;
-// Backend-specific passes
-pub mod maxssa;
-pub mod resolve_aliases;
 pub struct WasmFuncBackend<'a> {
     body: Cow<'a, FunctionBody>,
     cfg: CFGInfo,

@@ -11,7 +11,7 @@ use alloc::collections::BTreeSet;
 use alloc::vec;
 use alloc::vec::Vec;
 use hashbrown::{HashMap, HashSet};
-pub(crate) fn run(body: &mut FunctionBody, cut_blocks: Option<HashSet<Block>>, cfg: &CFGInfo) {
+pub fn run(body: &mut FunctionBody, cut_blocks: Option<HashSet<Block>>, cfg: &CFGInfo) {
     MaxSSAPass::new(cut_blocks).run(body, cfg);
 }
 struct MaxSSAPass {

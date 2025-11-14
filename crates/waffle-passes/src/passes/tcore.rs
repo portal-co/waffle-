@@ -327,7 +327,7 @@ pub fn tcore_tco_pass(
     f: Func,
     b: &mut FunctionBody,
 ) -> anyhow::Result<()> {
-    passes::resolve_aliases::run(b);
+    waffle_passes_shared::resolve_aliases::run(b);
     let mut m = BTreeMap::new();
     m.insert(f, b.entry);
     loop {
@@ -381,7 +381,7 @@ pub fn untcore_pass(
     b: &mut FunctionBody,
     // cff: bool,
 ) -> anyhow::Result<()> {
-    passes::resolve_aliases::run(b);
+    waffle_passes_shared::resolve_aliases::run(b);
     loop {
         let mut e = b.blocks.entries();
         let (block, fun, args) = 'gather: loop {
@@ -431,7 +431,7 @@ pub fn tcore_pass(
     b: &mut FunctionBody,
     // cff: bool,
 ) -> anyhow::Result<()> {
-    passes::resolve_aliases::run(b);
+    waffle_passes_shared::resolve_aliases::run(b);
     let mut m = BTreeMap::new();
     m.insert(f, b.entry);
     loop {

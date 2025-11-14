@@ -5,6 +5,7 @@ members = [
     "crates/waffle-ir",
     "crates/waffle-frontend",
     "crates/waffle-backend",
+    "crates/waffle-passes-shared",
     "crates/waffle-passes",
     "crates/waffle-copying",
     "crates/waffle-hooking",
@@ -59,6 +60,7 @@ waffle-entity = { path = "crates/waffle-entity", version = "0.5.5" }
 waffle-ir = { path = "crates/waffle-ir", version = "0.5.5" }
 waffle-frontend = { path = "crates/waffle-frontend", version = "0.5.5" }
 waffle-backend = { path = "crates/waffle-backend", version = "0.5.5" }
+waffle-passes-shared = { path = "crates/waffle-passes-shared", version = "0.5.5" }
 waffle-passes = { path = "crates/waffle-passes", version = "0.5.5" }
 waffle-copying = { path = "crates/waffle-copying", version = "0.5.5" }
 waffle-hooking = { path = "crates/waffle-hooking", version = "0.5.5" }

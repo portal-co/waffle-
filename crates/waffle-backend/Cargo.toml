@@ -9,6 +9,7 @@ edition.workspace = true
 [dependencies]
 waffle-entity .workspace = true
 waffle-ir .workspace = true
+waffle-passes-shared .workspace = true
 wasmparser .workspace = true
 wasm-encoder .workspace = true
 anyhow .workspace = true

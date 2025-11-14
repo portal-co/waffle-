@@ -30,7 +30,7 @@ impl core::default::Default for OptOptions {
         }
     }
 }
-pub(crate) fn basic_opt(body: &mut FunctionBody, cfg: &CFGInfo, options: &OptOptions) {
+pub fn basic_opt(body: &mut FunctionBody, cfg: &CFGInfo, options: &OptOptions) {
     loop {
         let mut pass = BasicOptPass {
             map: ScopedMap::default(),
