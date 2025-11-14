@@ -1,0 +1,17 @@
+[package]
+name = "waffle-copying"
+version.workspace = true
+description = "Copying module functionality for the WAFFLE Wasm analysis framework"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+waffle-entity .workspace = true
+waffle-ir .workspace = true
+anyhow .workspace = true
+log .workspace = true
+hashbrown .workspace = true
+
+[features]
+default = []

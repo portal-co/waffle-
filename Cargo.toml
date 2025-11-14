@@ -1,13 +1,16 @@
-[package]
-name = "portal-pc-waffle"
-version.workspace = true 
-description.workspace = true 
-authors.workspace = true 
-license.workspace = true 
-edition.workspace = true 
-
 [workspace]
-members = ["."]
+members = [
+    ".",
+    "crates/waffle-entity",
+    "crates/waffle-ir",
+    "crates/waffle-frontend",
+    "crates/waffle-backend",
+    "crates/waffle-passes",
+    "crates/waffle-copying",
+    "crates/waffle-hooking",
+    "crates/waffle-fuzzing",
+]
+resolver = "2"
 
 [workspace.package]
 version = "0.5.5"
@@ -15,29 +18,6 @@ description = "Wasm Analysis Framework For Lightweight Experiments"
 authors = ["Chris Fallin <chris@cfallin.org>","gkgoat"]
 license = "Apache-2.0 WITH LLVM-exception"
 edition = "2018"
-
-[dependencies]
-wasmparser .workspace = true 
-wasm-encoder .workspace = true 
-anyhow .workspace = true 
-log .workspace = true 
-smallvec .workspace = true 
-libfuzzer-sys ={workspace = true,optional=true} 
-indexmap .workspace = true 
-stacker ={workspace = true,optional=true} 
-wasm-smith ={workspace = true,optional=true} 
-paste .workspace = true 
-serde .workspace = true 
-either .workspace = true 
-arena-traits .workspace = true 
-ssa-traits ={workspace = true,optional=true} 
-cfg-traits ={workspace = true,optional=true} 
-cfg-traits-03 ={workspace = true,optional=true} 
-ssa-traits-03 ={workspace = true,optional=true} 
-lending-iterator .workspace = true 
-hashbrown .workspace = true 
-impl-trait-for-tuples .workspace = true 
-sha3 .workspace = true 
 
 [workspace.dependencies]
 wasmparser = { version = "0.227", default-features = false, features = ["simd"] }
@@ -74,6 +54,43 @@ hashbrown = { version = "0.15.2", default-features = false, features = ["alloc",
 impl-trait-for-tuples = "0.2.3"
 sha3 = { version = "0.10.8", default-features = false }
 
+# Internal workspace crates
+waffle-entity = { path = "crates/waffle-entity", version = "0.5.5" }
+waffle-ir = { path = "crates/waffle-ir", version = "0.5.5" }
+waffle-frontend = { path = "crates/waffle-frontend", version = "0.5.5" }
+waffle-backend = { path = "crates/waffle-backend", version = "0.5.5" }
+waffle-passes = { path = "crates/waffle-passes", version = "0.5.5" }
+waffle-copying = { path = "crates/waffle-copying", version = "0.5.5" }
+waffle-hooking = { path = "crates/waffle-hooking", version = "0.5.5" }
+waffle-fuzzing = { path = "crates/waffle-fuzzing", version = "0.5.5" }
+
+[package]
+name = "portal-pc-waffle"
+version.workspace = true 
+description.workspace = true 
+authors.workspace = true 
+license.workspace = true 
+edition.workspace = true 
+
+[dependencies]
+waffle-entity .workspace = true
+waffle-ir .workspace = true
+waffle-frontend .workspace = true
+waffle-backend .workspace = true
+waffle-passes .workspace = true
+waffle-copying = {workspace = true, optional = true}
+waffle-hooking = {workspace = true, optional = true}
+waffle-fuzzing = {workspace = true, optional = true}
+
+wasmparser .workspace = true 
+wasm-encoder .workspace = true 
+log .workspace = true 
+
+ssa-traits ={workspace = true,optional=true} 
+cfg-traits ={workspace = true,optional=true} 
+cfg-traits-03 ={workspace = true,optional=true} 
+ssa-traits-03 ={workspace = true,optional=true} 
+
 [dev-dependencies]
 wat = "1.212.0"
 env_logger = "0.11"
@@ -81,12 +98,12 @@ structopt = "0.3.26"
 
 [features]
 default = []
-fuzzing = ["libfuzzer-sys", "wasm-smith"]
-stacker = ["dep:stacker"]
-ssa-traits-02 = ["dep:ssa-traits","dep:cfg-traits"]
-ssa-traits-03 = ["dep:ssa-traits-03","dep:cfg-traits-03"]
-copying=[]
-tcore=[]
-exceptions=[]
-hooking=[]
-importify=[]
+fuzzing = ["waffle-fuzzing"]
+stacker = []
+ssa-traits-02 = ["dep:ssa-traits","dep:cfg-traits", "waffle-ir/ssa-traits-02"]
+ssa-traits-03 = ["dep:ssa-traits-03","dep:cfg-traits-03", "waffle-ir/ssa-traits-03"]
+copying = ["waffle-copying"]
+tcore = ["waffle-passes/tcore"]
+exceptions = []
+hooking = ["waffle-hooking"]
+importify = ["waffle-passes/importify"]

@@ -1,0 +1,34 @@
+[package]
+name = "waffle-ir"
+version.workspace = true
+description = "Core IR for the WAFFLE Wasm analysis framework"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+waffle-entity .workspace = true
+wasmparser .workspace = true
+wasm-encoder .workspace = true
+anyhow .workspace = true
+log .workspace = true
+smallvec .workspace = true
+indexmap .workspace = true
+paste .workspace = true
+serde .workspace = true
+either .workspace = true
+arena-traits .workspace = true
+hashbrown .workspace = true
+sha3 .workspace = true
+
+ssa-traits = {workspace = true, optional = true}
+cfg-traits = {workspace = true, optional = true}
+cfg-traits-03 = {workspace = true, optional = true}
+ssa-traits-03 = {workspace = true, optional = true}
+lending-iterator .workspace = true
+impl-trait-for-tuples .workspace = true
+
+[features]
+default = []
+ssa-traits-02 = ["dep:ssa-traits", "dep:cfg-traits"]
+ssa-traits-03 = ["dep:ssa-traits-03", "dep:cfg-traits-03"]
