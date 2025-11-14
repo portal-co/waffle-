@@ -56,15 +56,15 @@ impl-trait-for-tuples = "0.2.3"
 sha3 = { version = "0.10.8", default-features = false }
 
 # Internal workspace crates
-waffle-entity = { path = "crates/waffle-entity", version = "0.5.5" }
-waffle-ir = { path = "crates/waffle-ir", version = "0.5.5" }
-waffle-frontend = { path = "crates/waffle-frontend", version = "0.5.5" }
-waffle-backend = { path = "crates/waffle-backend", version = "0.5.5" }
-waffle-passes-shared = { path = "crates/waffle-passes-shared", version = "0.5.5" }
-waffle-passes = { path = "crates/waffle-passes", version = "0.5.5" }
-waffle-copying = { path = "crates/waffle-copying", version = "0.5.5" }
-waffle-hooking = { path = "crates/waffle-hooking", version = "0.5.5" }
-waffle-fuzzing = { path = "crates/waffle-fuzzing", version = "0.5.5" }
+waffle-entity = { path = "crates/waffle-entity",package = "portal-pc-waffle-entity", version = "0.5.5" }
+waffle-ir = { path = "crates/waffle-ir",package = "portal-pc-waffle-ir", version = "0.5.5" }
+waffle-frontend = { path = "crates/waffle-frontend",package = "portal-pc-waffle-frontend", version = "0.5.5" }
+waffle-backend = { path = "crates/waffle-backend",package = "portal-pc-waffle-backend", version = "0.5.5" }
+waffle-passes-shared = { path = "crates/waffle-passes-shared",package = "portal-pc-waffle-passes-shared", version = "0.5.5" }
+waffle-passes = { path = "crates/waffle-passes",package = "portal-pc-waffle-passes", version = "0.5.5" }
+waffle-copying = { path = "crates/waffle-copying",package = "portal-pc-waffle-copying", version = "0.5.5" }
+waffle-hooking = { path = "crates/waffle-hooking",package = "portal-pc-waffle-hooking", version = "0.5.5" }
+waffle-fuzzing = { path = "crates/waffle-fuzzing",package = "portal-pc-waffle-fuzzing", version = "0.5.5" }
 
 [package]
 name = "portal-pc-waffle"

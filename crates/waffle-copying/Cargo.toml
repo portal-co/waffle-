@@ -1,5 +1,5 @@
 [package]
-name = "waffle-copying"
+name = "portal-pc-waffle-copying"
 version.workspace = true
 description = "Copying module functionality for the WAFFLE Wasm analysis framework"
 authors.workspace = true

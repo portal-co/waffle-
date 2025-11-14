@@ -1,5 +1,5 @@
 [package]
-name = "waffle-hooking"
+name = "portal-pc-waffle-hooking"
 version.workspace = true
 description = "Hooking functionality for the WAFFLE Wasm analysis framework"
 authors.workspace = true

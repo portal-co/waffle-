@@ -1,5 +1,5 @@
 [package]
-name = "waffle-ir"
+name = "portal-pc-waffle-ir"
 version.workspace = true
 description = "Core IR for the WAFFLE Wasm analysis framework"
 authors.workspace = true

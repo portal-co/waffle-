@@ -1,5 +1,5 @@
 [package]
-name = "waffle-passes-shared"
+name = "portal-pc-waffle-passes-shared"
 version.workspace = true
 description = "Shared passes for the WAFFLE Wasm analysis framework (used by both backend and passes)"
 authors.workspace = true

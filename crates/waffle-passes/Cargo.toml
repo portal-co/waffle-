@@ -1,5 +1,5 @@
 [package]
-name = "waffle-passes"
+name = "portal-pc-waffle-passes"
 version.workspace = true
 description = "Optimization passes for the WAFFLE Wasm analysis framework"
 authors.workspace = true

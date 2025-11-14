@@ -1,5 +1,5 @@
 [package]
-name = "waffle-frontend"
+name = "portal-pc-waffle-frontend"
 version.workspace = true
 description = "Frontend (Wasm to IR) for the WAFFLE Wasm analysis framework"
 authors.workspace = true

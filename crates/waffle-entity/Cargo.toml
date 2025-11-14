@@ -1,5 +1,5 @@
 [package]
-name = "waffle-entity"
+name = "portal-pc-waffle-entity"
 version.workspace = true
 description = "Entity types for the WAFFLE Wasm analysis framework"
 authors.workspace = true

@@ -1,5 +1,5 @@
 [package]
-name = "waffle-fuzzing"
+name = "portal-pc-waffle-fuzzing"
 version.workspace = true
 description = "Fuzzing utilities for the WAFFLE Wasm analysis framework"
 authors.workspace = true
