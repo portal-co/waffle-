@@ -14,41 +14,35 @@
 #![allow(dead_code)]
 #![no_std]
 #![forbid(unsafe_code)]
-#[macro_use]
-extern crate alloc;
-// Re-export wasmparser for easier use of the right version by our embedders.
-pub use wasmparser;
-// Likewise for wasm-encoder.
-pub use wasm_encoder;
-pub mod backend;
-pub mod cfg;
-pub mod entity;
-mod errors;
-mod frontend;
-mod ir;
-pub mod op_traits;
-mod ops;
-pub mod passes;
-pub mod pool;
-mod scoped_map;
-pub use errors::*;
-pub use ir::*;
-pub use op_traits::SideEffect;
-pub use ops::{Ieee32, Ieee64, MemoryArg, Operator};
-mod interp;
-pub use interp::*;
-pub mod util;
-pub use passes::basic_opt::OptOptions;
+
+// Re-export all the smaller crates
+pub use waffle_entity as entity;
+pub use waffle_ir as ir;
+pub use waffle_frontend as frontend;
+pub use waffle_backend as backend;
+pub use waffle_passes as passes;
+
 #[cfg(feature = "copying")]
-pub mod copying;
-#[cfg(feature = "fuzzing")]
-pub mod fuzzing;
+pub use waffle_copying as copying;
 #[cfg(feature = "hooking")]
-pub mod hooking;
-#[cfg(feature = "ssa-traits-02")]
-mod ssa_traits_impls_02;
-#[cfg(feature = "ssa-traits-03")]
-mod ssa_traits_impls_03;
-#[doc(hidden)]
-pub mod td;
-// mod td;
+pub use waffle_hooking as hooking;
+#[cfg(feature = "fuzzing")]
+pub use waffle_fuzzing as fuzzing;
+
+// Re-export wasmparser and wasm-encoder for easier use
+pub use wasmparser;
+pub use wasm_encoder;
+
+// Re-export commonly used items to preserve existing API
+pub use waffle_entity::*;
+pub use waffle_ir::*;
+pub use waffle_frontend::*;
+pub use waffle_backend::*;
+pub use waffle_passes::*;
+
+#[cfg(feature = "copying")]
+pub use waffle_copying::*;
+#[cfg(feature = "hooking")]
+pub use waffle_hooking::*;
+#[cfg(feature = "fuzzing")]
+pub use waffle_fuzzing::*;

@@ -1,0 +1,18 @@
+[package]
+name = "waffle-passes-shared"
+version.workspace = true
+description = "Shared passes for the WAFFLE Wasm analysis framework (used by both backend and passes)"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+waffle-entity .workspace = true
+waffle-ir .workspace = true
+anyhow .workspace = true
+log .workspace = true
+smallvec .workspace = true
+hashbrown .workspace = true
+
+[features]
+default = []

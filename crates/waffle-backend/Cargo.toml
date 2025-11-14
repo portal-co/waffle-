@@ -1,0 +1,21 @@
+[package]
+name = "waffle-backend"
+version.workspace = true
+description = "Backend (IR to Wasm) for the WAFFLE Wasm analysis framework"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+waffle-entity .workspace = true
+waffle-ir .workspace = true
+waffle-passes-shared .workspace = true
+wasmparser .workspace = true
+wasm-encoder .workspace = true
+anyhow .workspace = true
+log .workspace = true
+smallvec .workspace = true
+hashbrown .workspace = true
+
+[features]
+default = []
