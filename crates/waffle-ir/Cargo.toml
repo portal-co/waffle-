@@ -32,3 +32,8 @@ impl-trait-for-tuples .workspace = true
 default = []
 ssa-traits-02 = ["dep:ssa-traits", "dep:cfg-traits"]
 ssa-traits-03 = ["dep:ssa-traits-03", "dep:cfg-traits-03"]
+
+[dev-dependencies]
+wat = "1.212.0"
+env_logger = "0.11"
+structopt = "0.3.26"

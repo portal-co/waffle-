@@ -3,6 +3,7 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::{Context, Ok};
+use waffle_passes_shared::{CFGInfo, maxssa};
 use core::mem::take;
 // use fcopy::obf_mod;
 // use waffle_ast::{
@@ -11,8 +12,8 @@ use core::mem::take;
 // };
 // use goatf2::JustNormalCFF;
 // use crate::more::Flix;
+use waffle_copying::{kts::Kts, module::tree_shake};
 use crate::{
-    copying::{kts::Kts, module::tree_shake},
     entity::{EntityRef, PerEntity},
     passes, BlockTarget, ExportKind, Func, FuncDecl, FunctionBody, Import, ImportKind, Module,
     Operator, Signature, Table, Terminator, Type, ValueDef,
@@ -49,7 +50,7 @@ pub fn un_tcore(m: &mut Module) -> anyhow::Result<()> {
 }
 pub fn tcore(m: &mut Module, do_fuse: bool) -> anyhow::Result<()> {
     // let mut m = Module::from_wasm_bytes(a, &Default::default())?;
-    m.expand_all_funcs()?;
+    // m.expand_all_funcs()?;
     let mut b = BTreeMap::new();
     for (f, d) in m.funcs.entries() {
         if let Some(d) = d.body() {
@@ -74,7 +75,7 @@ pub fn tcore(m: &mut Module, do_fuse: bool) -> anyhow::Result<()> {
 }
 pub fn tcore2(m: &mut Module, mut filter: impl FnMut(Func) -> bool) -> anyhow::Result<()> {
     // let mut m = Module::from_wasm_bytes(a, &Default::default())?;
-    m.expand_all_funcs()?;
+    // m.expand_all_funcs()?;
     let mut b = BTreeMap::new();
     for (f, d) in m.funcs.entries() {
         if !filter(f) {
@@ -101,25 +102,7 @@ pub fn tcore2(m: &mut Module, mut filter: impl FnMut(Func) -> bool) -> anyhow::R
     return Ok(());
 }
 pub type TCache = BTreeMap<(Table, SignatureData), Func>;
-pub fn trampoline_module(m: &mut Module, seal: bool) -> anyhow::Result<()> {
-    let mut b = BTreeMap::new();
-    for (f, d) in m.funcs.entries() {
-        if let Some(d) = d.body() {
-            let d = d.clone();
-            b.insert(f, d);
-        }
-    }
-    // let mut all
-    // let c = b.clone();
-    let mut c = TCache::new();
-    for (k, v) in b.iter_mut() {
-        gen_trampolines(v, m, &mut c, seal)?;
-    }
-    for (k, v) in b {
-        *m.funcs[k].body_mut().unwrap() = v;
-    }
-    return Ok(());
-}
+
 // pub fn slice_module(m: &mut Module) -> anyhow::Result<()> {
 //     trampoline_module(m, true)?;
 //     obf_mod(
@@ -184,143 +167,7 @@ pub fn trampoline_module(m: &mut Module, seal: bool) -> anyhow::Result<()> {
 //     tree_shake(m)?;
 //     return Ok(());
 // }
-pub fn trampoline_bytes(a: &[u8], seal: bool) -> anyhow::Result<Vec<u8>> {
-    let mut m = Module::from_wasm_bytes(a, &Default::default())?;
-    m.expand_all_funcs()?;
-    trampoline_module(&mut m, seal)?;
-    return Ok(m.to_wasm_bytes()?);
-}
-pub fn gen_trampoline(
-    m: &mut Module,
-    sig: Signature,
-    table_index: Table,
-    c: &mut TCache,
-    seal: bool,
-) -> anyhow::Result<Func> {
-    let mut n = m.signatures[sig].clone();
-    let cache_key = (table_index, n.clone());
-    if let Some(d) = c.get(&cache_key) {
-        return Ok(*d);
-    }
-    {
-        let SignatureData::Func {
-            params, returns, ..
-        } = &mut n
-        else {
-            anyhow::bail!("invalid signature")
-        };
-        params.push(Type::I32);
-    }
-    let nd = m.signatures.push(n.clone());
-    let mut b = FunctionBody::new(&m, nd);
-    // let sw = b.add_blockparam(b.entry, Type::I32);
-    let mut args = b.blocks[b.entry]
-        .params
-        .iter()
-        .map(|(a, b)| *b)
-        .collect::<Vec<_>>();
-    // for p in n.params.iter() {
-    //     args.push(b.add_blockparam(b.entry, *p));
-    // }
-    let idx = args.len() - 1;
-    let sw = args[idx];
-    let mut targets = vec![];
-    let nb = b.add_block();
-    b.set_terminator(nb, Terminator::Unreachable);
-    for e in m.tables[table_index]
-        .func_elements
-        .clone()
-        .context("no funcs for a called table")?
-    {
-        if e.is_valid() && m.funcs.get(e).map(|f| f.sig()) == Some(sig) {
-            let t = b.add_block();
-            // eprintln!("valid: {e}");
-            // let vs = b.arg_pool.from_iter(args[..idx].iter().map(|a| *a));
-            // let ts = b.type_pool.from_iter(n.clone().returns.iter().map(|a| *a));
-            // let v = b.add_value(ValueDef::Operator(
-            //     Operator::Call { function_index: e },
-            //     vs,
-            //     ts,
-            // ));
-            // b.append_to_block(t, v);
-            // let r = more_crate::results_ref(m, &mut b, v).context("supposed to ba a call")?;
-            b.set_terminator(
-                t,
-                Terminator::ReturnCall {
-                    func: e,
-                    args: args[..idx].iter().map(|a| *a).collect(),
-                },
-            );
-            targets.push(BlockTarget {
-                block: t,
-                args: vec![],
-            })
-        } else {
-            targets.push(BlockTarget {
-                block: nb,
-                args: vec![],
-            })
-        }
-    }
-    let cb = b.add_block();
-    if seal {
-        b.set_terminator(cb, Terminator::Unreachable);
-    } else {
-        b.set_terminator(
-            cb,
-            Terminator::ReturnCallIndirect {
-                sig: sig,
-                table: table_index,
-                args: args,
-            },
-        );
-    }
-    b.set_terminator(
-        b.entry,
-        Terminator::Select {
-            value: sw,
-            targets: targets,
-            default: BlockTarget {
-                block: cb,
-                args: vec![],
-            },
-        },
-    );
-    // b.value_locals = PerEntity::default();
-    let n = m.funcs.push(FuncDecl::Body(nd, format!("$"), b));
-    c.insert(cache_key, n);
-    return Ok(n);
-}
-pub fn gen_trampolines(
-    b: &mut FunctionBody,
-    m: &mut Module,
-    t: &mut TCache,
-    seal: bool,
-) -> anyhow::Result<()> {
-    // b.value_locals = PerEntity::default();
-    for (_, v) in b.values.entries_mut() {
-        if let ValueDef::Operator(o, _1, _2) = v {
-            if let Operator::CallIndirect {
-                sig_index,
-                table_index,
-            } = o.clone()
-            {
-                *o = Operator::Call {
-                    function_index: gen_trampoline(m, sig_index, table_index, t, seal)?,
-                }
-            }
-        }
-    }
-    for (_, k) in b.blocks.entries_mut() {
-        if let Terminator::ReturnCallIndirect { sig, table, args } = k.terminator.clone() {
-            k.terminator = Terminator::ReturnCall {
-                func: gen_trampoline(m, sig, table, t, seal)?,
-                args: args,
-            }
-        }
-    }
-    return Ok(());
-}
+
 pub fn tcore_tco_pass(
     // mo: &BTreeMap<Func, FunctionBody>,
     mo2: &mut Module,
@@ -356,7 +203,8 @@ pub fn tcore_tco_pass(
                 // eprintln!("fun_name={};func={}",mo.funcs[fun].name(),mo.funcs[fun].body().unwrap().display("", Some(mo)));
                 // b.convert_to_max_ssa(None);
                 let mut v = mo2.funcs[fun].body_mut().unwrap();
-                v.convert_to_max_ssa(None);
+                let cfg = CFGInfo::new(v);
+                maxssa::run(v, None, &cfg);
                 let e = Kts {
                     blocks: Default::default(),
                 }

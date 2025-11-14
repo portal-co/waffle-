@@ -10,6 +10,7 @@ use alloc::borrow::ToOwned;
 use alloc::vec;
 use alloc::vec::Vec;
 use smallvec::{smallvec, SmallVec};
+use waffle_passes_shared::value_is_pure;
 #[non_exhaustive]
 #[derive(Clone, Debug)]
 pub struct OptOptions {
@@ -60,12 +61,7 @@ impl<'a> DomtreePass for BasicOptPass<'a> {
         self.map.pop_level();
     }
 }
-pub fn value_is_pure(value: Value, body: &FunctionBody) -> bool {
-    match body.values[value] {
-        ValueDef::Operator(op, ..) if op.is_pure() => true,
-        _ => false,
-    }
-}
+
 fn value_is_const(value: Value, body: &FunctionBody) -> ConstVal {
     match body.values[value] {
         ValueDef::Operator(Operator::I32Const { value }, _, _) => ConstVal::I32(value),

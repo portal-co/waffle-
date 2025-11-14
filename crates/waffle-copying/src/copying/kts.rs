@@ -1,11 +1,12 @@
 use crate::{
-    cfg::CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, FunctionBody, Operator,
+    cfg::CFGInfo,  Block, BlockTarget, FunctionBody, Operator,
     ValueDef,
 };
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Context;
+use waffle_passes_shared::value_is_pure;
 use core::default;
 #[derive(Default)]
 pub struct Kts {
@@ -157,6 +158,7 @@ impl Kts {
                 }
                 crate::Terminator::Unreachable => crate::Terminator::Unreachable,
                 crate::Terminator::None => crate::Terminator::None,
+                _ => todo!()
             };
             dst.set_terminator(new, t);
         }

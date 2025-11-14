@@ -1,5 +1,5 @@
 use crate::{
-    CFGInfo, passes::basic_opt::value_is_pure, Block, BlockTarget, Func, FunctionBody,
+    CFGInfo, Block, BlockTarget, Func, FunctionBody,
     HeapType, Operator, Type, ValueDef, WithNullable,
 };
 use alloc::borrow::ToOwned;
@@ -7,6 +7,7 @@ use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Context;
+use waffle_passes_shared::value_is_pure;
 use crate::arena_traits::IndexAlloc;
 use core::default;
 #[derive(Default)]

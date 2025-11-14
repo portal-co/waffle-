@@ -1,5 +1,7 @@
 //! Integration test to ensure that roundtripping works.
 use portal_pc_waffle::{FrontendOptions, Module};
+use waffle_backend::ModuleExt;
+use waffle_frontend::{ModuleExt as ModuleParser};
 use std::path::PathBuf;
 fn get_wats() -> Vec<PathBuf> {
     let test_dir = std::env::current_dir()

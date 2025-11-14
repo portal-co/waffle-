@@ -419,7 +419,7 @@ impl<'a> Reducifier<'a> {
 mod test {
     use super::*;
     use crate::{
-        entity::EntityRef, BlockTarget, FuncDecl, Module, Operator, SignatureData, Terminator, Type,
+        BlockTarget, FuncDecl, Module, ModuleExt, Operator, SignatureData, Terminator, Type, entity::EntityRef
     };
     use alloc::string::ToString;
     #[test]

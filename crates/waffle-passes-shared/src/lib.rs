@@ -17,3 +17,10 @@ pub mod resolve_aliases;
 
 pub use maxssa::*;
 pub use resolve_aliases::*;
+
+pub fn value_is_pure(value: Value, body: &FunctionBody) -> bool {
+    match body.values[value] {
+        ValueDef::Operator(op, ..) if op.is_pure() => true,
+        _ => false,
+    }
+}

@@ -1,10 +1,11 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::Context;
-use arena_traits::IndexAlloc;
+use waffle_passes_shared::{maxssa, value_is_pure};
+use crate::arena_traits::IndexAlloc;
 use core::{default, iter::once};
 // use rayon::iter::{once, ParallelIterator};
 use crate::{
-    cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, Block, BlockTarget, Func,
+    cfg::CFGInfo, util::new_sig, Block, BlockTarget, Func,
     FuncDecl, FunctionBody, Module, Operator, SignatureData, ValueDef,
 };
 use alloc::string::ToString;
@@ -182,6 +183,7 @@ impl Fts {
                 }
                 crate::Terminator::Unreachable => crate::Terminator::Unreachable,
                 crate::Terminator::None => crate::Terminator::None,
+                _ => todo!()
             };
             dst.set_terminator(new, t);
         }
@@ -351,6 +353,7 @@ impl Fts {
                 }
                 crate::Terminator::Unreachable => crate::Terminator::Unreachable,
                 crate::Terminator::None => crate::Terminator::None,
+                _ => todo!()
             };
             dst.set_terminator(new, t);
             module.funcs[new_f] = FuncDecl::Body(s, k.to_string(), dst);
@@ -358,7 +361,8 @@ impl Fts {
     }
 }
 pub fn run_once(f: &mut FunctionBody, module: &mut Module) -> anyhow::Result<()> {
-    f.convert_to_max_ssa(None);
+    let cfg = CFGInfo::new(f);
+    maxssa::run(f, None, &cfg);
     let k = Fts {
         blocks: Default::default(),
         // fuel,

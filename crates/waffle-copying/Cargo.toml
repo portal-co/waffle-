@@ -12,6 +12,13 @@ waffle-ir .workspace = true
 anyhow .workspace = true
 log .workspace = true
 hashbrown .workspace = true
+paste.workspace = true
+waffle-passes-shared .workspace = true
 
 [features]
 default = []
+
+[dev-dependencies]
+wat = "1.212.0"
+env_logger = "0.11"
+structopt = "0.3.26"

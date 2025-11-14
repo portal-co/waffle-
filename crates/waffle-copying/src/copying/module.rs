@@ -1,5 +1,6 @@
 use super::fcopy::{clone_fn, DontObf};
 use super::kts::Kts;
+use crate::arena_traits::IndexAlloc;
 use crate::op_traits::rewrite_mem;
 use crate::util::{add_start, new_sig};
 use crate::{
@@ -14,7 +15,6 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Context;
-use arena_traits::IndexAlloc;
 use core::mem::{replace, take};
 use core::{
     hash::Hash,
@@ -293,6 +293,7 @@ impl<
                 ImportKind::ControlTag(self.internal_translate_control_tag(control_tag)?)
             }
             ImportKind::Type(t) => ImportKind::Type(self.translate_sig(t)?),
+            _ => todo!(),
         };
         // if let Some((j, k)) = i.as_ref() {
         //     crate::td::tm(
@@ -373,6 +374,7 @@ impl<
                         *like = self.translate_sig(*like)?;
                     }
                 }
+                _ => todo!(),
             };
             self.dest.signatures[k] = d;
         }

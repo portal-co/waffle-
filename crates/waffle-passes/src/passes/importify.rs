@@ -1,5 +1,5 @@
 use crate::{
-    cfg::CFGInfo, passes::basic_opt::value_is_pure, util::new_sig, util::results_ref_2, Block,
+    cfg::CFGInfo, waffle_passes_shared::value_is_pure, util::new_sig, util::results_ref_2, Block,
     BlockTarget, Export, Func, FuncDecl, FunctionBody, Import, ImportKind, Module, Operator, Type,
     Value, ValueDef,
 };
@@ -10,6 +10,7 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use anyhow::Context;
+use waffle_passes_shared::maxssa;
 use core::{
     default,
     mem::{replace, take},
@@ -354,7 +355,8 @@ pub fn importify_mod(m: &mut Module, ids: Arc<AtomicUsize>, name: String) -> any
     for f in m.funcs.iter().collect::<BTreeSet<_>>() {
         let mut g = take(&mut m.funcs[f]);
         if let FuncDecl::Body(s, _, b) = &mut g {
-            b.convert_to_max_ssa(None);
+            let cfg = CFGInfo::new(b);
+            maxssa::run(b, None, &cfg);
             let s = *s;
             let mut new = FunctionBody::new(&m, s);
             new.entry = match (Importify::new(ids.clone(), name.clone(), &mut BTreeMap::new()))

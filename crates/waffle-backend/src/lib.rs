@@ -28,3 +28,28 @@ pub fn to_wasm_bytes(module: &Module<'_>) -> Result<Vec<u8>> {
 pub fn to_encoded_module(module: &Module<'_>) -> Result<wasm_encoder::Module> {
     backend::compile(module)
 }
+
+pub trait ModuleExt<'a>{
+    fn module(&self) -> &Module<'a>;
+    fn to_wasm_bytes(&self) -> Result<Vec<u8>>{
+        return to_wasm_bytes(self.module());
+    }
+    fn to_encoded_module(&self) -> Result<wasm_encoder::Module>{
+        return to_encoded_module(self.module());
+    }
+}
+impl<'a> ModuleExt<'a> for Module<'a>{
+    fn module(&self) -> &Module<'a> {
+        self
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn empty_module_valid() {
+        let module = Module::empty();
+        let _ = module.to_wasm_bytes().unwrap();
+    }
+}

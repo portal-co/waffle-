@@ -10,6 +10,7 @@ edition.workspace = true
 waffle-entity .workspace = true
 waffle-ir .workspace = true
 waffle-passes-shared .workspace = true
+waffle-copying = {workspace = true,optional = true}
 anyhow .workspace = true
 log .workspace = true
 smallvec .workspace = true
@@ -18,5 +19,11 @@ sha3 .workspace = true
 
 [features]
 default = []
-tcore = []
+tcore = ["copying"]
 importify = []
+copying = ["dep:waffle-copying"]
+
+[dev-dependencies]
+wat = "1.212.0"
+env_logger = "0.11"
+structopt = "0.3.26"

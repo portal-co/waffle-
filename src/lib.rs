@@ -16,33 +16,36 @@
 #![forbid(unsafe_code)]
 
 // Re-export all the smaller crates
-pub use waffle_entity as entity;
-pub use waffle_ir as ir;
-pub use waffle_frontend as frontend;
 pub use waffle_backend as backend;
+pub use waffle_entity as entity;
+pub use waffle_frontend as frontend;
+pub use waffle_ir as ir;
 pub use waffle_passes as passes;
 
 #[cfg(feature = "copying")]
 pub use waffle_copying as copying;
-#[cfg(feature = "hooking")]
-pub use waffle_hooking as hooking;
 #[cfg(feature = "fuzzing")]
 pub use waffle_fuzzing as fuzzing;
+#[cfg(feature = "hooking")]
+pub use waffle_hooking as hooking;
 
 // Re-export wasmparser and wasm-encoder for easier use
-pub use wasmparser;
 pub use wasm_encoder;
+pub use wasmparser;
 
 // Re-export commonly used items to preserve existing API
-pub use waffle_entity::*;
-pub use waffle_ir::*;
-pub use waffle_frontend::*;
 pub use waffle_backend::*;
+pub use waffle_entity::*;
+pub use waffle_frontend::*;
+pub use waffle_ir::*;
 pub use waffle_passes::*;
 
 #[cfg(feature = "copying")]
 pub use waffle_copying::*;
-#[cfg(feature = "hooking")]
-pub use waffle_hooking::*;
 #[cfg(feature = "fuzzing")]
 pub use waffle_fuzzing::*;
+#[cfg(feature = "hooking")]
+pub use waffle_hooking::*;
+
+pub trait ModuleExt<'a>: backend::ModuleExt<'a> + frontend::ModuleExt<'a> {}
+impl<'a, T: backend::ModuleExt<'a> + frontend::ModuleExt<'a>> ModuleExt<'a> for T {}

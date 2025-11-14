@@ -514,12 +514,3 @@ impl<'a, T: FuncCollector> FuncCollector for &'a mut T {
         FuncCollector::collect_func(&mut **self, f);
     }
 }
-#[cfg(test)]
-mod test {
-    use super::*;
-    #[test]
-    fn empty_module_valid() {
-        let module = Module::empty();
-        let _ = module.to_wasm_bytes().unwrap();
-    }
-}

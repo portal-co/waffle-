@@ -1,5 +1,5 @@
+use waffle_copying::fcopy::{obf_mod, DontObf, Obfuscate};
 use crate::{
-    copying::fcopy::{obf_mod, DontObf, Obfuscate},
     util::new_sig,
     Block, BlockTarget, Func, FunctionBody, Memory, MemoryArg, Module, Operator, SignatureData,
     Type,

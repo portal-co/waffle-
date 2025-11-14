@@ -1,10 +1,11 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use hashbrown::HashMap;
+use waffle_passes_shared::maxssa;
 // use libc::key_t;
 use crate::util::new_sig;
 use crate::{
-    cfg::CFGInfo, entity::EntityRef, pool::ListRef, Block, BlockTarget, FrontendOptions, Func,
+    cfg::CFGInfo, entity::EntityRef, pool::ListRef, Block, BlockTarget, Func,
     FunctionBody, Memory, MemoryArg, Module, Operator, Signature, SignatureData, Terminator, Type,
     Value, ValueDef,
 };
@@ -152,7 +153,8 @@ pub fn tweak_terminator(
                 m(a)
             }
         }
-        Terminator::UB => {}
+        Terminator::UB => {},
+        _ => todo!()
     }
 }
 pub fn clone_value(
@@ -352,7 +354,9 @@ pub fn clone_fn(
 ) -> anyhow::Result<FunCloneRes> {
     let mut basis = basis.clone();
     sanity(&basis);
-    basis.convert_to_max_ssa(None);
+    let cfg = CFGInfo::new(&basis);
+    // basis.convert_to_max_ssa(None);
+    maxssa::run(&mut basis, None, &cfg);
     let mut all = BTreeMap::new();
     for k in basis.blocks.entries().map(|a| a.0) {
         all.insert(k, f.add_block());

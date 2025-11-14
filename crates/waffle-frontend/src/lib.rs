@@ -63,3 +63,26 @@ pub fn expand_all_funcs<'a>(module: &mut Module<'a>) -> Result<()> {
     }
     Ok(())
 }
+
+
+pub trait ModuleExt<'a>: Sized{
+    fn module(&self) -> &Module<'a>;
+    fn module_mut(&mut self) -> &mut Module<'a>;
+    fn from_wasm_bytes(bytes: &'a [u8], options: &FrontendOptions) -> Result<Self>;
+    fn expand_all_funcs(&mut self) -> Result<()>{
+        expand_all_funcs(self.module_mut())
+    }
+}
+impl<'a> ModuleExt<'a> for Module<'a>{
+    fn module(&self) -> &Module<'a> {
+        self
+    }
+
+    fn module_mut(&mut self) -> &mut Module<'a> {
+        self
+    }
+
+    fn from_wasm_bytes(bytes: &'a [u8], options: &FrontendOptions) -> Result<Self> {
+        from_wasm_bytes(bytes, options)
+    }
+}
