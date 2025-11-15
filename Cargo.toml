@@ -111,6 +111,3 @@ tcore = ["waffle-passes/tcore"]
 exceptions = []
 hooking = ["waffle-hooking"]
 importify = ["waffle-passes/importify"]
-
-[workspace.metadata.release]
-rate-limit.new-packages = 30
