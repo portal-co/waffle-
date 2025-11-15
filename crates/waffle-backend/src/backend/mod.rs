@@ -9,6 +9,7 @@ use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::vec;
 use alloc::vec::Vec;
+use waffle_ir::SignatureExt;
 use wasm_encoder::Encode;
 use wasm_encoder::Ieee32;
 use wasm_encoder::Ieee64;

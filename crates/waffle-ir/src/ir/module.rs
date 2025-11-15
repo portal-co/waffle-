@@ -228,8 +228,12 @@ impl From<&SignatureData> for wasm_encoder::SubType {
         }
     }
 }
-impl Signature {
-    pub fn is_backref(&self, module: &Module) -> bool {
+pub trait SignatureExt {
+    fn is_backref(&self, module: &Module) -> bool;
+}
+
+impl SignatureExt for Signature {
+    fn is_backref(&self, module: &Module) -> bool {
         return match &module.signatures[*self] {
             SignatureData::Func {
                 params, returns, ..

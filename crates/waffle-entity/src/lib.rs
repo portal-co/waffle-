@@ -10,6 +10,7 @@ pub use arena_traits;
 
 pub mod entity;
 pub mod pool;
+pub mod entities;
 
 pub use entity::*;
 pub use pool::*;
