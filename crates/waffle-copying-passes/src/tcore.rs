@@ -3,8 +3,8 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::{Context, Ok};
-use waffle_passes_shared::{CFGInfo, maxssa};
 use core::mem::take;
+use waffle_passes_shared::{maxssa, CFGInfo};
 // use fcopy::obf_mod;
 // use waffle_ast::{
 //     bulk_memory_lowering::{Reload, Warp},
@@ -12,13 +12,14 @@ use core::mem::take;
 // };
 // use goatf2::JustNormalCFF;
 // use crate::more::Flix;
-use waffle_copying::{kts::Kts, module::tree_shake};
 use crate::{
     entity::{EntityRef, PerEntity},
-    passes, BlockTarget, ExportKind, Func, FuncDecl, FunctionBody, Import, ImportKind, Module,
-    Operator, Signature, Table, Terminator, Type, ValueDef,
+    BlockTarget, ExportKind, Func, FuncDecl, FunctionBody, Import, ImportKind, Module, Operator,
+    Signature, Table, Terminator, Type, ValueDef,
 };
 use crate::{SignatureData, Value};
+use waffle_copying::{kts::Kts, module::tree_shake};
+use waffle_passes::passes;
 // use crate::fcopy::DontObf;
 // pub use waffle_ast::fcopy;
 // use waffle_ast::fcopy::DontObf;

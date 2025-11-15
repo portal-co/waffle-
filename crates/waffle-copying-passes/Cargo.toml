@@ -1,5 +1,5 @@
 [package]
-name = "portal-pc-waffle-passes"
+name = "portal-pc-waffle-copying-passes"
 version.workspace = true
 description = "Optimization passes for the WAFFLE Wasm analysis framework"
 authors.workspace = true
@@ -11,17 +11,10 @@ repository.workspace = true
 waffle-entity .workspace = true
 waffle-ir .workspace = true
 waffle-passes-shared .workspace = true
+waffle-copying.workspace = true
+waffle-passes.workspace = true
 anyhow .workspace = true
 log .workspace = true
 smallvec .workspace = true
 hashbrown .workspace = true
 sha3 .workspace = true
-
-[features]
-default = []
-importify = []
-
-[dev-dependencies]
-wat = "1.212.0"
-env_logger = "0.11"
-structopt = "0.3.26"

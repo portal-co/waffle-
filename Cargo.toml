@@ -9,7 +9,8 @@ members = [
     "crates/waffle-passes",
     "crates/waffle-copying",
     "crates/waffle-hooking",
-    "crates/waffle-fuzzing",
+    "crates/waffle-fuzzing", 
+    "crates/waffle-copying-passes",
 ]
 resolver = "2"
 
@@ -63,6 +64,7 @@ waffle-frontend = { path = "crates/waffle-frontend",package = "portal-pc-waffle-
 waffle-backend = { path = "crates/waffle-backend",package = "portal-pc-waffle-backend", version = "0.6.0-alpha.1" }
 waffle-passes-shared = { path = "crates/waffle-passes-shared",package = "portal-pc-waffle-passes-shared", version = "0.6.0-alpha.1" }
 waffle-passes = { path = "crates/waffle-passes",package = "portal-pc-waffle-passes", version = "0.6.0-alpha.1" }
+waffle-copying-passes = { path = "crates/waffle-copying-passes",package = "portal-pc-waffle-copying-passes", version = "0.6.0-alpha.1" }
 waffle-copying = { path = "crates/waffle-copying",package = "portal-pc-waffle-copying", version = "0.6.0-alpha.1" }
 waffle-hooking = { path = "crates/waffle-hooking",package = "portal-pc-waffle-hooking", version = "0.6.0-alpha.1" }
 waffle-fuzzing = { path = "crates/waffle-fuzzing",package = "portal-pc-waffle-fuzzing", version = "0.6.0-alpha.1" }
@@ -85,6 +87,7 @@ waffle-passes .workspace = true
 waffle-copying = {workspace = true, optional = true}
 waffle-hooking = {workspace = true, optional = true}
 waffle-fuzzing = {workspace = true, optional = true}
+waffle-copying-passes = {workspace = true,optional = true}
 
 wasmparser .workspace = true 
 wasm-encoder .workspace = true 
@@ -107,7 +110,7 @@ stacker = []
 ssa-traits-02 = ["dep:ssa-traits","dep:cfg-traits", "waffle-ir/ssa-traits-02"]
 ssa-traits-03 = ["dep:ssa-traits-03","dep:cfg-traits-03", "waffle-ir/ssa-traits-03"]
 copying = ["waffle-copying"]
-tcore = ["waffle-passes/tcore"]
+tcore = ["dep:waffle-copying-passes"]
 exceptions = []
 hooking = ["waffle-hooking"]
 importify = ["waffle-passes/importify"]

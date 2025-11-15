@@ -12,8 +12,5 @@ pub mod frint;
 #[cfg(feature = "importify")]
 pub mod importify;
 pub mod inline;
-#[cfg(feature = "copying")]
-pub mod mapping;
-#[cfg(feature = "tcore")]
-pub mod tcore;
+
 pub mod ub_vaccum;
