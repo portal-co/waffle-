@@ -1404,7 +1404,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
             | FuncDecl::Compiled(sig, _, _) => {
                 funcs.function(sig.index() as u32);
             }
-            FuncDecl::None => panic!("FuncDecl::None at compilation time"),
+            f => panic!("{f:?} at compilation time"),
         }
     }
     into_mod.section(&funcs);
@@ -1563,7 +1563,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
                     WasmFuncBackend::compile(body).map(|func| Cow::Owned(func.into_raw_body()))
                 }
                 FuncDecl::Import(_, _) => unreachable!("Should have skipped imports"),
-                FuncDecl::None => panic!("FuncDecl::None at compilation time"),
+                f => panic!("{f:?} at compilation time"),
             }
         })
         .collect::<Result<Vec<_>>>()?;

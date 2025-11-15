@@ -9,8 +9,8 @@ use crate::{EntityRef, EntityVec, PerEntity};
 // use crate::frontend::parse_body;
 use crate::ir::SourceLoc;
 // use crate::passes::basic_opt::OptOptions;
-use crate::{ListPool, ListRef};
 use crate::{Func, Operator, Table};
+use crate::{ListPool, ListRef};
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec;
@@ -22,6 +22,7 @@ use hashbrown::HashMap as FxHashMap;
 use hashbrown::HashSet;
 // use ssa_traits::{Term, Val};
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
 ///
 /// `FuncDecl` represents the various forms in which we can hold a
 /// function body: not yet parsed, parsed into full IR, recompiled
@@ -41,6 +42,16 @@ pub enum FuncDecl<'a> {
     None,
 }
 impl<'a> FuncDecl<'a> {
+    pub fn decompile<T>(self, go: impl FnOnce(FuncDecl<'_>) -> T) -> T {
+        match self {
+            FuncDecl::Compiled(sig, name, body) => go(FuncDecl::Lazy(
+                sig,
+                name,
+                wasmparser::FunctionBody::new(wasmparser::BinaryReader::new(&body, 0)),
+            )),
+            f => go(f),
+        }
+    }
     /// Get the signature for this function.
     pub fn sig(&self) -> Signature {
         match self {

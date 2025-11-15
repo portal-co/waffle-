@@ -504,7 +504,7 @@ impl<
                     *a = self.translate_sig(*a)?;
                 }
                 crate::FuncDecl::Compiled(_, _, _) => todo!(),
-                crate::FuncDecl::None => {}
+                _ => {}
             }
             self.dest.funcs[a] = f;
             return Ok(a);
