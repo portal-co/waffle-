@@ -1553,6 +1553,7 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
         .iter()
         .map(|(func, func_decl)| -> Result<_> {
             match func_decl {
+                #[cfg(feature = "frontend")]
                 FuncDecl::Lazy(_, _name, reader) => {
                     let data = &module.orig_bytes.unwrap()[reader.range()];
                     Ok(Cow::Borrowed(data))

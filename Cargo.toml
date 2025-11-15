@@ -81,8 +81,8 @@ repository.workspace = true
 [dependencies]
 waffle-entity .workspace = true
 waffle-ir .workspace = true
-waffle-frontend .workspace = true
-waffle-backend .workspace = true
+waffle-frontend ={workspace = true,optional=true}
+waffle-backend ={workspace = true,optional=true}
 waffle-passes .workspace = true
 waffle-copying = {workspace = true, optional = true}
 waffle-hooking = {workspace = true, optional = true}
@@ -114,3 +114,5 @@ tcore = ["dep:waffle-copying-passes"]
 exceptions = []
 hooking = ["waffle-hooking"]
 importify = ["waffle-passes/importify"]
+frontend = ["dep:waffle-frontend","waffle-ir/frontend","waffle-backend?/frontend"]
+backend = ["dep:waffle-backend","waffle-ir/backend","waffle-frontend?/backend"]

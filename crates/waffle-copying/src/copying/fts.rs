@@ -2,6 +2,7 @@ use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::Context;
 use waffle_passes_shared::{maxssa, value_is_pure};
 use crate::arena_traits::IndexAlloc;
+use core::marker::PhantomData;
 use core::{default, iter::once};
 // use rayon::iter::{once, ParallelIterator};
 use crate::{
@@ -207,7 +208,7 @@ impl Fts {
                     shared: src.shared,
                 },
             );
-            let new_f = module.funcs.alloc(FuncDecl::None);
+            let new_f = module.funcs.alloc(FuncDecl::None(PhantomData));
             let mut dst = FunctionBody::new(module, s);
             let new = dst.entry;
             let mut state = src.blocks[k]

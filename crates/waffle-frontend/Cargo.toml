@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 waffle-entity .workspace = true
-waffle-ir .workspace = true
+waffle-ir = {workspace = true, features = ["frontend"]}
 wasmparser .workspace = true
 wasm-encoder .workspace = true
 anyhow .workspace = true
@@ -18,3 +18,4 @@ hashbrown .workspace = true
 
 [features]
 default = []
+backend = ['waffle-ir/backend']

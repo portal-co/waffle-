@@ -1,7 +1,7 @@
 //! Waffle IR interpreter.
-use crate::{EntityRef, PerEntity};
 use crate::ir::*;
 use crate::ops::Operator;
+use crate::{EntityRef, PerEntity};
 use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec;
@@ -132,7 +132,9 @@ impl InterpContext {
         let mut args = args.to_vec();
         'redo: loop {
             let body = match &module.funcs[func] {
+                #[cfg(feature = "frontend")]
                 FuncDecl::Lazy(..) => panic!("Un-expanded function"),
+                #[cfg(feature = "backend")]
                 FuncDecl::Compiled(..) => panic!("Already-compiled function"),
                 FuncDecl::Import(..) => {
                     let import = &module.imports[func.index()];
@@ -141,7 +143,7 @@ impl InterpContext {
                     todo!()
                 }
                 FuncDecl::Body(_, _, body) => body,
-                FuncDecl::None => panic!("FuncDecl::None in call()"),
+                FuncDecl::None { .. } => panic!("FuncDecl::None in call()"),
             };
             log::trace!(
                 "Interp: entering func {}:\n{}\n",

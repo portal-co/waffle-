@@ -254,6 +254,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                     )?;
                     writeln!(f, "{}", body.display("    ", Some(self.module)))?;
                 }
+                #[cfg(feature = "frontend")]
                 FuncDecl::Lazy(sig, name, reader) => {
                     writeln!(
                         f,
@@ -265,6 +266,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                     )?;
                     writeln!(f, "  # raw bytes (length {})", reader.range().len())?;
                 }
+                #[cfg(feature = "backend")]
                 FuncDecl::Compiled(sig, name, _) => {
                     writeln!(
                         f,
@@ -286,7 +288,7 @@ impl<'a> Display for ModuleDisplay<'a> {
                         sig_strs.get(sig).unwrap()
                     )?;
                 }
-                FuncDecl::None => {
+                FuncDecl::None { .. } => {
                     writeln!(f, "  {}: none", func)?;
                 }
             }

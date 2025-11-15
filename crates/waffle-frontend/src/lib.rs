@@ -24,6 +24,15 @@ pub fn from_wasm_bytes<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Result
 
 /// Expand a function body, parsing its lazy reference to original bytecode into IR if needed.
 pub fn expand_func<'a, 'b>(module: &'b mut Module<'a>, id: Func) -> Result<&'b mut FuncDecl<'a>> {
+     #[cfg(feature = "backend")]
+    if let FuncDecl::Compiled(..) = module.funcs[id] {
+        module.funcs[id].clone().decompile(|mut func| {
+            let mut func = module.funcs[id].clone();
+            parse_func_decl(&mut func, module)?;
+            module.funcs[id] = func;
+            anyhow::Ok(())
+        })?;
+    }
     if let FuncDecl::Lazy(..) = module.funcs[id] {
         // End the borrow. This is cheap (a slice copy).
         let mut func = module.funcs[id].clone();
@@ -64,16 +73,15 @@ pub fn expand_all_funcs<'a>(module: &mut Module<'a>) -> Result<()> {
     Ok(())
 }
 
-
-pub trait ModuleExt<'a>: Sized{
+pub trait ModuleExt<'a>: Sized {
     fn module(&self) -> &Module<'a>;
     fn module_mut(&mut self) -> &mut Module<'a>;
     fn from_wasm_bytes(bytes: &'a [u8], options: &FrontendOptions) -> Result<Self>;
-    fn expand_all_funcs(&mut self) -> Result<()>{
+    fn expand_all_funcs(&mut self) -> Result<()> {
         expand_all_funcs(self.module_mut())
     }
 }
-impl<'a> ModuleExt<'a> for Module<'a>{
+impl<'a> ModuleExt<'a> for Module<'a> {
     fn module(&self) -> &Module<'a> {
         self
     }

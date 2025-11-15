@@ -16,12 +16,14 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Result;
+use core::convert::Infallible;
 use core::iter::{empty, once};
+use core::marker::PhantomData;
 use either::Either;
 use hashbrown::HashMap as FxHashMap;
 use hashbrown::HashSet;
 // use ssa_traits::{Term, Val};
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 ///
 /// `FuncDecl` represents the various forms in which we can hold a
@@ -32,18 +34,25 @@ pub enum FuncDecl<'a> {
     Import(Signature, String),
     /// An un-expanded body that can be lazily expanded if needed.
     #[serde(skip)]
+    #[cfg(feature = "frontend")]
     Lazy(Signature, String, wasmparser::FunctionBody<'a>),
     /// A modified or new function body that requires compilation.
     Body(Signature, String, FunctionBody),
     /// A compiled function body (was IR, has been collapsed back to bytecode).
+    #[cfg(feature = "backend")]
     Compiled(Signature, String, Vec<u8>),
     /// A placeholder.
-    #[default]
-    None,
+    None(PhantomData<&'a [u8]>),
+}
+impl<'a> Default for FuncDecl<'a> {
+    fn default() -> Self {
+        Self::None(PhantomData)
+    }
 }
 impl<'a> FuncDecl<'a> {
     pub fn decompile<T>(self, go: impl FnOnce(FuncDecl<'_>) -> T) -> T {
         match self {
+            #[cfg(all(feature = "frontend", feature = "backend"))]
             FuncDecl::Compiled(sig, name, body) => go(FuncDecl::Lazy(
                 sig,
                 name,
@@ -56,10 +65,12 @@ impl<'a> FuncDecl<'a> {
     pub fn sig(&self) -> Signature {
         match self {
             FuncDecl::Import(sig, ..) => *sig,
+            #[cfg(feature = "frontend")]
             FuncDecl::Lazy(sig, ..) => *sig,
             FuncDecl::Body(sig, ..) => *sig,
+            #[cfg(feature = "backend")]
             FuncDecl::Compiled(sig, ..) => *sig,
-            FuncDecl::None => panic!("No signature for FuncDecl::None"),
+            FuncDecl::None { .. } => panic!("No signature for FuncDecl::None"),
         }
     }
     // NOTE: parse() and optimize() methods moved to frontend and passes crates respectively
@@ -85,21 +96,25 @@ impl<'a> FuncDecl<'a> {
     /// Return the name of this function.
     pub fn name(&self) -> &str {
         match self {
-            FuncDecl::Body(_, name, _)
-            | FuncDecl::Lazy(_, name, _)
-            | FuncDecl::Import(_, name)
-            | FuncDecl::Compiled(_, name, _) => &name[..],
-            FuncDecl::None => panic!("No name for FuncDecl::None"),
+            FuncDecl::Body(_, name, _) => &name[..],
+            #[cfg(feature = "frontend")]
+            FuncDecl::Lazy(_, name, _) => &name[..],
+            FuncDecl::Import(_, name) => &name[..],
+            #[cfg(feature = "backend")]
+            FuncDecl::Compiled(_, name, _) => &name[..],
+            FuncDecl::None { .. } => panic!("No name for FuncDecl::None"),
         }
     }
     /// Set the name of this function.
     pub fn set_name(&mut self, new_name: &str) {
         match self {
-            FuncDecl::Body(_, name, _)
-            | FuncDecl::Lazy(_, name, _)
-            | FuncDecl::Import(_, name)
-            | FuncDecl::Compiled(_, name, _) => *name = new_name.to_owned(),
-            FuncDecl::None => panic!("No name for FuncDecl::None"),
+            FuncDecl::Body(_, name, _) => *name = new_name.to_owned(),
+            #[cfg(feature = "frontend")]
+            FuncDecl::Lazy(_, name, _) => *name = new_name.to_owned(),
+            FuncDecl::Import(_, name) => *name = new_name.to_owned(),
+            #[cfg(feature = "backend")]
+            FuncDecl::Compiled(_, name, _) => *name = new_name.to_owned(),
+            FuncDecl::None { .. } => panic!("No name for FuncDecl::None"),
         }
     }
     /// Remove any references to a function's original bytes. This
@@ -111,8 +126,10 @@ impl<'a> FuncDecl<'a> {
         match self {
             FuncDecl::Body(sig, name, body) => FuncDecl::Body(sig, name, body),
             FuncDecl::Import(sig, name) => FuncDecl::Import(sig, name),
+            #[cfg(feature = "backend")]
             FuncDecl::Compiled(sig, name, func) => FuncDecl::Compiled(sig, name, func),
-            FuncDecl::None => FuncDecl::None,
+            FuncDecl::None(a) => FuncDecl::None(PhantomData),
+            #[cfg(feature = "frontend")]
             FuncDecl::Lazy(..) => panic!("Trying to strip lifetime from lazy decl"),
         }
     }

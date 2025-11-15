@@ -15,6 +15,7 @@ use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Context;
+use core::marker::PhantomData;
 use core::mem::{replace, take};
 use core::{
     hash::Hash,
@@ -387,7 +388,7 @@ impl<
             if let Some(x) = self.state.fun_cache.get(&f) {
                 return Ok(*x);
             }
-            let a = self.dest.funcs.push(crate::FuncDecl::None);
+            let a = self.dest.funcs.push(crate::FuncDecl::None(PhantomData));
             self.state.fun_cache.insert(f, a);
             for t in &self.state.tables {
                 self.dest.tables[*t]
@@ -499,12 +500,12 @@ impl<
                 crate::FuncDecl::Import(a, _) => {
                     *a = self.translate_sig(*a)?;
                 }
-                crate::FuncDecl::Lazy(_, _, _) => todo!(),
+                // crate::FuncDecl::Lazy(_, _, _) => todo!(),
                 crate::FuncDecl::Body(a, _, _) => {
                     *a = self.translate_sig(*a)?;
                 }
-                crate::FuncDecl::Compiled(_, _, _) => todo!(),
-                _ => {}
+                // crate::FuncDecl::Compiled(_, _, _) => todo!(),
+                a => todo!("module copy {a:?}")
             }
             self.dest.funcs[a] = f;
             return Ok(a);
