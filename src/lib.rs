@@ -16,10 +16,10 @@
 #![forbid(unsafe_code)]
 
 // Re-export all the smaller crates
- #[cfg(feature = "backend")]
+#[cfg(feature = "backend")]
 pub use waffle_backend as backend;
 pub use waffle_entity as entity;
- #[cfg(feature = "frontend")]
+#[cfg(feature = "frontend")]
 pub use waffle_frontend as frontend;
 pub use waffle_ir as ir;
 pub use waffle_passes as passes;
@@ -36,8 +36,10 @@ pub use wasm_encoder;
 pub use wasmparser;
 
 // Re-export commonly used items to preserve existing API
+#[cfg(feature = "backend")]
 pub use waffle_backend::*;
 pub use waffle_entity::*;
+#[cfg(feature = "frontend")]
 pub use waffle_frontend::*;
 pub use waffle_ir::*;
 pub use waffle_passes::*;
@@ -49,7 +51,7 @@ pub use waffle_fuzzing::*;
 #[cfg(feature = "hooking")]
 pub use waffle_hooking::*;
 
- #[cfg(all(feature = "frontend",feature="backend"))]
+#[cfg(all(feature = "frontend", feature = "backend"))]
 pub trait ModuleExt<'a>: backend::ModuleExt<'a> + frontend::ModuleExt<'a> {}
- #[cfg(all(feature = "frontend",feature="backend"))]
+#[cfg(all(feature = "frontend", feature = "backend"))]
 impl<'a, T: backend::ModuleExt<'a> + frontend::ModuleExt<'a>> ModuleExt<'a> for T {}
