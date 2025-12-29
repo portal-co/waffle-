@@ -21,3 +21,4 @@ sha3 .workspace = true
 
 [features]
 unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions","waffle-copying/unstable-exceptions","waffle-passes/unstable-exceptions"]
+unstable-debugging=["waffle-ir/unstable-debugging","waffle-passes-shared/unstable-debugging","waffle-copying/unstable-debugging","waffle-passes/unstable-debugging"]

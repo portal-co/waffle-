@@ -22,6 +22,7 @@ hashbrown .workspace = true
 default = []
 frontend = ["waffle-ir/frontend"]
 unstable-exceptions=["waffle-ir/unstable-exceptions"]
+unstable-debugging=["waffle-ir/unstable-debugging"]
 
 [dev-dependencies]
 wat = "1.212.0"

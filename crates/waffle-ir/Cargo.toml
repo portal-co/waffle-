@@ -37,6 +37,7 @@ frontend = []
 backend=[]
 
 unstable-exceptions=[]
+unstable-debugging=[]
 
 [dev-dependencies]
 wat = "1.212.0"

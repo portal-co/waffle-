@@ -18,3 +18,4 @@ hashbrown .workspace = true
 [features]
 default = []
 unstable-exceptions=["waffle-ir/unstable-exceptions"]
+unstable-debugging=["waffle-ir/unstable-debugging"]
