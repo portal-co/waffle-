@@ -116,7 +116,7 @@ impl Fts {
                     block: self.fueled_translate(f, module, dst, src, k.block, &stack)?,
                 })
             };
-            let t = match &src.blocks[k].terminator {
+            let t = match &src.blocks[k].terminator.terminator {
                 crate::Terminator::UB => crate::Terminator::UB,
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,
@@ -286,7 +286,7 @@ impl Fts {
                         .collect(),
                 })
             };
-            let t = match &src.blocks[k].terminator {
+            let t = match &src.blocks[k].terminator.terminator {
                 crate::Terminator::UB => crate::Terminator::UB,
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,

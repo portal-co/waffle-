@@ -282,7 +282,7 @@ impl InterpContext {
                         log::trace!("Inst {} gets result {:?}", inst, result);
                         frame.values.insert(inst, result);
                     }
-                    match &body.blocks[frame.cur_block].terminator {
+                    match &body.blocks[frame.cur_block].terminator .terminator{
                         crate::Terminator::UB => {
                             return InterpResult::OutOfFuel;
                         }

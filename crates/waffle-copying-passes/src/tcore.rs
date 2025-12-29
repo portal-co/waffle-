@@ -189,7 +189,7 @@ pub fn tcore_tco_pass(
                 return Ok(());
             };
             // let mut d = d.clone();
-            let Terminator::ReturnCall { func, args } = d.terminator.clone() else {
+            let Terminator::ReturnCall { func, args } = d.terminator.terminator.clone() else {
                 continue 'gather;
             };
             let Some(_) = mo2.funcs[func].body() else {
@@ -214,7 +214,7 @@ pub fn tcore_tco_pass(
                 e
             }
         };
-        b.blocks[block].terminator = Terminator::None;
+        b.blocks[block].terminator.terminator = Terminator::None;
         b.set_terminator(
             block,
             Terminator::Br {
@@ -247,11 +247,11 @@ pub fn untcore_pass(
                 sig: _,
                 table: _,
                 args,
-            }) = d.terminator.clone()
+            }) = d.terminator.terminator.clone()
             else {
                 continue 'gather;
             };
-            break 'gather (bl, d.terminator.clone(), args);
+            break 'gather (bl, d.terminator.terminator.clone(), args);
         };
         drop(e);
         let c = match fun {
@@ -269,7 +269,7 @@ pub fn untcore_pass(
         let c = b.values.push(ValueDef::Operator(c, vs, ts));
         b.append_to_block(block, c);
         let c = results_ref_2(b, c);
-        b.blocks[block].terminator = Terminator::None;
+        b.blocks[block].terminator.terminator = Terminator::None;
         b.set_terminator(block, Terminator::Return { values: c });
         b.recompute_edges();
     }
@@ -294,7 +294,7 @@ pub fn tcore_pass(
                 return Ok(());
             };
             let mut d = d.clone();
-            let Terminator::Return { mut values } = d.terminator.clone() else {
+            let Terminator::Return { mut values } = d.terminator.terminator.clone() else {
                 continue 'gather;
             };
             if values.len() == 0 {
@@ -385,7 +385,7 @@ pub fn tcore_pass(
             break 'gather (bl, o, b.arg_pool[vs].to_owned());
         };
         drop(e);
-        b.blocks[block].terminator = Terminator::None;
+        b.blocks[block].terminator.terminator = Terminator::None;
         b.set_terminator(
             block,
             match fun {

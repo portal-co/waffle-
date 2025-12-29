@@ -158,7 +158,7 @@ impl<'a> BasicOptPass<'a> {
             }
         }
         if self.options.ub_vaccum {
-            if let Terminator::UB = &body.blocks[block].terminator {
+            if let Terminator::UB = &body.blocks[block].terminator.terminator {
                 body.blocks[block].insts.clear();
             }
         }
@@ -282,12 +282,12 @@ impl<'a> BasicOptPass<'a> {
             }
         }
         if self.options.inline_refs {
-            if let Terminator::ReturnCallRef { sig, args } = &body.blocks[block].terminator {
+            if let Terminator::ReturnCallRef { sig, args } = &body.blocks[block].terminator.terminator {
                 let mut args = args.clone();
                 let a = args.pop().unwrap();
                 if let ValueDef::Operator(Operator::RefFunc { func_index }, _, _) = &body.values[a]
                 {
-                    body.blocks[block].terminator = Terminator::ReturnCall {
+                    body.blocks[block].terminator.terminator = Terminator::ReturnCall {
                         func: *func_index,
                         args,
                     }

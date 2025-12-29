@@ -17,7 +17,7 @@ pub fn reorder_funcs_in_body(b: &mut FunctionBody, f: &BTreeMap<Func, Func>) {
         }
     }
     for k in b.blocks.values_mut() {
-        if let Terminator::ReturnCall { func, args } = &mut k.terminator {
+        if let Terminator::ReturnCall { func, args } = &mut k.terminator.terminator {
             *func = *f.get(&*func).unwrap();
         }
     }

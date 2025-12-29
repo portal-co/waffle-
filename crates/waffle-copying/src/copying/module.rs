@@ -474,7 +474,7 @@ impl<
                 }
                 for k in b.blocks.iter() {
                     let mut kv = b.blocks[k].clone();
-                    match &mut kv.terminator {
+                    match &mut kv.terminator.terminator {
                         crate::Terminator::ReturnCall { func, args } => {
                             *func = self.translate_Func(*func)?;
                         }

@@ -20,7 +20,7 @@ fn block_is_empty_jump(body: &FunctionBody, block: Block) -> Option<BlockTarget>
     if body.blocks[block].params.len() > 0 {
         return None;
     }
-    let target = match &body.blocks[block].terminator {
+    let target = match &body.blocks[block].terminator.terminator {
         &Terminator::Br { ref target } => target,
         _ => return None,
     };

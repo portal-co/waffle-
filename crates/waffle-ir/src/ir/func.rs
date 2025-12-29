@@ -17,6 +17,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Result;
 use core::convert::Infallible;
+use core::fmt::Display;
 use core::iter::{empty, once};
 use core::marker::PhantomData;
 use either::Either;
@@ -256,7 +257,7 @@ impl FunctionBody {
             blockparams.push(self.add_blockparam(edge_block, ty));
         }
         // Create an unconditional-branch terminator in the edge block.
-        self.blocks[edge_block].terminator = Terminator::Br {
+        self.blocks[edge_block].terminator.terminator = Terminator::Br {
             target: BlockTarget {
                 block: to,
                 args: blockparams,
@@ -405,12 +406,12 @@ impl FunctionBody {
     /// Set the terminator instruction on a block, updating the edge
     /// lists as well.
     pub fn set_terminator(&mut self, block: Block, terminator: Terminator) {
-        debug_assert_eq!(&self.blocks[block].terminator, &Terminator::None);
+        debug_assert_eq!(&self.blocks[block].terminator.terminator, &Terminator::None);
         log::trace!("block {} terminator {:?}", block, terminator);
         terminator.visit_successors(|succ| {
             self.add_edge(block, succ);
         });
-        self.blocks[block].terminator = terminator;
+        self.blocks[block].terminator.terminator = terminator;
     }
     /// Prety-print this function body. `indent` is prepended to each
     /// line of output. `module`, if provided, allows printing source
@@ -567,7 +568,7 @@ pub struct BlockDef {
     /// Instructions in this block.
     pub insts: Vec<ValueRecord>,
     /// Terminator: branch or return.
-    pub terminator: Terminator,
+    pub terminator: TerminatorRecord,
     /// Successor blocks.
     pub succs: Vec<Block>,
     /// For each successor block, our index in its `preds` array.
@@ -581,14 +582,76 @@ pub struct BlockDef {
     /// Descriptive name for the block, if any.
     pub desc: String,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
+pub struct TerminatorRecord {
+    ///The terminator
+    pub terminator: Terminator,
+
+    _private: (),
+}
+impl Display for TerminatorRecord {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(f, "{}", self.terminator)
+    }
+}
+impl TerminatorRecord {
+    ///Obtains the core terminator within this record provided no on-the-spot effects
+    pub fn pure_core(&self) -> Option<Terminator> {
+        Some(self.terminator.clone())
+    }
+    ///Creates a record froma  core terminator
+    pub fn core(a: Terminator) -> Self {
+        Self {
+            terminator: a,
+            _private: (),
+        }
+    }
+    pub fn visit_successors<F: FnMut(Block)>(&self, mut f: F) {
+        self.visit_targets(|target| f(target.block));
+    }
+
+    pub fn visit_uses<F: FnMut(Value)>(&self, mut f: F) {
+        self.terminator.visit_uses(|value| f(value));
+    }
+    pub fn update_uses<F: FnMut(&mut Value)>(&mut self, mut f: F) {
+        self.terminator.update_uses(|value| f(value));
+    }
+
+    pub fn num_targets(&self) -> usize {
+        return self.terminator.num_targets();
+    }
+    pub fn visit_targets<F: FnMut(&BlockTarget)>(&self, mut f: F) {
+        self.terminator.visit_targets(|target| f(target));
+    }
+    pub fn update_targets<F: FnMut(&mut BlockTarget)>(&mut self, mut f: F) {
+        self.terminator.update_targets(|target| f(target));
+    }
+    pub fn visit_target<R, F: FnOnce(&BlockTarget) -> R>(&self, index: usize, mut f: F) -> R {
+        self.try_visit_target(index, f).expect("to be in bounds")
+    }
+    pub fn try_visit_target<R, F: FnOnce(&BlockTarget) -> R>(
+        &self,
+        index: usize,
+        mut f: F,
+    ) -> Result<R, usize> {
+        self.terminator
+            .try_visit_target(index, move |target| f(target))
+    }
+    pub fn update_target<T, F: FnOnce(&mut BlockTarget) -> T>(
+        &mut self,
+        index: usize,
+        mut f: F,
+    ) -> Result<T, usize> {
+        self.terminator.update_target(index, f)
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub struct ValueRecord {
     ///The value
     pub value: Value,
-    ///The exception handler
-    // pub handler: PerEntity<ControlTag, Handler<HoleTarget>>,
-    // pub default_handler: Option<Handler<HoleTarget>>,
+
     _private: (),
 }
 impl ValueRecord {

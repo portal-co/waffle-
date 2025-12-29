@@ -151,7 +151,7 @@ impl Frint {
                     block: self.translate(dst, src, k.block, funcs)?,
                 })
             };
-            let t = match &src.blocks[k].terminator {
+            let t = match &src.blocks[k].terminator.terminator {
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,
                 },

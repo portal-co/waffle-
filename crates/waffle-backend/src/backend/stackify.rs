@@ -189,7 +189,7 @@ impl<'a, 'b> Context<'a, 'b> {
                 ref targets,
                 ref default,
                 ..
-            } = &body.blocks[block].terminator
+            } = &body.blocks[block].terminator.terminator
             {
                 for target in &targets[..] {
                     merge_nodes.insert(target.block);
@@ -408,7 +408,7 @@ impl<'a, 'b> Context<'a, 'b> {
         } else {
             // Leaf node: emit contents!
             into.push(WasmBlock::Leaf { block });
-            match &self.body.blocks[block].terminator {
+            match &self.body.blocks[block].terminator.terminator {
                 &Terminator::Br { ref target } => {
                     self.process_stack.push(StackEntry::DoBranch {
                         block,

@@ -60,7 +60,7 @@ impl CFGInfo {
         let mut preds: PerEntity<Block, SmallVec<[Block; 4]>> = PerEntity::default();
         let mut pred_pos: PerEntity<Block, SmallVec<[usize; 4]>> = PerEntity::default();
         for (block_id, block) in f.blocks.entries() {
-            if let Terminator::Return { .. } = &block.terminator {
+            if let Terminator::Return { .. } = &block.terminator.terminator {
                 return_blocks.push(block_id);
             }
             let mut target_idx = 0;

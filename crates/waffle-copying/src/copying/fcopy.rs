@@ -1,6 +1,7 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::String;
 use hashbrown::HashMap;
+use waffle_ir::TerminatorRecord;
 use waffle_passes_shared::maxssa;
 // use libc::key_t;
 use crate::util::new_sig;
@@ -105,11 +106,11 @@ pub fn tweak_target(
 }
 pub fn tweak_terminator(
     f: &mut FunctionBody,
-    x: &mut Terminator,
+    x: &mut TerminatorRecord,
     mut m: impl FnMut(&mut Value),
     mut k: impl FnMut(&mut Block),
 ) {
-    match x {
+    match &mut x.terminator {
         Terminator::Br { target } => tweak_target(f, target, m, k),
         Terminator::CondBr {
             cond,
@@ -311,7 +312,7 @@ pub fn clone_block(
     // for a in d.insts.clone(){
     //     f.append_to_block(r, a);
     // }
-    obf.obf_term(d.terminator.clone(), r, f, modu)?;
+    obf.obf_term(d.terminator.terminator.clone(), r, f, modu)?;
     return Ok(());
 }
 pub struct FunCloneRes {

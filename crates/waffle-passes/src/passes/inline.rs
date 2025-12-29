@@ -206,7 +206,7 @@ impl Inline {
                     block: self.translate(module, dst, src, k.block)?,
                 })
             };
-            let t = match &src.blocks[k].terminator {
+            let t = match &src.blocks[k].terminator.terminator {
                 &crate::Terminator::UB => crate::Terminator::UB,
                 crate::Terminator::Br { target } => crate::Terminator::Br {
                     target: target_(target)?,

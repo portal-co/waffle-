@@ -8,9 +8,9 @@ pub fn vaccum(f: &mut FunctionBody) {
         work = false;
         for k in f.blocks.iter().collect::<BTreeSet<_>>() {
             let mut t = take(&mut f.blocks[k].terminator);
-            if let Terminator::Br { target } = &t {
-                if let Terminator::UB = f.blocks[target.block].terminator {
-                    t = Terminator::UB;
+            if let Terminator::Br { target } = &t.terminator {
+                if let Terminator::UB = f.blocks[target.block].terminator.terminator {
+                    t.terminator = Terminator::UB;
                     work = true;
                 }
             }
@@ -18,26 +18,26 @@ pub fn vaccum(f: &mut FunctionBody) {
                 cond,
                 if_true,
                 if_false,
-            } = &t
+            } = &t.terminator
             {
-                if let Terminator::UB = f.blocks[if_true.block].terminator {
-                    t = Terminator::Br {
+                if let Terminator::UB = f.blocks[if_true.block].terminator.terminator {
+                    t.terminator = Terminator::Br {
                         target: if_false.clone(),
                     };
-                    f.set_terminator(k, t);
+                    f.set_terminator(k, t.terminator);
                     work = true;
                     continue;
                 }
-                if let Terminator::UB = f.blocks[if_false.block].terminator {
-                    t = Terminator::Br {
+                if let Terminator::UB = f.blocks[if_false.block].terminator.terminator {
+                    t.terminator = Terminator::Br {
                         target: if_true.clone(),
                     };
-                    f.set_terminator(k, t);
+                    f.set_terminator(k, t.terminator);
                     work = true;
                     continue;
                 }
             }
-            f.set_terminator(k, t);
+            f.set_terminator(k, t.terminator);
         }
     }
 }
@@ -50,7 +50,7 @@ pub fn gvc(m: &mut Module) -> anyhow::Result<()> {
             let mut b = take(&mut m.funcs[f]);
             'a: {
                 if let Some(b) = b.body_mut() {
-                    if let Terminator::UB = b.blocks[b.entry].terminator {
+                    if let Terminator::UB = b.blocks[b.entry].terminator.terminator {
                         break 'a;
                     }
                     vaccum(b);
@@ -58,7 +58,7 @@ pub fn gvc(m: &mut Module) -> anyhow::Result<()> {
                     let b_cfg = CFGInfo::new(b);
                     crate::passes::basic_opt::basic_opt(b, &b_cfg, &Default::default());
                     crate::passes::empty_blocks::run(b);
-                    if let Terminator::UB = b.blocks[b.entry].terminator {
+                    if let Terminator::UB = b.blocks[b.entry].terminator.terminator {
                         save.insert(f);
                         // if !save.insert(f){
                         work = true
