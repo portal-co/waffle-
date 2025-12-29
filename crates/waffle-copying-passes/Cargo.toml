@@ -18,3 +18,6 @@ log .workspace = true
 smallvec .workspace = true
 hashbrown .workspace = true
 sha3 .workspace = true
+
+[features]
+unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions","waffle-copying/unstable-exceptions","waffle-passes/unstable-exceptions"]

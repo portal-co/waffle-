@@ -36,6 +36,8 @@ ssa-traits-03 = ["dep:ssa-traits-03", "dep:cfg-traits-03"]
 frontend = []
 backend=[]
 
+unstable-exceptions=[]
+
 [dev-dependencies]
 wat = "1.212.0"
 env_logger = "0.11"

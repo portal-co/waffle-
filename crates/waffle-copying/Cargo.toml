@@ -18,6 +18,8 @@ waffle-passes-shared .workspace = true
 
 [features]
 default = []
+unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions"]
+
 
 [dev-dependencies]
 wat = "1.212.0"

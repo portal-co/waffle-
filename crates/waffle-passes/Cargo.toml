@@ -20,6 +20,7 @@ sha3 .workspace = true
 [features]
 default = []
 importify = []
+unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions"]
 
 [dev-dependencies]
 wat = "1.212.0"

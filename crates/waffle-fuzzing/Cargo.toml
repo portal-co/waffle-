@@ -16,3 +16,4 @@ wasm-smith .workspace = true
 
 [features]
 default = []
+unstable-exceptions=["waffle-ir/unstable-exceptions"]

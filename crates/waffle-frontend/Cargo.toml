@@ -19,3 +19,4 @@ hashbrown .workspace = true
 [features]
 default = []
 backend = ['waffle-ir/backend']
+unstable-exceptions=["waffle-ir/unstable-exceptions"]
