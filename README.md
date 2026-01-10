@@ -73,3 +73,12 @@ The backend operates in three stages:
   memories, tables, etc., while Cranelift lowers operations and storage
   abstractions into runtime/embedding-specific implementation details in the
   IR.
+
+## Goals
+- [ ] Add project goals
+
+## Progress
+- [ ] Initial setup
+
+---
+*AI assisted*
