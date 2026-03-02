@@ -14,6 +14,7 @@ use crate::{
     ExportKind, Func, FuncDecl, FunctionBody, Memory, Module, Operator, Type, ValueDef,
 };
 // use itertools::Itertools;
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Fuse {
     pub resolve: Func,
     pub grow: Func,

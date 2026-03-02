@@ -14,3 +14,4 @@ waffle-ir .workspace = true
 [features]
 default = []
 unstable-exceptions=["waffle-ir/unstable-exceptions"]
+rkyv-impl = ["waffle-ir/rkyv-impl"]

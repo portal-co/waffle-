@@ -23,6 +23,7 @@ default = []
 frontend = ["waffle-ir/frontend"]
 unstable-exceptions=["waffle-ir/unstable-exceptions"]
 unstable-debugging=["waffle-ir/unstable-debugging"]
+rkyv-impl = ["waffle-ir/rkyv-impl", "waffle-passes-shared/rkyv-impl"]
 
 [dev-dependencies]
 wat = "1.212.0"

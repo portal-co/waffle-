@@ -41,6 +41,8 @@ macro_rules! declare_entity {
         #[derive(
             Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
         )]
+        #[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+        #[cfg_attr(feature = "rkyv-impl", rkyv(compare(PartialEq, PartialOrd), derive(PartialEq, Eq, PartialOrd, Hash, Ord)))]
         pub struct $name(u32);
         impl $crate::entity::EntityRef for $name {
             fn new(value: usize) -> Self {
@@ -80,6 +82,7 @@ macro_rules! declare_entity {
     };
 }
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct EntityVec<Idx: EntityRef, T: Clone + Debug>(Vec<T>, PhantomData<Idx>);
 impl<Idx: EntityRef, T: Clone + Debug> core::default::Default for EntityVec<Idx, T> {
     fn default() -> Self {
@@ -166,6 +169,7 @@ impl<Idx: EntityRef, T: Clone + Debug> IndexIter<Idx> for EntityVec<Idx, T> {
     }
 }
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// Vector of state per entity in an index-space that does *not*
 /// define the index-space. In other words, this container will not
 /// pass out new indices, it will only allow associating state with

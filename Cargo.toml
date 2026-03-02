@@ -30,7 +30,7 @@ anyhow = { version = "^1.0", default-features = false }
 log = { version = "0.4", default-features = false }
 
 
-smallvec = { version = "1.13", default-features = false }
+smallvec = { version = "1.13", default-features = false, features = ["union"] }
 
 
 
@@ -43,6 +43,7 @@ stacker = { version = "0.1.15" }
 wasm-smith = { version = "0.202" }
 paste = "1.0.15"
 serde = { version = "1.0.204", features = ["derive"] }
+rkyv = { version = "0.8", default-features = false, features = ["alloc", "smallvec-1", "hashbrown-0_15"] }
 
 
 either = { version = "1.13.0", features = ["serde"], default-features = false }
@@ -116,3 +117,4 @@ hooking = ["waffle-hooking"]
 importify = ["waffle-passes/importify"]
 frontend = ["dep:waffle-frontend","waffle-ir/frontend","waffle-backend?/frontend"]
 backend = ["dep:waffle-backend","waffle-ir/backend","waffle-frontend?/backend"]
+rkyv-impl = ["waffle-entity/rkyv-impl", "waffle-ir/rkyv-impl", "waffle-passes/rkyv-impl", "waffle-copying?/rkyv-impl", "waffle-hooking?/rkyv-impl", "waffle-fuzzing?/rkyv-impl", "waffle-copying-passes?/rkyv-impl", "waffle-frontend?/rkyv-impl", "waffle-backend?/rkyv-impl"]

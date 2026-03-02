@@ -1,6 +1,9 @@
 //! Core IR (Intermediate Representation) for WAFFLE Wasm analysis framework.
 #![no_std]
-#![forbid(unsafe_code)]
+// TODO: ideally this would be `forbid(unsafe_code)`, but `unsafe impl
+// rkyv::Portable for Operator` in `ops_rkyv.rs` cannot be expressed without
+// unsafe and there is currently no safe rkyv escape hatch for this pattern.
+#![deny(unsafe_code)]
 #![allow(dead_code)]
 
 #[macro_use]
@@ -37,6 +40,9 @@ pub use ir_subtypes::*;
 pub use op_traits::{SideEffect, op_inputs, op_outputs};
 pub use ops::{Ieee32, Ieee64, MemoryArg, Operator};
 pub use interp::*;
+
+#[cfg(feature = "rkyv-impl")]
+mod ops_rkyv;
 
 #[cfg(feature = "ssa-traits-02")]
 mod ssa_traits_impls_02;

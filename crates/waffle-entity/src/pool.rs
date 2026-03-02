@@ -22,6 +22,7 @@ use core::fmt::Debug;
 use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// A "storage pool" backing many `ListRef`s of the given type.
 pub struct ListPool<T: Clone + Debug> {
     pub storage: Vec<T>,
@@ -32,6 +33,7 @@ impl<T: Clone + Debug> Default for ListPool<T> {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// A handle to a list stored in a `ListPool`.
 ///
 /// The handle can be used to yield the actual slice, given the pool,

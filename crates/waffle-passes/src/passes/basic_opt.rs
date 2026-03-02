@@ -13,6 +13,7 @@ use smallvec::{smallvec, SmallVec};
 use waffle_passes_shared::value_is_pure;
 #[non_exhaustive]
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct OptOptions {
     pub gvn: bool,
     pub cprop: bool,

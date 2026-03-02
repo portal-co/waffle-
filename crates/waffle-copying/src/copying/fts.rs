@@ -13,6 +13,7 @@ use alloc::string::ToString;
 use alloc::vec;
 use alloc::vec::Vec;
 #[derive(Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Fts {
     pub blocks: BTreeMap<Block, Func>,
 }

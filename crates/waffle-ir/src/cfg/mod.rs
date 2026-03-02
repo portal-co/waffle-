@@ -13,6 +13,7 @@ pub mod postorder;
 declare_entity!(RPOIndex, "rpo");
 /// Auxiliary analyses of the control-flow graph.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct CFGInfo {
     /// Entry block.
     pub entry: Block,
@@ -34,6 +35,7 @@ pub struct CFGInfo {
     pub pred_pos: PerEntity<Block, SmallVec<[usize; 4]>>,
 }
 #[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct DomtreeChildren {
     pub child: Block,
     pub next: Block,

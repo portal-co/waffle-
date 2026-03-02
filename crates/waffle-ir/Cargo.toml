@@ -28,6 +28,7 @@ cfg-traits-03 = {workspace = true, optional = true}
 ssa-traits-03 = {workspace = true, optional = true}
 lending-iterator .workspace = true
 impl-trait-for-tuples .workspace = true
+rkyv = { workspace = true, optional = true }
 
 [features]
 default = []
@@ -38,6 +39,7 @@ backend=[]
 
 unstable-exceptions=[]
 unstable-debugging=[]
+rkyv-impl = ["dep:rkyv", "waffle-entity/rkyv-impl"]
 
 [dev-dependencies]
 wat = "1.212.0"

@@ -11,19 +11,24 @@ use hashbrown::HashMap;
 declare_entity!(SourceFile, "file");
 declare_entity!(SourceLoc, "loc");
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Debug {
     /// Interned source-file names, indexed by a `SourceFile` entity
     /// index.
     pub source_files: EntityVec<SourceFile, String>,
+    #[cfg_attr(feature = "rkyv-impl", rkyv(with = rkyv::with::Skip))]
     source_file_dedup: HashMap<String, SourceFile>,
     /// Interned source locations (file, line, and column),, indexed
     /// by a `SourceLoc` entity index.
     pub source_locs: EntityVec<SourceLoc, SourceLocData>,
+    #[cfg_attr(feature = "rkyv-impl", rkyv(with = rkyv::with::Skip))]
     source_loc_dedup: HashMap<SourceLocData, SourceLoc>,
 }
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "rkyv-impl", rkyv(compare(PartialEq), derive(Hash)))]
 /// A "source location": a filename (interned to an ID), a line, and a
 /// column.
 pub struct SourceLocData {
@@ -55,6 +60,7 @@ impl Debug {
     }
 }
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// A map from ranges of offsets in the original Wasm file to source
 /// locations.
 pub struct DebugMap {

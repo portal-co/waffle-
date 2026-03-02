@@ -30,12 +30,14 @@ pub struct InterpContext {
 }
 /// The state of one interpreter memory.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct InterpMemory {
     pub data: Vec<u8>,
     pub max_pages: usize,
 }
 /// The state of one interpreter table.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct InterpTable {
     pub elements: Vec<Func>,
 }
@@ -58,6 +60,7 @@ pub enum InterpResult {
 }
 /// A constant concrete value during interpretation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum ConstVal {
     I32(u32),
     I64(u64),

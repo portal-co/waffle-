@@ -14,6 +14,7 @@ use crate::{
 };
 // use crate::FuncCollector;
 #[derive(Clone)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct InlineCfg {
     pub funcs: BTreeSet<Func>,
 }

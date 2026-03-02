@@ -2,6 +2,7 @@
 use alloc::string::String;
 /// An error that occurs when translating Wasm to IR.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum FrontendError {
     /// The given WebAssembly feature is not supported.
     UnsupportedFeature(String),

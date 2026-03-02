@@ -138,12 +138,14 @@ pub fn metafuse_all(m: &mut Module, cfg: &mut impl Cfg) {
 pub trait Cfg {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool;
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct All {}
 impl Cfg for All {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool {
         true
     }
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct ImportsOnly {}
 impl Cfg for ImportsOnly {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool {

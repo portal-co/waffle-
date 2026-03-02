@@ -54,12 +54,14 @@ pub struct Module<'a> {
     pub custom_sections: BTreeMap<String, Vec<u8>>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct ControlTagData {
     ///The signature used when invoking this tag
     pub sig: Signature,
 }
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum SignatureData {
     Func {
         /// Parameters: a Wasm function may have zero or more primitive
@@ -110,6 +112,7 @@ impl SignatureData {
 pub const WASM_PAGE: usize = 0x1_0000; // 64KiB
 /// A memory definition.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct MemoryData {
     /// How many Wasm pages (64KiB size) in the initial memory size?
     pub initial_pages: usize,
@@ -122,6 +125,7 @@ pub struct MemoryData {
     pub page_size_log2: Option<u32>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct MemorySegment {
     /// The offset of this data.
     pub offset: usize,
@@ -129,6 +133,7 @@ pub struct MemorySegment {
     pub data: Vec<u8>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct TableData {
     /// The type of element in this table.
     pub ty: Type,
@@ -142,6 +147,7 @@ pub struct TableData {
     pub table64: bool,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct GlobalData {
     /// The type of this global variable.
     pub ty: Type,
@@ -258,6 +264,7 @@ impl Type {
     }
 }
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Import {
     /// The name of the module the import comes from.
     pub module: String,
@@ -268,6 +275,7 @@ pub struct Import {
     pub kind: ImportKind,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 #[non_exhaustive]
 pub enum ImportKind {
     /// An import of a table.
@@ -297,6 +305,7 @@ impl core::fmt::Display for ImportKind {
     }
 }
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Export {
     /// The name of this export.
     pub name: String,
@@ -304,6 +313,7 @@ pub struct Export {
     pub kind: ExportKind,
 }
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 #[non_exhaustive]
 pub enum ExportKind {
     /// An export of a table.

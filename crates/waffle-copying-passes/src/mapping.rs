@@ -13,6 +13,7 @@ use core::mem;
 //     Builder, Expr,
 // };
 #[derive(Default, Clone, Copy)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Reload<T, F> {
     pub wrapped: T,
     pub predicate: F,
@@ -537,6 +538,7 @@ impl<T: Obfuscate, F: FnMut(Memory) -> bool> Obfuscate for Reload<T, F> {
         }
     }
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct LowerBulkMemory<F> {
     pub predicate: F,
 }
@@ -810,6 +812,7 @@ pub fn lower(m: &mut Module, mut f: impl FnMut(Memory) -> bool) -> anyhow::Resul
     )?;
     return Ok(());
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Ream<F> {
     pub resolver: F,
 }

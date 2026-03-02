@@ -15,11 +15,13 @@ log .workspace = true
 hashbrown .workspace = true
 paste.workspace = true
 waffle-passes-shared .workspace = true
+rkyv = { workspace = true, optional = true }
 
 [features]
 default = []
 unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions"]
 unstable-debugging=["waffle-ir/unstable-debugging","waffle-passes-shared/unstable-debugging"]
+rkyv-impl = ["dep:rkyv", "waffle-ir/rkyv-impl", "waffle-passes-shared/rkyv-impl"]
 
 [dev-dependencies]
 wat = "1.212.0"

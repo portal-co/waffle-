@@ -10,6 +10,8 @@ repository.workspace = true
 [dependencies]
 arena-traits .workspace = true
 serde .workspace = true
+rkyv = { workspace = true, optional = true }
 
 [features]
 default = []
+rkyv-impl = ["dep:rkyv"]

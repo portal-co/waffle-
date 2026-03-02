@@ -18,6 +18,7 @@ use anyhow::Context;
 use core::convert::TryFrom;
 pub use wasmparser::{Ieee32, Ieee64};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// An argument to a memory load or store, specifying which memory,
 /// alignment and an optional offset.
 pub struct MemoryArg {
@@ -36,6 +37,7 @@ impl core::fmt::Display for MemoryArg {
 }
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[repr(u16)]
 /// An operator in the IR, consuming arguments and producing results
 /// when executed.
 pub enum Operator {
@@ -1903,3 +1905,7 @@ impl core::convert::From<MemoryArg> for wasm_encoder::MemArg {
         }
     }
 }
+
+// rkyv impls for `Operator` live in `ops_rkyv.rs` (which allows unsafe code)
+// because `unsafe impl rkyv::Portable` cannot be written in a deny(unsafe_code)
+// module. See that file for the full safety argument.

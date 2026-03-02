@@ -11,6 +11,7 @@ use waffle_passes_shared::value_is_pure;
 use crate::arena_traits::IndexAlloc;
 use core::default;
 #[derive(Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Frint {
     pub blocks: BTreeMap<(Block, Vec<Option<Func>>), Block>,
 }

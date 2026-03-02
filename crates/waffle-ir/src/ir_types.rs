@@ -6,6 +6,8 @@ pub use waffle_entity::entities::*;
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "rkyv-impl", rkyv(compare(PartialEq)))]
 /// Types in waffle's IR.
 ///
 /// These types correspond to (a subset of) the primitive Wasm value
@@ -40,6 +42,8 @@ pub enum Type {
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "rkyv-impl", rkyv(compare(PartialEq)))]
 ///a `Type` that can be stored on the heap
 pub enum HeapType {
     FuncRef,
@@ -50,6 +54,8 @@ pub enum HeapType {
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "rkyv-impl", rkyv(compare(PartialEq)))]
 ///Something, alsong with whether it can be `null`
 pub struct WithNullable<T> {
     pub value: T,
@@ -58,6 +64,7 @@ pub struct WithNullable<T> {
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 ///Something, alsong with whether it can be mutated
 pub struct WithMutablility<T> {
     pub value: T,
@@ -76,6 +83,7 @@ pub struct WithMutablility<T> {
     serde::Deserialize,
     Default,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 ///An exception's handler
 pub enum Handler<T> {
     ///Rethrow the exception
@@ -88,6 +96,7 @@ pub enum Handler<T> {
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
 )]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 ///A storage type
 pub enum StorageType {
     Val(Type),

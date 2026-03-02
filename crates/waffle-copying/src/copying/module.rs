@@ -25,7 +25,9 @@ use core::{
 use hashbrown::HashMap;
 use paste::paste;
 #[derive(Eq, PartialEq, Clone, Hash)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct IKW(pub ImportKind);
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct State<I, G = bool> {
     cache: HashMap<IKW, ImportKind>,
     fun_cache: BTreeMap<Func, Func>,
@@ -52,6 +54,7 @@ impl<I, G> State<I, G> {
         };
     }
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Copier<A, B, S> {
     pub src: A,
     pub dest: B,
@@ -115,6 +118,7 @@ pub trait Imports {
 }
 #[repr(transparent)]
 #[derive(Clone, Debug, Copy)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct ImportFn<F>(pub F);
 pub fn import_fn(
     a: impl FnMut(
@@ -146,6 +150,7 @@ impl<
     }
 }
 #[non_exhaustive]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum ImportBehavior {
     Bind(ImportKind),
     BindRerun(ImportKind),

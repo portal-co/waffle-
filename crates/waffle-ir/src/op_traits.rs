@@ -1804,6 +1804,7 @@ pub fn op_outputs(
 }
 /// Side-effects that an operator may have.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum SideEffect {
     /// Operator can trap.
     Trap,

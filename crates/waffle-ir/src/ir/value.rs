@@ -2,6 +2,7 @@ use super::{Block, Type, Value};
 use crate::{ListPool, ListRef};
 use crate::Operator;
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// A definition of an SSA value.
 pub enum ValueDef {
     /// This value is a block parameter of the given block, with the

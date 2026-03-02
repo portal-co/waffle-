@@ -17,6 +17,7 @@ use log::trace;
 use wasmparser::{BlockType, DataKind, ExternalKind, KnownCustom, Name, Parser, Payload, TypeRef};
 /// Options to control the Wasm-to-bytecode translation process.
 #[derive(Clone, Copy, Debug, Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct FrontendOptions {
     /// Preserve DWARF debug-info. Otherwise, it is discarded if
     /// present.

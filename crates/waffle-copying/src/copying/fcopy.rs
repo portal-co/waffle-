@@ -44,6 +44,7 @@ pub trait Obfuscate {
         return Ok(());
     }
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct DontObf {}
 impl Obfuscate for DontObf {
     fn obf(
@@ -315,6 +316,7 @@ pub fn clone_block(
     obf.obf_term(d.terminator.terminator.clone(), r, f, modu)?;
     return Ok(());
 }
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct FunCloneRes {
     pub all: BTreeMap<Block, Block>,
 }

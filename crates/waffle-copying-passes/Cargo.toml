@@ -18,7 +18,9 @@ log .workspace = true
 smallvec .workspace = true
 hashbrown .workspace = true
 sha3 .workspace = true
+rkyv = { workspace = true, optional = true }
 
 [features]
 unstable-exceptions=["waffle-ir/unstable-exceptions","waffle-passes-shared/unstable-exceptions","waffle-copying/unstable-exceptions","waffle-passes/unstable-exceptions"]
 unstable-debugging=["waffle-ir/unstable-debugging","waffle-passes-shared/unstable-debugging","waffle-copying/unstable-debugging","waffle-passes/unstable-debugging"]
+rkyv-impl = ["dep:rkyv", "waffle-ir/rkyv-impl", "waffle-passes-shared/rkyv-impl", "waffle-copying/rkyv-impl", "waffle-passes/rkyv-impl"]

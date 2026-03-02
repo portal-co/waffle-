@@ -11,8 +11,7 @@ use crate::ir::SourceLoc;
 // use crate::passes::basic_opt::OptOptions;
 use crate::{Func, Operator, Table};
 use crate::{ListPool, ListRef};
-use alloc::borrow::ToOwned;
-use alloc::string::String;
+use alloc::borrow::ToOwned;use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use anyhow::Result;
@@ -20,7 +19,6 @@ use core::convert::Infallible;
 use core::fmt::Display;
 use core::iter::{empty, once};
 use core::marker::PhantomData;
-use either::Either;
 use hashbrown::HashMap as FxHashMap;
 use hashbrown::HashSet;
 // use ssa_traits::{Term, Val};
@@ -136,6 +134,7 @@ impl<'a> FuncDecl<'a> {
     }
 }
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 /// The body of a function, as an SSA-based intermediate
 /// representation.
 pub struct FunctionBody {
@@ -155,6 +154,7 @@ pub struct FunctionBody {
     /// Pool of types for ValueDefs' result type lists.
     pub type_pool: ListPool<Type>,
     /// Deduplication for type-lists of single types.
+    #[cfg_attr(feature = "rkyv-impl", rkyv(with = rkyv::with::Skip))]
     pub single_type_dedup: FxHashMap<Type, ListRef<Type>>,
     /// Pool of values for ValueDefs' arg lists.
     pub arg_pool: ListPool<Value>,
@@ -564,6 +564,7 @@ impl FunctionBody {
     // NOTE: compile() method moved to backend crate to avoid circular dependencies
 }
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct BlockDef {
     /// Instructions in this block.
     pub insts: Vec<ValueRecord>,
@@ -583,6 +584,7 @@ pub struct BlockDef {
     pub desc: String,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 #[non_exhaustive]
 pub struct TerminatorRecord {
     ///The terminator
@@ -647,6 +649,7 @@ impl TerminatorRecord {
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 #[non_exhaustive]
 pub struct ValueRecord {
     ///The value
@@ -675,15 +678,25 @@ impl ValueRecord {
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct BlockTarget {
     pub block: Block,
     pub args: Vec<Value>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct HoleTarget {
     pub block: Block,
-    pub args: Vec<Either<usize, Value>>,
+    pub args: Vec<HoleArg>,
     pub num_holes: usize,
+}
+/// An argument slot in a [`HoleTarget`]: either a numbered hole to be
+/// filled in at the call site, or a concrete [`Value`].
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+pub enum HoleArg {
+    Hole(usize),
+    Value(Value),
 }
 pub type ExceptionTarget = HoleTarget;
 impl core::fmt::Display for BlockTarget {
@@ -701,9 +714,9 @@ impl core::fmt::Display for HoleTarget {
         let args = self
             .args
             .iter()
-            .map(|arg| match arg.as_ref() {
-                Either::Right(arg) => format!("{}", arg),
-                Either::Left(arg) => format!("hole{}", arg),
+            .map(|arg| match arg {
+                HoleArg::Value(arg) => format!("{}", arg),
+                HoleArg::Hole(arg) => format!("hole{}", arg),
             })
             .collect::<Vec<_>>();
         write!(f, "{}({})", self.block, args.join(", "))
@@ -711,6 +724,7 @@ impl core::fmt::Display for HoleTarget {
 }
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum Terminator {
     Br {
         target: BlockTarget,

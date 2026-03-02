@@ -9,6 +9,7 @@ use anyhow::Context;
 use waffle_passes_shared::value_is_pure;
 use core::default;
 #[derive(Default)]
+#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Kts {
     pub blocks: BTreeMap<Block, Block>,
 }
