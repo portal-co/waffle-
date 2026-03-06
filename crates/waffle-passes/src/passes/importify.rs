@@ -5,7 +5,7 @@ use crate::{
 };
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
-use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -111,244 +111,274 @@ impl<'a> Importify<'a> {
         // .try_insert(k, |k| {
         // .map(|a| *a)
     }
+    /// Allocates a destination block for `k` without processing its body.
+    fn alloc_block(&mut self, dst: &mut FunctionBody, k: Block) -> Block {
+        if let Some(&b) = self.blocks.get(&k) {
+            return b;
+        }
+        let new = dst.add_block();
+        self.blocks.insert(k, new);
+        new
+    }
+
     pub fn translate(
         &mut self,
         module: &mut Module,
         dst: &mut FunctionBody,
         src: &FunctionBody,
-        k: Block,
+        start: Block,
     ) -> anyhow::Result<Block> {
-        loop {
-            if let Some(l) = self.blocks.get(&k) {
-                return Ok(*l);
-            }
-            let new = dst.add_block();
-            if self.manifest.is_empty() && !manifest_of(&module, &self.name, src, k).is_empty() {
-                let vals = src.blocks[k].params.iter().map(|a| a.0).collect::<Vec<_>>();
-                let vtys = vals
-                    .iter()
-                    .cloned()
-                    .map(|a| dst.add_blockparam(new, a))
-                    .collect();
-                let proper = self.translate_f(module, src, k)?;
-                let mut chain = proper;
-                let mut m2 = manifest_of(&module, &self.name, src, k);
-                loop {
-                    let Some((_, (ky, ts))) = m2.pop_first() else {
-                        break;
-                    };
-                    let siga = new_sig(
-                        module,
-                        crate::SignatureData::Func {
-                            params: m2
-                                .values()
-                                .map(|a| &a.1)
-                                .flatten()
-                                .cloned()
-                                .chain(src.blocks[k].params.iter().map(|a| a.0))
-                                .collect(),
-                            returns: src.rets.clone(),
-                            shared: true,
-                        },
-                    );
-                    let i = module
-                        .funcs
-                        .push(crate::FuncDecl::Import(siga, format!("{ky}/import")));
-                    let n = self.ids.fetch_and(1, core::sync::atomic::Ordering::SeqCst);
-                    let n = format!("$${n}");
-                    module.imports.push(Import {
-                        module: ky,
-                        name: n.clone(),
-                        kind: ImportKind::Func(i),
-                    });
-                    let x = replace(&mut chain, i);
-                    module.exports.push(Export {
-                        name: n,
-                        kind: crate::ExportKind::Func(x),
-                    });
-                }
-                dst.set_terminator(
-                    k,
-                    crate::Terminator::ReturnCall {
-                        func: chain,
-                        args: vtys,
-                    },
-                );
-                self.blocks.insert(k, new);
+        let start_dst = self.alloc_block(dst, start);
+        let mut queue: VecDeque<Block> = VecDeque::new();
+        let mut processed: BTreeSet<Block> = BTreeSet::new();
+        queue.push_back(start);
+        while let Some(k) = queue.pop_front() {
+            if !processed.insert(k) {
                 continue;
             }
-            let mut manifest = take(&mut self.manifest)
-                .into_iter()
-                .map(|(a, (b, c))| {
-                    (
-                        a,
-                        (
-                            b,
-                            c.into_iter()
-                                .map(|d| dst.add_blockparam(new, d))
-                                .collect::<Vec<_>>(),
-                        ),
-                    )
-                })
-                .collect::<BTreeMap<_, _>>();
-            let mut state = src.blocks[k]
-                .params
+            self.process_block(module, dst, src, k, &mut queue)?;
+        }
+        Ok(start_dst)
+    }
+
+    fn process_block(
+        &mut self,
+        module: &mut Module,
+        dst: &mut FunctionBody,
+        src: &FunctionBody,
+        k: Block,
+        queue: &mut VecDeque<Block>,
+    ) -> anyhow::Result<()> {
+        let new = *self.blocks.get(&k).unwrap();
+        if self.manifest.is_empty() && !manifest_of(&module, &self.name, src, k).is_empty() {
+            let vals = src.blocks[k].params.iter().map(|a| a.0).collect::<Vec<_>>();
+            let vtys = vals
                 .iter()
-                .map(|(k, v)| (*v, vec![dst.add_blockparam(new, *k)]))
-                .collect::<BTreeMap<_, _>>();
-            self.blocks.insert(k, new);
-            'a: for i in src.blocks[k].insts.iter().cloned() {
-                let Some(i) = i.pure_core() else {
-                    anyhow::bail!("non-core value")
+                .cloned()
+                .map(|a| dst.add_blockparam(new, a))
+                .collect();
+            let proper = self.translate_f(module, src, k)?;
+            let mut chain = proper;
+            let mut m2 = manifest_of(&module, &self.name, src, k);
+            loop {
+                let Some((_, (ky, ts))) = m2.pop_first() else {
+                    break;
                 };
-                if value_is_pure(i, src) {
-                    let mut unused = true;
-                    for j in src.blocks[k].insts.iter().cloned() {
-                        src.values[j.value].visit_uses(&src.arg_pool, |u| {
-                            if u == i {
-                                unused = false;
-                            }
-                        });
-                    }
-                    src.blocks[k].terminator.visit_uses(|u| {
+                let siga = new_sig(
+                    module,
+                    crate::SignatureData::Func {
+                        params: m2
+                            .values()
+                            .map(|a| &a.1)
+                            .flatten()
+                            .cloned()
+                            .chain(src.blocks[k].params.iter().map(|a| a.0))
+                            .collect(),
+                        returns: src.rets.clone(),
+                        shared: true,
+                    },
+                );
+                let i = module
+                    .funcs
+                    .push(crate::FuncDecl::Import(siga, format!("{ky}/import")));
+                let n = self.ids.fetch_and(1, core::sync::atomic::Ordering::SeqCst);
+                let n = format!("$${n}");
+                module.imports.push(Import {
+                    module: ky,
+                    name: n.clone(),
+                    kind: ImportKind::Func(i),
+                });
+                let x = replace(&mut chain, i);
+                module.exports.push(Export {
+                    name: n,
+                    kind: crate::ExportKind::Func(x),
+                });
+            }
+            dst.set_terminator(
+                k,
+                crate::Terminator::ReturnCall {
+                    func: chain,
+                    args: vtys,
+                },
+            );
+            return Ok(());
+        }
+        let mut manifest = take(&mut self.manifest)
+            .into_iter()
+            .map(|(a, (b, c))| {
+                (
+                    a,
+                    (
+                        b,
+                        c.into_iter()
+                            .map(|d| dst.add_blockparam(new, d))
+                            .collect::<Vec<_>>(),
+                    ),
+                )
+            })
+            .collect::<BTreeMap<_, _>>();
+        let mut state = src.blocks[k]
+            .params
+            .iter()
+            .map(|(k, v)| (*v, vec![dst.add_blockparam(new, *k)]))
+            .collect::<BTreeMap<_, _>>();
+        'a: for i in src.blocks[k].insts.iter().cloned() {
+            let Some(i) = i.pure_core() else {
+                anyhow::bail!("non-core value")
+            };
+            if value_is_pure(i, src) {
+                let mut unused = true;
+                for j in src.blocks[k].insts.iter().cloned() {
+                    src.values[j.value].visit_uses(&src.arg_pool, |u| {
                         if u == i {
                             unused = false;
                         }
                     });
-                    if unused {
-                        continue 'a;
-                    }
                 }
-                let v = match manifest.remove(&i) {
-                    None => match &src.values[i] {
-                        crate::ValueDef::BlockParam(block, _, _) => todo!(),
-                        crate::ValueDef::Operator(operator, list_ref, list_ref1) => {
-                            let args = src.arg_pool[*list_ref]
-                                .iter()
-                                .filter_map(|a| state.get(a))
-                                .flatten()
-                                .cloned()
-                                .collect::<Vec<_>>();
-                            let tys = &src.type_pool[*list_ref1];
-                            let c = dst.add_op(new, operator.clone(), &args, tys);
-                            results_ref_2(dst, c)
-                        }
-                        crate::ValueDef::PickOutput(value, a, b) => {
-                            let value = state
-                                .get(value)
-                                .cloned()
-                                .context("in getting the referenced value")?;
-                            vec![value[*a as usize]]
-                        }
-                        crate::ValueDef::Alias(value) => state
+                src.blocks[k].terminator.visit_uses(|u| {
+                    if u == i {
+                        unused = false;
+                    }
+                });
+                if unused {
+                    continue 'a;
+                }
+            }
+            let v = match manifest.remove(&i) {
+                None => match &src.values[i] {
+                    crate::ValueDef::BlockParam(block, _, _) => todo!(),
+                    crate::ValueDef::Operator(operator, list_ref, list_ref1) => {
+                        let args = src.arg_pool[*list_ref]
+                            .iter()
+                            .filter_map(|a| state.get(a))
+                            .flatten()
+                            .cloned()
+                            .collect::<Vec<_>>();
+                        let tys = &src.type_pool[*list_ref1];
+                        let c = dst.add_op(new, operator.clone(), &args, tys);
+                        results_ref_2(dst, c)
+                    }
+                    crate::ValueDef::PickOutput(value, a, b) => {
+                        let value = state
                             .get(value)
                             .cloned()
-                            .context("in getting the referenced value")?,
-                        crate::ValueDef::Placeholder(_) => todo!(),
-                        crate::ValueDef::None => vec![],
-                    },
-                    Some((n, vs)) => vs,
-                };
-                state.insert(i, v);
-            }
-            let mut target_ = |k: &BlockTarget| {
-                anyhow::Ok(BlockTarget {
-                    args: k
-                        .args
-                        .iter()
-                        .filter_map(|b| state.get(b))
-                        .flatten()
-                        .cloned()
-                        .collect(),
-                    block: self.translate(module, dst, src, k.block)?,
-                })
-            };
-            let t = match &src.blocks[k].terminator {
-                crate::Terminator::Br { target } => crate::Terminator::Br {
-                    target: target_(target)?,
-                },
-                crate::Terminator::CondBr {
-                    cond,
-                    if_true,
-                    if_false,
-                } => {
-                    let if_true = target_(if_true)?;
-                    let if_false = target_(if_false)?;
-                    let cond = state
-                        .get(cond)
-                        .cloned()
-                        .context("in getting the referenced value")?;
-                    crate::Terminator::CondBr {
-                        cond: cond[0],
-                        if_true,
-                        if_false,
+                            .context("in getting the referenced value")?;
+                        vec![value[*a as usize]]
                     }
-                }
-                crate::Terminator::Select {
-                    value,
-                    targets,
-                    default,
-                } => {
-                    let value = state
+                    crate::ValueDef::Alias(value) => state
                         .get(value)
                         .cloned()
-                        .context("in getting the referenced value")?;
-                    let default = target_(default)?;
-                    let targets = targets
-                        .iter()
-                        .map(target_)
-                        .collect::<anyhow::Result<Vec<_>>>()?;
-                    crate::Terminator::Select {
-                        value: value[0],
-                        targets,
-                        default,
-                    }
-                }
-                crate::Terminator::Return { values } => crate::Terminator::Return {
-                    values: values
-                        .iter()
-                        .filter_map(|b| state.get(b))
-                        .flatten()
-                        .cloned()
-                        .collect(),
+                        .context("in getting the referenced value")?,
+                    crate::ValueDef::Placeholder(_) => todo!(),
+                    crate::ValueDef::None => vec![],
                 },
-                crate::Terminator::ReturnCall { func, args } => crate::Terminator::ReturnCall {
-                    func: *func,
+                Some((_, vs)) => vs,
+            };
+            state.insert(i, v);
+        }
+        // Allocate successor block (if needed), enqueue, and remap args.
+        let mut ensure_target =
+            |this: &mut Self,
+             dst: &mut FunctionBody,
+             target: &BlockTarget|
+             -> anyhow::Result<BlockTarget> {
+                let block = this.alloc_block(dst, target.block);
+                queue.push_back(target.block);
+                let args = target
+                    .args
+                    .iter()
+                    .filter_map(|b| state.get(b))
+                    .flatten()
+                    .cloned()
+                    .collect();
+                anyhow::Ok(BlockTarget { args, block })
+            };
+        let t = match &src.blocks[k].terminator {
+            crate::Terminator::Br { target } => crate::Terminator::Br {
+                target: ensure_target(self, dst, target)?,
+            },
+            crate::Terminator::CondBr {
+                cond,
+                if_true,
+                if_false,
+            } => {
+                let if_true = ensure_target(self, dst, if_true)?;
+                let if_false = ensure_target(self, dst, if_false)?;
+                let cond = state
+                    .get(cond)
+                    .cloned()
+                    .context("in getting the referenced value")?;
+                crate::Terminator::CondBr {
+                    cond: cond[0],
+                    if_true,
+                    if_false,
+                }
+            }
+            crate::Terminator::Select {
+                value,
+                targets,
+                default,
+            } => {
+                let value = state
+                    .get(value)
+                    .cloned()
+                    .context("in getting the referenced value")?;
+                let default = ensure_target(self, dst, default)?;
+                let targets = targets
+                    .iter()
+                    .map(|t| ensure_target(self, dst, t))
+                    .collect::<anyhow::Result<Vec<_>>>()?;
+                crate::Terminator::Select {
+                    value: value[0],
+                    targets,
+                    default,
+                }
+            }
+            crate::Terminator::Return { values } => crate::Terminator::Return {
+                values: values
+                    .iter()
+                    .filter_map(|b| state.get(b))
+                    .flatten()
+                    .cloned()
+                    .collect(),
+            },
+            crate::Terminator::ReturnCall { func, args } => crate::Terminator::ReturnCall {
+                func: *func,
+                args: args
+                    .iter()
+                    .filter_map(|b| state.get(b))
+                    .flatten()
+                    .cloned()
+                    .collect(),
+            },
+            crate::Terminator::ReturnCallIndirect { sig, table, args } => {
+                crate::Terminator::ReturnCallIndirect {
+                    sig: *sig,
+                    table: *table,
                     args: args
                         .iter()
                         .filter_map(|b| state.get(b))
                         .flatten()
                         .cloned()
                         .collect(),
-                },
-                crate::Terminator::ReturnCallIndirect { sig, table, args } => {
-                    crate::Terminator::ReturnCallIndirect {
-                        sig: *sig,
-                        table: *table,
-                        args: args
-                            .iter()
-                            .filter_map(|b| state.get(b))
-                            .flatten()
-                            .cloned()
-                            .collect(),
-                    }
                 }
-                crate::Terminator::ReturnCallRef { sig, args } => {
-                    crate::Terminator::ReturnCallRef {
-                        sig: *sig,
-                        args: args
-                            .iter()
-                            .filter_map(|b| state.get(b))
-                            .flatten()
-                            .cloned()
-                            .collect(),
-                    }
+            }
+            crate::Terminator::ReturnCallRef { sig, args } => {
+                crate::Terminator::ReturnCallRef {
+                    sig: *sig,
+                    args: args
+                        .iter()
+                        .filter_map(|b| state.get(b))
+                        .flatten()
+                        .cloned()
+                        .collect(),
                 }
-                crate::Terminator::Unreachable => crate::Terminator::Unreachable,
-                _ => crate::Terminator::None,
-            };
-            dst.set_terminator(new, t);
-        }
+            }
+            crate::Terminator::Unreachable => crate::Terminator::Unreachable,
+            _ => crate::Terminator::None,
+        };
+        dst.set_terminator(new, t);
+        Ok(())
     }
 }
 pub fn importify_mod(m: &mut Module, ids: Arc<AtomicUsize>, name: String) -> anyhow::Result<()> {
