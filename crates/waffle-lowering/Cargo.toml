@@ -1,0 +1,22 @@
+[package]
+name = "portal-pc-waffle-lowering"
+version.workspace = true
+description = "Memory-lowering passes for the WAFFLE Wasm analysis framework"
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+waffle-entity .workspace = true
+waffle-ir .workspace = true
+waffle-passes .workspace = true
+anyhow .workspace = true
+log .workspace = true
+rkyv = { workspace = true, optional = true }
+
+[features]
+default = []
+unstable-exceptions = ["waffle-ir/unstable-exceptions", "waffle-passes/unstable-exceptions"]
+unstable-debugging = ["waffle-ir/unstable-debugging", "waffle-passes/unstable-debugging"]
+rkyv-impl = ["dep:rkyv", "waffle-ir/rkyv-impl", "waffle-passes/rkyv-impl"]

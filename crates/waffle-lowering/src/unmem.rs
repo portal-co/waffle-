@@ -1,5 +1,5 @@
-use crate::util::{add_start, new_sig};
-use crate::{
+use waffle_passes::util::{add_start, new_sig};
+use waffle_passes::{
     Block, ExportKind, Func, FuncDecl, FunctionBody, Import, ImportKind, Memory, MemoryArg,
     MemoryData, Module, Operator, Signature, SignatureData, Table, Type, Value, ValueDef,
 };
@@ -25,8 +25,6 @@ pub fn fuse_iter(m: &mut Module, x: impl Iterator<Item = (usize, u8)>, mem: Memo
     let ia = b.add_value(ValueDef::Operator(Operator::I32Const { value: 0 }, vz, ti));
     b.append_to_block(b.entry, ia);
     for (a, c) in x {
-        // let ia = b.add_value(ValueDef::Operator(Operator::I32Const { value: a as u32 }, vz, ti));
-        // b.append_to_block(b.entry, ia);
         let ic = b.add_value(ValueDef::Operator(
             Operator::I32Const { value: c as u32 },
             vz,
@@ -53,7 +51,7 @@ pub fn fuse_iter(m: &mut Module, x: impl Iterator<Item = (usize, u8)>, mem: Memo
         ));
         b.append_to_block(b.entry, j);
     }
-    b.set_terminator(b.entry, crate::Terminator::Return { values: vec![] });
+    b.set_terminator(b.entry, waffle_passes::Terminator::Return { values: vec![] });
     let f = m.funcs.push(FuncDecl::Body(null, format!("z"), b));
     add_start(m, f);
 }
@@ -95,7 +93,7 @@ pub fn metafuse(m: &mut Module, mem: Memory, dat: MemoryData) {
         tz,
     ));
     b.append_to_block(b.entry, ib);
-    b.set_terminator(b.entry, crate::Terminator::Return { values: vec![] });
+    b.set_terminator(b.entry, waffle_passes::Terminator::Return { values: vec![] });
     let f = m.funcs.push(FuncDecl::Body(null, format!("z"), b));
     add_start(m, f);
 }
@@ -150,11 +148,9 @@ pub struct ImportsOnly {}
 impl Cfg for ImportsOnly {
     fn unmemmable(&mut self, module: &mut Module, mem: Memory) -> bool {
         for i in module.imports.iter().map(|a| a.clone()).collect::<Vec<_>>() {
-            // if self.cfg.do_lower(&i.module, &i.name) {
             if i.kind == ImportKind::Memory(mem) {
                 return true;
             }
-            // }
         }
         false
     }

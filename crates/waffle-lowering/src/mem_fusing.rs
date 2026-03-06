@@ -7,13 +7,10 @@ use core::{
     convert::Infallible,
     iter::{empty, once},
 };
-// use libc::name_t;
-// use crate::append_before;
-use crate::{
+use waffle_passes::{
     entity::{EntityRef, EntityVec},
     ExportKind, Func, FuncDecl, FunctionBody, Memory, Module, Operator, Type, ValueDef,
 };
-// use itertools::Itertools;
 #[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Fuse {
     pub resolve: Func,
@@ -66,53 +63,7 @@ impl Fuse {
         let new = m.memories.push(mem);
         let mut fs = BTreeMap::new();
         fs.insert(self.target, new);
-        crate::passes::reorder_funs::reorder_mems(m, &fs);
-        // let mem = m.memories[Memory::new(0)].clone();
-        // let l = m.memories.len() - 1;
-        // m.memories = EntityVec::default();
-        // m.memories.push(mem);
-        // let v = vec![self.resolve, self.grow, self.size];
-        // let mut new = vec![];
-        // for f in v.clone() {
-        //     let n = m.funcs[f].clone();
-        //     let s = n.sig();
-        //     let name = n.name().to_owned();
-        //     // let n = m.funcs.push(n);
-        //     let mut b = FunctionBody::new(&m, s);
-        //     let mut p = b.blocks[b.entry]
-        //         .params
-        //         .iter()
-        //         .map(|a| a.1)
-        //         .collect::<Vec<_>>();
-        //     let vz = b.arg_pool.from_iter(empty());
-        //     let tz = b.type_pool.from_iter(empty());
-        //     let ti = b.type_pool.from_iter(vec![Type::I32].into_iter());
-        //     let i = b.add_value(ValueDef::Operator(
-        //         Operator::I32Const { value: l as u32 },
-        //         vz,
-        //         ti,
-        //     ));
-        //     b.append_to_block(b.entry, i);
-        //     let i = b.arg_pool.from_iter(vec![p[p.len() - 1], i].into_iter());
-        //     let i = b.add_value(ValueDef::Operator(Operator::I32Add, i, ti));
-        //     let l = p.len();
-        //     p[l - 1] = i;
-        //     b.append_to_block(b.entry, i);
-        //     b.set_terminator(b.entry, crate::Terminator::ReturnCall { func: f, args: p });
-        //     let n = FuncDecl::Body(s, name, b);
-        //     let n = m.funcs.push(n);
-        //     new.push(n);
-        // }
-        // for x in m.exports.iter_mut() {
-        //     let ExportKind::Func(xf) = &mut x.kind else {
-        //         continue;
-        //     };
-        //     for (o, n) in v.iter().zip(new.iter()) {
-        //         if xf == o {
-        //             *xf = *n
-        //         }
-        //     }
-        // }
+        waffle_passes::passes::reorder_funs::reorder_mems(m, &fs);
         return new;
     }
     pub fn process(&self, m: &mut Module, f: &mut FunctionBody) {
@@ -121,11 +72,8 @@ impl Fuse {
         let ti = f.type_pool.from_iter(vec![Type::I32].into_iter());
         let mut ka = BTreeMap::new();
         for k in f.blocks.iter().collect::<Vec<_>>() {
-            // eprintln!("dbg: {v}");
-            // let k = f.value_blocks[v];
             for v in core::mem::take(&mut f.blocks[k].insts) {
                 let mut w = f.values[v.value].clone();
-                // let vi = v;
                 if let ValueDef::Operator(a, b, c) = &mut w {
                     let mut bp = f.arg_pool[*b].to_vec();
                     fn g(
@@ -133,9 +81,9 @@ impl Fuse {
                             &mut Module,
                             &mut FunctionBody,
                             Memory,
-                            &'a mut crate::Value,
+                            &'a mut waffle_passes::Value,
                         ),
-                    ) -> impl for<'a> FnMut(&mut Module, &mut FunctionBody, Memory, &'a mut crate::Value)
+                    ) -> impl for<'a> FnMut(&mut Module, &mut FunctionBody, Memory, &'a mut waffle_passes::Value)
                     {
                         return a;
                     }
@@ -148,7 +96,6 @@ impl Fuse {
                                 let x =
                                     f.add_value(ValueDef::Operator(Operator::I32WrapI64, w, ti));
                                 f.append_to_block(k, x);
-                                // crate::append_before(f, x, vi, k);
                                 *v = x;
                             }
                             (false, true) => {
@@ -157,7 +104,6 @@ impl Fuse {
                                 let x =
                                     f.add_value(ValueDef::Operator(Operator::I64ExtendI32U, w, ti));
                                 f.append_to_block(k, x);
-                                // crate::append_before(f, x, vi, k);
                                 *v = x;
                             }
                             (false, false) => {}
@@ -173,7 +119,6 @@ impl Fuse {
                                     vz,
                                     ti,
                                 ));
-                                // append_before(f, ia, vi, k);
                                 f.append_to_block(k, ia);
                                 *a = Operator::Call {
                                     function_index: self.size,
@@ -191,7 +136,6 @@ impl Fuse {
                                     vz,
                                     ti,
                                 ));
-                                // append_before(f, ia, vi, k);
                                 f.append_to_block(k, ia);
                                 *a = Operator::Call {
                                     function_index: self.grow,
@@ -200,7 +144,7 @@ impl Fuse {
                                 p(m, f, mem, &mut bp[0]);
                             }
                         }
-                        _ => crate::op_traits::rewrite_mem(a, &mut bp, |mem, v| {
+                        _ => waffle_passes::op_traits::rewrite_mem(a, &mut bp, |mem, v| {
                             if *mem != self.target {
                                 let ia = f.add_value(ValueDef::Operator(
                                     Operator::I32Const {
@@ -210,7 +154,6 @@ impl Fuse {
                                     ti,
                                 ));
                                 f.append_to_block(k, ia);
-                                // append_before(f, ia, vi, k);
                                 if let Some(v) = v {
                                     p(m, f, *mem, &mut *v);
                                     let w = f.arg_pool.from_iter(vec![*v, ia].into_iter());
@@ -222,7 +165,6 @@ impl Fuse {
                                         ti,
                                     ));
                                     f.append_to_block(k, x);
-                                    // crate::append_before(f, x, vi, k);
                                     *v = x;
                                 }
                                 *mem = self.target;
@@ -243,8 +185,7 @@ impl Fuse {
 }
 pub fn fuse(m: &mut Module) -> anyhow::Result<()> {
     let f = Fuse::new(m).context("in getting the fuse funcs")?;
-    crate::passes::unmem::metafuse_all(m, &mut crate::passes::unmem::All {});
-    // crate::passes::splice::splice_module(m)?;
+    crate::unmem::metafuse_all(m, &mut crate::unmem::All {});
     m.take_per_func_body(|m, b| f.process(m, b));
     f.finalize(m);
     return Ok(());

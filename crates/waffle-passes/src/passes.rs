@@ -4,9 +4,7 @@ pub mod dom_pass;
 pub mod empty_blocks;
 // pub mod ssa;
 // pub mod trace;
-pub mod mem_fusing;
 pub mod reorder_funs;
-pub mod unmem;
 // pub mod fixup_rets;
 pub mod frint;
 #[cfg(feature = "importify")]
