@@ -8,13 +8,16 @@ use anyhow::Context;
 use core::{default, mem::take, usize};
 // use arena_traits::IndexAlloc;
 use crate::{
-    CFGInfo, const_eval, EntityRef, waffle_passes_shared::value_is_pure, util::new_sig,
-    util::results_ref_2, Block, BlockTarget, ConstVal, Func, FuncCollector, FuncDecl, FunctionBody,
+    const_eval, util::new_sig, util::results_ref_2, waffle_passes_shared::value_is_pure, Block,
+    BlockTarget, CFGInfo, ConstVal, EntityRef, Func, FuncCollector, FuncDecl, FunctionBody,
     ImportKind, Module, Operator, SignatureData, Terminator, Type, Value, ValueDef,
 };
 // use crate::FuncCollector;
 #[derive(Clone)]
-#[cfg_attr(feature = "rkyv-impl", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(
+    feature = "rkyv-impl",
+    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)
+)]
 pub struct InlineCfg {
     pub funcs: BTreeSet<Func>,
 }
@@ -29,8 +32,7 @@ impl FuncCollector for InlineCfg {
 //     }
 // }
 pub struct Inline {
-    blocks: BTreeMap<Block, Block>,
-    return_to: Option<Block>,
+    blocks: BTreeMap<(Block, Func, Option<Block>), Block>,
     inline_funcs: Arc<InlineCfg>,
     stack: BTreeMap<Func, Block>,
 }
@@ -42,17 +44,18 @@ pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
             // Convert to max SSA
             let b_cfg = CFGInfo::new(b);
             crate::waffle_passes_shared::maxssa::run(b, None, &b_cfg);
-            
+
             let s = *s;
+            let entry = b.entry;
+            m.funcs[f] = g;
             let mut new = FunctionBody::new(&m, s);
             new.entry = match (Inline::new(cfg.clone())).translate(
-                m, &mut new, &*b,
-                b.entry,
+                m, &mut new, f,
+                entry,
                 // b.blocks[b.entry].params.iter().map(|_| None).collect(),
             ) {
                 Ok(a) => a,
                 Err(e) => {
-                    m.funcs[f] = g;
                     return Err(e);
                 }
             };
@@ -61,9 +64,12 @@ pub fn inline_mod(m: &mut Module, mut cfg: InlineCfg) -> anyhow::Result<()> {
             let new_cfg = CFGInfo::new(&new);
             crate::passes::basic_opt::basic_opt(&mut new, &new_cfg, &Default::default());
             crate::passes::empty_blocks::run(&mut new);
-            *b = new;
+            *m.funcs[f]
+                .body_mut()
+                .context("in getting the function body")? = new;
+        } else {
+            m.funcs[f] = g;
         }
-        m.funcs[f] = g;
     }
     Ok(())
 }
@@ -71,15 +77,20 @@ impl Inline {
     pub fn new(a: InlineCfg) -> Self {
         Self {
             blocks: BTreeMap::new(),
-            return_to: None,
             inline_funcs: Arc::new(a),
             stack: Default::default(),
         }
     }
     /// Allocates a destination block for `k` without processing its body.
     /// If already allocated, returns the existing block.
-    fn alloc_block(&mut self, dst: &mut FunctionBody, k: Block) -> Block {
-        if let Some(&b) = self.blocks.get(&k) {
+    fn alloc_block(
+        &mut self,
+        dst: &mut FunctionBody,
+        k: Block,
+        f: Func,
+        return_to: Option<Block>,
+    ) -> Block {
+        if let Some(&b) = self.blocks.get(&(k, f, return_to)) {
             return b;
         }
         let new = dst.add_block();
@@ -89,7 +100,7 @@ impl Inline {
                 *v = new;
             }
         }
-        self.blocks.insert(k, new);
+        self.blocks.insert((k, f, return_to), new);
         new
     }
 
@@ -97,18 +108,18 @@ impl Inline {
         &mut self,
         module: &Module,
         dst: &mut FunctionBody,
-        src: &FunctionBody,
+        f: Func,
         start: Block,
     ) -> anyhow::Result<Block> {
-        let start_dst = self.alloc_block(dst, start);
-        let mut queue: VecDeque<Block> = VecDeque::new();
-        let mut processed: BTreeSet<Block> = BTreeSet::new();
-        queue.push_back(start);
-        while let Some(k) = queue.pop_front() {
-            if !processed.insert(k) {
+        let start_dst = self.alloc_block(dst, start, f, None);
+        let mut queue: VecDeque<(Block, Func, Option<Block>)> = VecDeque::new();
+        let mut processed: BTreeSet<(Block, Func, Option<Block>)> = BTreeSet::new();
+        queue.push_back((start, f, None));
+        while let Some((k, f, return_to)) = queue.pop_front() {
+            if !processed.insert((k, f, return_to)) {
                 continue;
             }
-            self.process_block(module, dst, src, k, &mut queue)?;
+            self.process_block(module, dst, k, f, return_to, &mut queue)?;
         }
         Ok(start_dst)
     }
@@ -117,11 +128,15 @@ impl Inline {
         &mut self,
         module: &Module,
         dst: &mut FunctionBody,
-        src: &FunctionBody,
         k: Block,
-        queue: &mut VecDeque<Block>,
+        f: Func,
+        return_to: Option<Block>,
+        queue: &mut VecDeque<(Block, Func, Option<Block>)>,
     ) -> anyhow::Result<()> {
-        let mut new = *self.blocks.get(&k).unwrap();
+        let src = module.funcs[f]
+            .body()
+            .context("in getting the function body")?;
+        let mut new = *self.blocks.get(&(k, f, return_to)).unwrap();
         let mut state = src.blocks[k]
             .params
             .iter()
@@ -166,17 +181,23 @@ impl Inline {
                             .flatten()
                             .cloned()
                             .collect::<Vec<_>>();
-                        let ke = Inline {
-                            blocks: Default::default(),
-                            return_to: Some(k2),
-                            inline_funcs: self.inline_funcs.clone(),
-                            stack: {
-                                let mut a = self.stack.clone();
-                                a.insert(*function_index, Block::invalid());
-                                a
-                            },
-                        }
-                        .translate(module, dst, b, b.entry)?;
+                        let ke = self.alloc_block(
+                            dst,
+                            module.funcs[*function_index]
+                                .body()
+                                .context("in getting the function body")?
+                                .entry,
+                            *function_index,
+                            Some(k2),
+                        );
+                        queue.push_back((
+                            module.funcs[*function_index]
+                                .body()
+                                .context("in getting the function body")?
+                                .entry,
+                            *function_index,
+                            Some(k2),
+                        ));
                         dst.set_terminator(
                             new,
                             crate::Terminator::Br {
@@ -224,8 +245,8 @@ impl Inline {
         }
         // Helper: allocate successor block (if needed) and enqueue for processing.
         let mut ensure_succ = |this: &mut Self, dst: &mut FunctionBody, succ: Block| -> Block {
-            let b = this.alloc_block(dst, succ);
-            queue.push_back(succ);
+            let b = this.alloc_block(dst, succ, f, return_to);
+            queue.push_back((succ, f, return_to));
             b
         };
         let remap_args = |target: &BlockTarget, state: &BTreeMap<_, Vec<_>>| -> Vec<_> {
@@ -261,8 +282,14 @@ impl Inline {
                     .context("in getting the referenced value")?;
                 crate::Terminator::CondBr {
                     cond: cond[0],
-                    if_true: BlockTarget { block: true_block, args: true_args },
-                    if_false: BlockTarget { block: false_block, args: false_args },
+                    if_true: BlockTarget {
+                        block: true_block,
+                        args: true_args,
+                    },
+                    if_false: BlockTarget {
+                        block: false_block,
+                        args: false_args,
+                    },
                 }
             }
             crate::Terminator::Select {
@@ -287,10 +314,13 @@ impl Inline {
                 crate::Terminator::Select {
                     value: value[0],
                     targets,
-                    default: BlockTarget { block: default_block, args: default_args },
+                    default: BlockTarget {
+                        block: default_block,
+                        args: default_args,
+                    },
                 }
             }
-            crate::Terminator::Return { values } => match self.return_to {
+            crate::Terminator::Return { values } => match return_to {
                 None => crate::Terminator::Return {
                     values: values
                         .iter()
@@ -311,7 +341,7 @@ impl Inline {
                     },
                 },
             },
-            crate::Terminator::ReturnCall { func, args } => match self.return_to {
+            crate::Terminator::ReturnCall { func, args } => match return_to {
                 None => crate::Terminator::ReturnCall {
                     func: *func,
                     args: args
@@ -336,17 +366,8 @@ impl Inline {
                                     .flatten()
                                     .cloned()
                                     .collect::<Vec<_>>();
-                                let ke = Inline {
-                                    blocks: Default::default(),
-                                    return_to: Some(ret),
-                                    inline_funcs: self.inline_funcs.clone(),
-                                    stack: {
-                                        let mut a = self.stack.clone();
-                                        a.insert(*func, Block::invalid());
-                                        a
-                                    },
-                                }
-                                .translate(module, dst, b, b.entry)?;
+                                let ke = self.alloc_block(dst, b.entry, *func, return_to);
+                                queue.push_back((b.entry, *func, return_to));
                                 Terminator::Br {
                                     target: BlockTarget {
                                         block: ke,
@@ -362,7 +383,10 @@ impl Inline {
                                     .cloned()
                                     .collect::<Vec<_>>();
                                 Terminator::Br {
-                                    target: BlockTarget { block: k2, args: call_args },
+                                    target: BlockTarget {
+                                        block: k2,
+                                        args: call_args,
+                                    },
                                 }
                             }
                         }
@@ -379,7 +403,9 @@ impl Inline {
                             .collect::<Vec<_>>();
                         let values = dst.add_op(
                             new,
-                            Operator::Call { function_index: *func },
+                            Operator::Call {
+                                function_index: *func,
+                            },
                             &call_args,
                             tys,
                         );
@@ -393,49 +419,47 @@ impl Inline {
                     }
                 }
             },
-            crate::Terminator::ReturnCallIndirect { sig, table, args } => {
-                match self.return_to {
-                    None => crate::Terminator::ReturnCallIndirect {
-                        sig: *sig,
-                        table: *table,
-                        args: args
-                            .iter()
-                            .filter_map(|b| state.get(b))
-                            .flatten()
-                            .cloned()
-                            .collect(),
-                    },
-                    Some(ret) => {
-                        let tys = match &module.signatures[*sig] {
-                            SignatureData::Func { returns, .. } => returns,
-                            _ => todo!(),
-                        };
-                        let call_args = args
-                            .iter()
-                            .filter_map(|b| state.get(b))
-                            .flatten()
-                            .cloned()
-                            .collect::<Vec<_>>();
-                        let values = dst.add_op(
-                            new,
-                            Operator::CallIndirect {
-                                sig_index: *sig,
-                                table_index: *table,
-                            },
-                            &call_args,
-                            tys,
-                        );
-                        let values = results_ref_2(dst, values);
-                        crate::Terminator::Br {
-                            target: BlockTarget {
-                                block: ret,
-                                args: values,
-                            },
-                        }
+            crate::Terminator::ReturnCallIndirect { sig, table, args } => match return_to {
+                None => crate::Terminator::ReturnCallIndirect {
+                    sig: *sig,
+                    table: *table,
+                    args: args
+                        .iter()
+                        .filter_map(|b| state.get(b))
+                        .flatten()
+                        .cloned()
+                        .collect(),
+                },
+                Some(ret) => {
+                    let tys = match &module.signatures[*sig] {
+                        SignatureData::Func { returns, .. } => returns,
+                        _ => todo!(),
+                    };
+                    let call_args = args
+                        .iter()
+                        .filter_map(|b| state.get(b))
+                        .flatten()
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    let values = dst.add_op(
+                        new,
+                        Operator::CallIndirect {
+                            sig_index: *sig,
+                            table_index: *table,
+                        },
+                        &call_args,
+                        tys,
+                    );
+                    let values = results_ref_2(dst, values);
+                    crate::Terminator::Br {
+                        target: BlockTarget {
+                            block: ret,
+                            args: values,
+                        },
                     }
                 }
-            }
-            crate::Terminator::ReturnCallRef { sig, args } => match self.return_to {
+            },
+            crate::Terminator::ReturnCallRef { sig, args } => match return_to {
                 None => crate::Terminator::ReturnCallRef {
                     sig: *sig,
                     args: args
