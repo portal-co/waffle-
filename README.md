@@ -1,84 +1,106 @@
 # WAFFLE: Wasm Analysis Framework for Lightweight Experimentation
 
-Synopsis: an SSA IR compiler framework for Wasm-to-Wasm transforms, in Rust.
+A Wasm-to-Wasm compiler framework in Rust, built around an SSA IR. This is a fork of the original [waffle](https://github.com/cfallin/waffle) by Chris Fallin, maintained under the `portal-co` organization and published as the `portal-pc-waffle` family of crates.
 
-## Status: working for Wasm MVP; roundtrips complex modules successfully
+## What it does
 
-The transforms from Wasm to IR and from IR to Wasm work well, and has been
-fuzzed in various ways. In particular, waffle is fuzzed by roundtripping Wasm
-through SSA IR and back, and differentially executing the original and
-roundtripped Wasm under Wasmtime (with limits on execution time). At this time,
-no correctness bugs have been found.
+WAFFLE reads WebAssembly bytecode, converts it to an SSA (Static Single Assignment) intermediate representation, optionally transforms or optimizes it, and compiles it back to valid Wasm bytecode. The round-trip (Wasm -> IR -> Wasm) is the core operation. All other features (optimization passes, hooking, copying, lowering) are built on top of that.
 
-Waffle is able to roundtrip (convert to IR, then compile back to Wasm) complex
-modules such as the SpiderMonkey JS engine compiled to Wasm.
+The IR is a CFG of basic blocks where dataflow is explicit SSA values. Wasm locals are eliminated during parsing and replaced with SSA values and block parameters. All Wasm operators remain at the Wasm abstraction level — memories, tables, and reference types are first-class IR concepts rather than being lowered into implementation details.
 
-Waffle has some basic mid-end optimizations working, such as GVN and constant
-propagation. Much more could be done on this.
+## Status
 
-There are various ways in which the generated Wasm bytecode could be improved;
-work is ongoing on this.
+Version 0.6.0-alpha.1. The codebase has been refactored from a single crate into a Cargo workspace of smaller crates (see `crates/`). The round-trip pass is working and has been fuzzed. The IR supports Wasm MVP plus multivalue, SIMD, reference types (including non-nullable funcrefs and typed funcrefs), and GC proposals (arrays, structs). There is a built-in interpreter used for fuzzing differential testing.
 
-## Architecture
+The codebase compiles with `#![no_std]` (using `alloc`) in most crates and has `#![forbid(unsafe_code)]` in all library crates.
 
-The IR is a CFG of blocks, containing operators that correspond 1-to-1 to Wasm
-operators. Dataflow is via SSA, and blocks have blockparams (rather than
-phi-nodes). Wasm locals are not used in the IR (they are converted to SSA).
+## Repository
 
-The frontend converts Wasm into this IR by building SSA as it goes, inserting
-blockparams when it discovers multiple reaching definitions for a local.
-Multivalue Wasm (parameters and results for every control-flow block) is fully
-supported, and converted to SSA. This process more or less works like
-Cranelift's does, except that memory, table, etc. operations remain at the Wasm
-abstraction layer (are not lowered into implementation details), and arithmetic
-operators mirror Wasm's exactly.
+https://github.com/portal-co/waffle-
 
-The backend operates in three stages:
+## Crate structure
 
-* [Structured control flow recovery](src/backend/stackify.rs), which uses
-  [Ramsey's algorithm](https://dl.acm.org/doi/abs/10.1145/3547621) to convert
-  the CFG back into an AST of Wasm control-flow primitives (blocks, loops, and
-  if-then AST nodes).
+The workspace is split into the following crates, all published under the `portal-pc-` prefix:
 
-* [Treeification](src/backend/treeify.rs), which computes whether some SSA
-  values are used only once and can be moved to just before their single
-  consumer, computing the value directly onto the Wasm stack without the need
-  for an intermediate local. This is a very simple form of code scheduling.
+| Crate | Published name | Purpose |
+|---|---|---|
+| `.` (root) | `portal-pc-waffle` | Facade; re-exports and gates sub-crates via features |
+| `crates/waffle-entity` | `portal-pc-waffle-entity` | Type-safe arena indices (`Func`, `Block`, `Value`, `Memory`, etc.) and indexed containers |
+| `crates/waffle-ir` | `portal-pc-waffle-ir` | Core IR types: `Module`, `FunctionBody`, `ValueDef`, `Operator`, `Terminator`; also contains the built-in interpreter and a WASI stub |
+| `crates/waffle-frontend` | `portal-pc-waffle-frontend` | Wasm bytecode -> IR conversion (SSA construction, multivalue handling) |
+| `crates/waffle-backend` | `portal-pc-waffle-backend` | IR -> Wasm bytecode (reducify, stackify, treeify, localify) |
+| `crates/waffle-passes-shared` | `portal-pc-waffle-passes-shared` | Utilities shared between passes: max-SSA conversion, alias resolution, purity predicates |
+| `crates/waffle-passes` | `portal-pc-waffle-passes` | Optimization passes: GVN, constant propagation/folding, redundant blockparam elimination, inlining, reordering, `ub_vaccum`, `func_rocket`, `importify` |
+| `crates/waffle-lowering` | `portal-pc-waffle-lowering` | Memory-level lowering passes: `mem_fusing` and `unmem` |
+| `crates/waffle-copying` | `portal-pc-waffle-copying` | Utilities for copying/cloning module components (`fcopy`, `fts`, `kts`, module copy) |
+| `crates/waffle-copying-passes` | `portal-pc-waffle-copying-passes` | Passes that combine copying with optimization (`mapping`, `tcore`) |
+| `crates/waffle-hooking` | `portal-pc-waffle-hooking` | Function wrapping/swizzling: replaces a function body with a new body that calls the original, useful for instrumentation |
+| `crates/waffle-fuzzing` | `portal-pc-waffle-fuzzing` | Fuzzing helpers: `ArbitraryModule` wrapper, rejection filters |
 
-* [Localification](src/backend/localify.rs), which performs a register
-  allocation (using a simple linear-scan algorithm) to assign all SSA values to
-  locals such that no live-ranges overlap in the same local.
+## Backend pipeline
 
-## Comparisons / Related Work
+Compiling a `FunctionBody` back to Wasm bytecode goes through four stages:
 
-- Like [Binaryen](https://github.com/WebAssembly/binaryen) but with an SSA IR,
-  rather than an AST-based IR. Dataflow analyses are much easier when one
-  doesn't have to handle arbitrary reads and writes to locals. Binaryen is able
-  to stackify/reloop arbitrary control flow (CFG to Wasm) but does not
-  implement the other direction (Wasm to CFG), and it has only a C/C++ API, not
-  Rust.
+1. **Reducify** (`reducify.rs`) — Handles irreducible control flow by duplicating code to make all CFG loops reducible. Uses RPO-based loop detection. The comments warn of potential exponential code blowup for pathological inputs (dense state machines, cliques).
 
-- Like [Walrus](https://github.com/rustwasm/walrus) but also with an SSA IR.
-  Walrus is in Rust and designed for Wasm-to-Wasm transforms as well, but its
-  IR mirrors the Wasm bytecode closely and thus presents the same difficulties
-  as Binaryen for traditional CFG-of-SSA-style compiler analyses and
-  transforms.
+2. **Stackify** (`stackify.rs`) — Converts the reducible CFG into a structured Wasm control-flow AST (blocks, loops, if-then) using Ramsey's algorithm.
 
-- Halfway like
-  [Cranelift](https://github.com/bytecodealliance/wasmtime/tree/main/cranelift/),
-  in that the IR is similar to Cranelift's (a CFG of SSA IR with blockparams),
-  but with the Wasm backend as well (Cranelift only does Wasm-to-IR). WAFFLE's
-  IR also deliberately remains at the Wasm abstraction level, maintaining
-  1-to-1 correspondence with all operators and maintaining the concepts of
-  memories, tables, etc., while Cranelift lowers operations and storage
-  abstractions into runtime/embedding-specific implementation details in the
-  IR.
+3. **Treeify** (`treeify.rs`) — Identifies SSA values used exactly once and "trees" them: moves the computation inline to avoid materializing an intermediate local.
 
-## Goals
-- [ ] Add project goals
+4. **Localify** (`localify.rs`) — Linear-scan register allocation over the remaining SSA values, assigning them to Wasm locals with no overlapping live ranges.
 
-## Progress
-- [ ] Initial setup
+## Frontend
 
----
-*AI assisted*
+The frontend (`waffle-frontend`) parses Wasm with `wasmparser` and builds SSA as it goes. When it discovers multiple reaching definitions for a Wasm local (e.g. at a join point), it inserts block parameters rather than phi nodes. Multivalue blocks (Wasm parameters and results for every control-flow construct) are fully handled. Function bodies are parsed lazily and expanded on demand.
+
+## Optimization passes
+
+`OptOptions` (in `waffle-passes`) controls:
+- `gvn` — global value numbering (domtree walk with a scoped map)
+- `cprop` — constant propagation and folding (uses the interpreter's `const_eval`)
+- `redundant_blockparams` — removes block parameters that always carry the same value
+- `inline_refs` — inlines single-use pure values
+- `ub_vaccum` — removes unreachable/undefined-behavior code
+
+Additional passes include function inlining, function reordering, `importify` (converts internal functions to imports under a feature flag), `func_rocket` (cancels paired call/inverse-call patterns), and memory-level operations in `waffle-lowering`.
+
+## Fuzzing
+
+The `fuzz/` directory contains six libfuzzer targets:
+
+- `roundtrip` — parses generated Wasm and compiles it back; checks for panics
+- `roundtrip_roundtrip` — checks that two round-trips produce identical output
+- `differential` — compares globals and memory of the original Wasm run against the round-tripped version under Wasmtime (with fuel limits)
+- `opt_diff` — compares interpreter execution results before and after optimization
+- `irreducible` — exercises the reducify pass specifically
+- `parse_ir` — exercises IR parsing
+
+## Wasm feature support
+
+- MVP instructions
+- Multivalue (block params/returns)
+- SIMD (via `wasmparser`'s `simd` feature)
+- Reference types: `funcref`, `externref`, non-nullable refs, typed funcrefs
+- GC proposal types: arrays, structs (subtype checking implemented in `ir_subtypes.rs`)
+- Exception handling (unstable, behind `unstable-exceptions` feature flag)
+
+## Optional features
+
+- `frontend` / `backend` — enable the parsing and code-generation halves independently
+- `copying` — enable `waffle-copying`
+- `hooking` — enable `waffle-hooking`
+- `tcore` — enable `waffle-copying-passes`
+- `fuzzing` — enable `waffle-fuzzing`
+- `ssa-traits-02` / `ssa-traits-03` — implement `ssa-traits` and `cfg-traits` interfaces from `portal-co/codegen-utils`
+- `rkyv-impl` — derive `rkyv` Archive/Serialize/Deserialize for IR types
+- `importify` — enable the `importify` pass in `waffle-passes`
+
+## Related projects
+
+- [Binaryen](https://github.com/WebAssembly/binaryen) — AST-based IR, C/C++ API only; supports CFG-to-Wasm but not Wasm-to-CFG
+- [Walrus](https://github.com/rustwasm/walrus) — Rust, Wasm-to-Wasm transforms, but IR mirrors bytecode closely (no SSA)
+- [Cranelift](https://github.com/bytecodealliance/wasmtime/tree/main/cranelift/) — similar SSA IR with block params, but only Wasm-to-IR (no Wasm output), and it lowers Wasm abstractions
+
+## License
+
+Apache-2.0 WITH LLVM-exception
