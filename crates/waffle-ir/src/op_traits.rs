@@ -1133,10 +1133,13 @@ pub fn op_inputs(
             let SignatureData::Array { ty, .. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
-            Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
-                value: crate::HeapType::Sig { sig_index: sig },
-                nullable: true,
-            })]))
+            Ok(Cow::Owned(vec![
+                Type::Heap(crate::WithNullable {
+                    value: crate::HeapType::Sig { sig_index: sig },
+                    nullable: true,
+                }),
+                Type::I32,
+            ]))
         }
         &Operator::ArraySet { sig } => {
             let SignatureData::Array { ty, .. } = &module.signatures[sig] else {
@@ -1147,6 +1150,7 @@ pub fn op_inputs(
                     value: crate::HeapType::Sig { sig_index: sig },
                     nullable: true,
                 }),
+                Type::I32,
                 ty.value.clone().unpack(),
             ]))
         }
@@ -1187,6 +1191,72 @@ pub fn op_inputs(
         &Operator::RefCast { ty } => Ok(Cow::Owned(vec![
             op_stack.context("in getting the op stack")?[0].0,
         ])),
+        &Operator::StructNewDefault { sig } => Ok(Cow::Borrowed(&[])),
+        &Operator::StructGetS { sig, .. } => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::Sig { sig_index: sig },
+            nullable: true,
+        })])),
+        &Operator::StructGetU { sig, .. } => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::Sig { sig_index: sig },
+            nullable: true,
+        })])),
+        &Operator::ArrayNewDefault { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::ArrayNewData { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
+        &Operator::ArrayNewElem { .. } => Ok(Cow::Borrowed(&[Type::I32, Type::I32])),
+        &Operator::ArrayGetS { sig } => Ok(Cow::Owned(vec![
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            }),
+            Type::I32,
+        ])),
+        &Operator::ArrayGetU { sig } => Ok(Cow::Owned(vec![
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            }),
+            Type::I32,
+        ])),
+        &Operator::ArrayInitData { sig, .. } => Ok(Cow::Owned(vec![
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            }),
+            Type::I32,
+            Type::I32,
+            Type::I32,
+        ])),
+        &Operator::ArrayInitElem { sig, .. } => Ok(Cow::Owned(vec![
+            Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: true,
+            }),
+            Type::I32,
+            Type::I32,
+            Type::I32,
+        ])),
+        &Operator::RefEq => {
+            let eq_ref = Type::Heap(crate::WithNullable {
+                value: crate::HeapType::Eq,
+                nullable: true,
+            });
+            Ok(Cow::Owned(vec![eq_ref, eq_ref]))
+        }
+        &Operator::RefI31 => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::I31GetS | &Operator::I31GetU => Ok(Cow::Owned(vec![Type::Heap(
+            crate::WithNullable {
+                value: crate::HeapType::I31,
+                nullable: true,
+            },
+        )])),
+        &Operator::AnyConvertExtern => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::ExternRef,
+            nullable: true,
+        })])),
+        &Operator::ExternConvertAny => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::Any,
+            nullable: true,
+        })])),
     }
 }
 /// Given a module and an existing operand stack for context, provide
@@ -1800,6 +1870,50 @@ pub fn op_outputs(
         Operator::ArrayLen => Ok(Cow::Borrowed(&[Type::I32])),
         &Operator::RefTest { ty } => Ok(Cow::Borrowed(&[Type::I32])),
         &Operator::RefCast { ty } => Ok(Cow::Owned(vec![ty])),
+        &Operator::StructNewDefault { sig } => Ok(Cow::Owned(vec![Type::Heap(
+            crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            },
+        )])),
+        &Operator::StructGetS { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::StructGetU { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::ArrayNewDefault { sig } => Ok(Cow::Owned(vec![Type::Heap(
+            crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            },
+        )])),
+        &Operator::ArrayNewData { sig, .. } => Ok(Cow::Owned(vec![Type::Heap(
+            crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            },
+        )])),
+        &Operator::ArrayNewElem { sig, .. } => Ok(Cow::Owned(vec![Type::Heap(
+            crate::WithNullable {
+                value: crate::HeapType::Sig { sig_index: sig },
+                nullable: false,
+            },
+        )])),
+        &Operator::ArrayGetS { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::ArrayGetU { .. } => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::ArrayInitData { .. } => Ok(Cow::Borrowed(&[])),
+        &Operator::ArrayInitElem { .. } => Ok(Cow::Borrowed(&[])),
+        &Operator::RefEq => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::RefI31 => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::I31,
+            nullable: false,
+        })])),
+        &Operator::I31GetS | &Operator::I31GetU => Ok(Cow::Borrowed(&[Type::I32])),
+        &Operator::AnyConvertExtern => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::Any,
+            nullable: true,
+        })])),
+        &Operator::ExternConvertAny => Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
+            value: crate::HeapType::ExternRef,
+            nullable: true,
+        })])),
     }
 }
 /// Side-effects that an operator may have.
@@ -2329,6 +2443,22 @@ impl Operator {
             Operator::ArrayLen => &[ReadGlobal],
             Operator::RefTest { ty } => &[],
             Operator::RefCast { ty } => &[Trap],
+            Operator::StructNewDefault { .. } => &[],
+            Operator::StructGetS { .. } => &[ReadGlobal],
+            Operator::StructGetU { .. } => &[ReadGlobal],
+            Operator::ArrayNewDefault { .. } => &[],
+            Operator::ArrayNewData { .. } => &[ReadGlobal],
+            Operator::ArrayNewElem { .. } => &[ReadGlobal],
+            Operator::ArrayGetS { .. } => &[ReadGlobal],
+            Operator::ArrayGetU { .. } => &[ReadGlobal],
+            Operator::ArrayInitData { .. } => &[WriteGlobal, ReadGlobal],
+            Operator::ArrayInitElem { .. } => &[WriteGlobal, ReadGlobal],
+            Operator::RefEq => &[],
+            Operator::RefI31 => &[],
+            Operator::I31GetS => &[],
+            Operator::I31GetU => &[],
+            Operator::AnyConvertExtern => &[],
+            Operator::ExternConvertAny => &[],
         }
     }
     /// Is the operator pure (has no side-effects)?
@@ -3066,6 +3196,30 @@ impl core::fmt::Display for Operator {
             Operator::ArrayLen => write!(f, "array_len")?,
             Operator::RefTest { ty } => write!(f, "ref_test<{ty}>")?,
             Operator::RefCast { ty } => write!(f, "ref_cast<{ty}>")?,
+            Operator::StructNewDefault { sig } => write!(f, "struct_new_default<{sig}>")?,
+            Operator::StructGetS { sig, idx } => write!(f, "struct_get_s<{sig}@{idx}>")?,
+            Operator::StructGetU { sig, idx } => write!(f, "struct_get_u<{sig}@{idx}>")?,
+            Operator::ArrayNewDefault { sig } => write!(f, "array_new_default<{sig}>")?,
+            Operator::ArrayNewData { sig, data_idx } => {
+                write!(f, "array_new_data<{sig};data={data_idx}>")?
+            }
+            Operator::ArrayNewElem { sig, elem_idx } => {
+                write!(f, "array_new_elem<{sig};elem={elem_idx}>")?
+            }
+            Operator::ArrayGetS { sig } => write!(f, "array_get_s<{sig}>")?,
+            Operator::ArrayGetU { sig } => write!(f, "array_get_u<{sig}>")?,
+            Operator::ArrayInitData { sig, data_idx } => {
+                write!(f, "array_init_data<{sig};data={data_idx}>")?
+            }
+            Operator::ArrayInitElem { sig, elem_idx } => {
+                write!(f, "array_init_elem<{sig};elem={elem_idx}>")?
+            }
+            Operator::RefEq => write!(f, "ref_eq")?,
+            Operator::RefI31 => write!(f, "ref_i31")?,
+            Operator::I31GetS => write!(f, "i31_get_s")?,
+            Operator::I31GetU => write!(f, "i31_get_u")?,
+            Operator::AnyConvertExtern => write!(f, "any_convert_extern")?,
+            Operator::ExternConvertAny => write!(f, "extern_convert_any")?,
         }
         Ok(())
     }

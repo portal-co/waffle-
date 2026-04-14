@@ -869,6 +869,66 @@ pub enum Operator {
     RefCast {
         ty: Type,
     },
+    /// `struct.new_default`: creates a struct with all fields set to their
+    /// default (zero) value; takes no value inputs.
+    StructNewDefault {
+        sig: Signature,
+    },
+    /// `struct.get_s`: sign-extending packed-field read from a struct.
+    StructGetS {
+        sig: Signature,
+        idx: usize,
+    },
+    /// `struct.get_u`: zero-extending packed-field read from a struct.
+    StructGetU {
+        sig: Signature,
+        idx: usize,
+    },
+    /// `array.new_default`: creates an array of the given length with all
+    /// elements set to the default (zero) value.
+    ArrayNewDefault {
+        sig: Signature,
+    },
+    /// `array.new_data`: creates an array from a data segment slice.
+    ArrayNewData {
+        sig: Signature,
+        data_idx: u32,
+    },
+    /// `array.new_elem`: creates an array from an element-segment slice.
+    ArrayNewElem {
+        sig: Signature,
+        elem_idx: u32,
+    },
+    /// `array.get_s`: sign-extending packed-element read from an array.
+    ArrayGetS {
+        sig: Signature,
+    },
+    /// `array.get_u`: zero-extending packed-element read from an array.
+    ArrayGetU {
+        sig: Signature,
+    },
+    /// `array.init_data`: bulk-initialise an array slice from a data segment.
+    ArrayInitData {
+        sig: Signature,
+        data_idx: u32,
+    },
+    /// `array.init_elem`: bulk-initialise an array slice from an element segment.
+    ArrayInitElem {
+        sig: Signature,
+        elem_idx: u32,
+    },
+    /// `ref.eq`: structural equality test on `eqref` values.
+    RefEq,
+    /// `ref.i31`: boxes an `i32` value into an `i31ref`.
+    RefI31,
+    /// `i31.get_s`: sign-extends an `i31ref` back to `i32`.
+    I31GetS,
+    /// `i31.get_u`: zero-extends an `i31ref` back to `i32`.
+    I31GetU,
+    /// `any.convert_extern`: converts an `externref` into an `anyref`.
+    AnyConvertExtern,
+    /// `extern.convert_any`: converts an `anyref` into an `externref`.
+    ExternConvertAny,
 }
 #[test]
 fn op_size() {
@@ -1883,6 +1943,70 @@ impl<'a, 'b> core::convert::TryFrom<&'b wasmparser::Operator<'a>> for Operator {
             &wasmparser::Operator::RefCastNullable { hty } => Ok(Operator::RefCast {
                 ty: Type::Heap(wasmparser::RefType::new(true, hty).unwrap().into()),
             }),
+            &wasmparser::Operator::StructNewDefault { struct_type_index } => {
+                Ok(Operator::StructNewDefault {
+                    sig: Signature::new(struct_type_index as usize),
+                })
+            }
+            &wasmparser::Operator::StructGetS {
+                struct_type_index,
+                field_index,
+            } => Ok(Operator::StructGetS {
+                sig: Signature::new(struct_type_index as usize),
+                idx: field_index as usize,
+            }),
+            &wasmparser::Operator::StructGetU {
+                struct_type_index,
+                field_index,
+            } => Ok(Operator::StructGetU {
+                sig: Signature::new(struct_type_index as usize),
+                idx: field_index as usize,
+            }),
+            &wasmparser::Operator::ArrayNewDefault { array_type_index } => {
+                Ok(Operator::ArrayNewDefault {
+                    sig: Signature::new(array_type_index as usize),
+                })
+            }
+            &wasmparser::Operator::ArrayNewData {
+                array_type_index,
+                array_data_index,
+            } => Ok(Operator::ArrayNewData {
+                sig: Signature::new(array_type_index as usize),
+                data_idx: array_data_index,
+            }),
+            &wasmparser::Operator::ArrayNewElem {
+                array_type_index,
+                array_elem_index,
+            } => Ok(Operator::ArrayNewElem {
+                sig: Signature::new(array_type_index as usize),
+                elem_idx: array_elem_index,
+            }),
+            &wasmparser::Operator::ArrayGetS { array_type_index } => Ok(Operator::ArrayGetS {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArrayGetU { array_type_index } => Ok(Operator::ArrayGetU {
+                sig: Signature::new(array_type_index as usize),
+            }),
+            &wasmparser::Operator::ArrayInitData {
+                array_type_index,
+                array_data_index,
+            } => Ok(Operator::ArrayInitData {
+                sig: Signature::new(array_type_index as usize),
+                data_idx: array_data_index,
+            }),
+            &wasmparser::Operator::ArrayInitElem {
+                array_type_index,
+                array_elem_index,
+            } => Ok(Operator::ArrayInitElem {
+                sig: Signature::new(array_type_index as usize),
+                elem_idx: array_elem_index,
+            }),
+            &wasmparser::Operator::RefEq => Ok(Operator::RefEq),
+            &wasmparser::Operator::RefI31 => Ok(Operator::RefI31),
+            &wasmparser::Operator::I31GetS => Ok(Operator::I31GetS),
+            &wasmparser::Operator::I31GetU => Ok(Operator::I31GetU),
+            &wasmparser::Operator::AnyConvertExtern => Ok(Operator::AnyConvertExtern),
+            &wasmparser::Operator::ExternConvertAny => Ok(Operator::ExternConvertAny),
             _ => Err(()),
         }
     }

@@ -50,6 +50,24 @@ pub enum HeapType {
     ExternRef,
     Sig { sig_index: Signature },
     Array,
+    /// The abstract `any` heap type (top of the GC type hierarchy).
+    Any,
+    /// The abstract `eq` heap type (supertype of all ref.eq-comparable types).
+    Eq,
+    /// The abstract `i31` heap type (unboxed 31-bit integer).
+    I31,
+    /// The abstract `struct` heap type (supertype of all struct types).
+    Struct,
+    /// The abstract `none` heap type (bottom of the internal type hierarchy).
+    None,
+    /// The abstract `noextern` heap type (bottom of the external type hierarchy).
+    NoExtern,
+    /// The abstract `nofunc` heap type (bottom of the function type hierarchy).
+    NoFunc,
+    /// The abstract `exn` heap type.
+    Exn,
+    /// The abstract `noexn` heap type.
+    NoExn,
 }
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -138,33 +156,29 @@ impl From<wasmparser::FieldType> for WithMutablility<StorageType> {
 }
 impl From<wasmparser::RefType> for WithNullable<HeapType> {
     fn from(ty: wasmparser::RefType) -> Self {
-        if ty.is_extern_ref() {
-            return WithNullable {
-                nullable: ty.is_nullable(),
-                value: HeapType::ExternRef,
-            };
-        }
-        if ty.is_array_ref() {
-            return WithNullable {
-                nullable: ty.is_nullable(),
-                value: HeapType::Array,
-            };
-        }
-        match ty.type_index() {
-            Some(idx) => {
-                let nullable = ty.is_nullable();
-                WithNullable {
-                    nullable,
-                    value: HeapType::Sig {
-                        sig_index: Signature::new(idx.as_module_index().unwrap() as usize),
-                    },
-                }
-            }
-            None => WithNullable {
-                value: HeapType::FuncRef,
-                nullable: ty.is_nullable(),
+        let nullable = ty.is_nullable();
+        let value = match ty.heap_type() {
+            wasmparser::HeapType::Concrete(idx) => HeapType::Sig {
+                sig_index: Signature::new(idx.as_module_index().unwrap() as usize),
             },
-        }
+            wasmparser::HeapType::Abstract { ty, .. } => match ty {
+                wasmparser::AbstractHeapType::Func => HeapType::FuncRef,
+                wasmparser::AbstractHeapType::Extern => HeapType::ExternRef,
+                wasmparser::AbstractHeapType::Any => HeapType::Any,
+                wasmparser::AbstractHeapType::None => HeapType::None,
+                wasmparser::AbstractHeapType::NoExtern => HeapType::NoExtern,
+                wasmparser::AbstractHeapType::NoFunc => HeapType::NoFunc,
+                wasmparser::AbstractHeapType::Eq => HeapType::Eq,
+                wasmparser::AbstractHeapType::Struct => HeapType::Struct,
+                wasmparser::AbstractHeapType::Array => HeapType::Array,
+                wasmparser::AbstractHeapType::I31 => HeapType::I31,
+                wasmparser::AbstractHeapType::Exn => HeapType::Exn,
+                wasmparser::AbstractHeapType::NoExn => HeapType::NoExn,
+                // Cont, NoCont and any future abstract types
+                _ => HeapType::FuncRef,
+            },
+        };
+        WithNullable { value, nullable }
     }
 }
 impl core::fmt::Display for Type {
@@ -191,6 +205,16 @@ impl core::fmt::Display for HeapType {
             HeapType::ExternRef => write!(f, "externref"),
             HeapType::Sig { sig_index } => write!(f, "sigref({})", sig_index),
             HeapType::Array => write!(f, "arrayref"),
+            HeapType::Any => write!(f, "anyref"),
+            HeapType::Eq => write!(f, "eqref"),
+            HeapType::I31 => write!(f, "i31ref"),
+            HeapType::Struct => write!(f, "structref"),
+            HeapType::None => write!(f, "nullref"),
+            HeapType::NoExtern => write!(f, "nullexternref"),
+            HeapType::NoFunc => write!(f, "nullfuncref"),
+            HeapType::Exn => write!(f, "exnref"),
+            HeapType::NoExn => write!(f, "nullexnref"),
+            _ => write!(f, "<unknown heap type>"),
         }
     }
 }
@@ -220,15 +244,63 @@ impl From<WithMutablility<StorageType>> for wasm_encoder::FieldType {
 }
 impl From<WithNullable<HeapType>> for wasm_encoder::RefType {
     fn from(ty: WithNullable<HeapType>) -> wasm_encoder::RefType {
-        match &ty.value {
-            HeapType::ExternRef => wasm_encoder::RefType::EXTERNREF,
-            HeapType::FuncRef => wasm_encoder::RefType::FUNCREF,
-            HeapType::Sig { sig_index } => wasm_encoder::RefType {
-                nullable: ty.nullable,
-                heap_type: wasm_encoder::HeapType::Concrete(sig_index.index() as u32),
+        let heap_type = match &ty.value {
+            HeapType::FuncRef => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Func,
             },
-            HeapType::Array => wasm_encoder::RefType::ARRAYREF,
+            HeapType::ExternRef => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Extern,
+            },
+            HeapType::Any => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Any,
+            },
+            HeapType::None => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::None,
+            },
+            HeapType::NoExtern => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::NoExtern,
+            },
+            HeapType::NoFunc => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::NoFunc,
+            },
+            HeapType::Eq => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Eq,
+            },
+            HeapType::Struct => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Struct,
+            },
+            HeapType::Array => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Array,
+            },
+            HeapType::I31 => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::I31,
+            },
+            HeapType::Exn => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::Exn,
+            },
+            HeapType::NoExn => wasm_encoder::HeapType::Abstract {
+                shared: false,
+                ty: wasm_encoder::AbstractHeapType::NoExn,
+            },
+            HeapType::Sig { sig_index } => {
+                wasm_encoder::HeapType::Concrete(sig_index.index() as u32)
+            }
             _ => panic!("Cannot convert {:?} into reftype", ty),
+        };
+        wasm_encoder::RefType {
+            nullable: ty.nullable,
+            heap_type,
         }
     }
 }

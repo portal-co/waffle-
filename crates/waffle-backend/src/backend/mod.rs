@@ -1292,6 +1292,60 @@ impl<'a> WasmFuncBackend<'a> {
                 }
                 _ => todo!(),
             }),
+            Operator::StructNewDefault { sig } => Some(
+                wasm_encoder::Instruction::StructNewDefault(sig.index() as u32),
+            ),
+            Operator::StructGetS { sig, idx } => {
+                Some(wasm_encoder::Instruction::StructGetS {
+                    struct_type_index: sig.index() as u32,
+                    field_index: *idx as u32,
+                })
+            }
+            Operator::StructGetU { sig, idx } => {
+                Some(wasm_encoder::Instruction::StructGetU {
+                    struct_type_index: sig.index() as u32,
+                    field_index: *idx as u32,
+                })
+            }
+            Operator::ArrayNewDefault { sig } => {
+                Some(wasm_encoder::Instruction::ArrayNewDefault(sig.index() as u32))
+            }
+            Operator::ArrayNewData { sig, data_idx } => {
+                Some(wasm_encoder::Instruction::ArrayNewData {
+                    array_type_index: sig.index() as u32,
+                    array_data_index: *data_idx,
+                })
+            }
+            Operator::ArrayNewElem { sig, elem_idx } => {
+                Some(wasm_encoder::Instruction::ArrayNewElem {
+                    array_type_index: sig.index() as u32,
+                    array_elem_index: *elem_idx,
+                })
+            }
+            Operator::ArrayGetS { sig } => {
+                Some(wasm_encoder::Instruction::ArrayGetS(sig.index() as u32))
+            }
+            Operator::ArrayGetU { sig } => {
+                Some(wasm_encoder::Instruction::ArrayGetU(sig.index() as u32))
+            }
+            Operator::ArrayInitData { sig, data_idx } => {
+                Some(wasm_encoder::Instruction::ArrayInitData {
+                    array_type_index: sig.index() as u32,
+                    array_data_index: *data_idx,
+                })
+            }
+            Operator::ArrayInitElem { sig, elem_idx } => {
+                Some(wasm_encoder::Instruction::ArrayInitElem {
+                    array_type_index: sig.index() as u32,
+                    array_elem_index: *elem_idx,
+                })
+            }
+            Operator::RefEq => Some(wasm_encoder::Instruction::RefEq),
+            Operator::RefI31 => Some(wasm_encoder::Instruction::RefI31),
+            Operator::I31GetS => Some(wasm_encoder::Instruction::I31GetS),
+            Operator::I31GetU => Some(wasm_encoder::Instruction::I31GetU),
+            Operator::AnyConvertExtern => Some(wasm_encoder::Instruction::AnyConvertExtern),
+            Operator::ExternConvertAny => Some(wasm_encoder::Instruction::ExternConvertAny),
             _ => todo!("Unknown operator"),
         };
         if let Some(inst) = inst {
