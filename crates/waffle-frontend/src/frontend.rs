@@ -946,7 +946,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             self.pop_n(tys.len())
         }
     }
-    fn handle_op(&mut self, op: wasmparser::Operator<'a>, loc: SourceLoc) -> Result<()> {
+    fn handle_op(&mut self, op: wasmparser::Operator<'_>, loc: SourceLoc) -> Result<()> {
         trace!("handle_op: {:?}", op);
         trace!("op_stack = {:?}", self.op_stack);
         trace!("ctrl_stack = {:?}", self.ctrl_stack);
@@ -1528,7 +1528,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         }
         Ok(())
     }
-    fn handle_op_unreachable(&mut self, op: wasmparser::Operator<'a>) -> Result<()> {
+    fn handle_op_unreachable(&mut self, op: wasmparser::Operator<'_>) -> Result<()> {
         trace!("handle_op_unreachable: {:?}", op);
         trace!("op_stack = {:?}", self.op_stack);
         trace!("ctrl_stack = {:?}", self.ctrl_stack);
@@ -1536,7 +1536,7 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         self.handle_ctrl_op(op)?;
         Ok(())
     }
-    fn handle_ctrl_op(&mut self, op: wasmparser::Operator<'a>) -> Result<bool> {
+    fn handle_ctrl_op(&mut self, op: wasmparser::Operator<'_>) -> Result<bool> {
         log::trace!(
             "handle_ctrl_op: op {:?} reachable {} cur_block {}",
             op,
@@ -2007,5 +2007,31 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             }
         }
         Ok(())
+    }
+}
+
+pub struct BodySink<'a, 'b> {
+    pub inner: FunctionBodyBuilder<'a, 'b>,
+}
+
+impl<'a, 'b> BodySink<'a, 'b> {
+    pub fn new(module: &'b Module<'a>, sig: Signature, body: &'b mut FunctionBody) -> Self {
+        BodySink {
+            inner: FunctionBodyBuilder::new(module, sig, body),
+        }
+    }
+}
+
+impl<'a, 'b> wax_core::build::OperatorSink<(), anyhow::Error> for BodySink<'a, 'b> {
+    fn operator(
+        &mut self,
+        _ctx: &mut (),
+        op: &wasmparser::Operator<'_>,
+    ) -> anyhow::Result<()> {
+        if self.inner.reachable {
+            self.inner.handle_op(op.clone(), SourceLoc::invalid())
+        } else {
+            self.inner.handle_op_unreachable(op.clone())
+        }
     }
 }

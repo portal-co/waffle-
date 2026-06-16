@@ -24,8 +24,9 @@ edition = "2018"
 repository = "https://github.com/portal-co/waffle-"
 
 [workspace.dependencies]
-wasmparser = { version = "^0.241", default-features = false, features = ["simd"] }
-wasm-encoder = { version = "^0.241", default-features = false }
+wasmparser = { version = "0.240", default-features = false, features = ["simd"] }
+wasm-encoder = { version = "0.240", default-features = false }
+wax-core = { version = "0.1.0", git = "https://github.com/portal-co/wax.git" }
 anyhow = { version = "^1.0", default-features = false }
 
 log = { version = "0.4", default-features = false }

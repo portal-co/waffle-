@@ -18,6 +18,7 @@ pub use waffle_passes_shared;
 
 pub mod backend;
 pub use backend::*;
+pub use wax_core::build::InstructionSink;
 
 /// Compile a WAFFLE Module to Wasm bytes.
 pub fn to_wasm_bytes(module: &Module<'_>) -> Result<Vec<u8>> {

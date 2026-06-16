@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 waffle-entity .workspace = true
+wax-core .workspace = true
 waffle-ir = {workspace = true, features = ["frontend"]}
 wasmparser .workspace = true
 wasm-encoder .workspace = true

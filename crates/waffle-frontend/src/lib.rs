@@ -16,6 +16,7 @@ pub use waffle_ir::*;
 
 mod frontend;
 pub use frontend::*;
+pub use wax_core::build::OperatorSink;
 
 /// Parse a WebAssembly module from bytes into a WAFFLE Module.
 pub fn from_wasm_bytes<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Result<Module<'a>> {
