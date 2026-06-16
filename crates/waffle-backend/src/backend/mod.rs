@@ -73,7 +73,7 @@ impl<'a> WasmFuncBackend<'a> {
                 .collect::<Vec<_>>(),
         );
         for block in &ctx.ctrl {
-            self.lower_block(&ctx, block, &mut func)?;
+            self.lower_block::<(), anyhow::Error, _>(&ctx, &mut (), block, &mut func)?;
         }
         // If the last block was a Block, Loop or If, then the type
         // may not match, so end with an Unreachable.
@@ -89,83 +89,91 @@ impl<'a> WasmFuncBackend<'a> {
         log::debug!("Compiled to:\n{:?}\n", func);
         Ok(func)
     }
-    pub fn lower_to_sink<S: InstructionSink<(), anyhow::Error>>(
-        &self,
-        sink: &mut S,
-    ) -> Result<()> {
+    pub fn lower_to_sink<Ctx, E, S>(&self, sctx: &mut Ctx, sink: &mut S) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         let trees = Trees::compute(&self.body);
         let ctrl = StackifyContext::new(&self.body, &self.cfg)?.compute();
         let locals = Localifier::compute(&self.body, &self.cfg, &trees);
         let ctx = CompileContext { trees, ctrl, locals };
         for block in &ctx.ctrl {
-            self.lower_block(&ctx, block, sink)?;
+            self.lower_block(&ctx, sctx, block, sink)?;
         }
         match ctx.ctrl.last() {
             Some(&WasmBlock::Block { .. })
             | Some(&WasmBlock::Loop { .. })
             | Some(&WasmBlock::If { .. }) => {
-                sink.instruction(&mut (), &wasm_encoder::Instruction::Unreachable)?;
+                sink.instruction(sctx, &wasm_encoder::Instruction::Unreachable)
+                    .map_err(Into::into)?;
             }
             _ => {}
         }
-        sink.instruction(&mut (), &wasm_encoder::Instruction::End)?;
+        sink.instruction(sctx, &wasm_encoder::Instruction::End)
+            .map_err(Into::into)?;
         Ok(())
     }
-    fn lower_block<S: InstructionSink<(), anyhow::Error>>(
+    fn lower_block<Ctx, E, S>(
         &self,
         ctx: &CompileContext<'_>,
+        sctx: &mut Ctx,
         block: &WasmBlock<'_>,
         func: &mut S,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         match block {
             WasmBlock::Block { body, .. } => {
-                func.instruction(&mut (), &wasm_encoder::Instruction::Block(
+                func.instruction(sctx, &wasm_encoder::Instruction::Block(
                     wasm_encoder::BlockType::Empty,
-                ))?;
+                )).map_err(Into::into)?;
                 for sub_block in &body[..] {
-                    self.lower_block(ctx, sub_block, func)?;
+                    self.lower_block(ctx, sctx, sub_block, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::End)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::End).map_err(Into::into)?;
             }
             WasmBlock::Loop { body, .. } => {
-                func.instruction(&mut (), &wasm_encoder::Instruction::Loop(
+                func.instruction(sctx, &wasm_encoder::Instruction::Loop(
                     wasm_encoder::BlockType::Empty,
-                ))?;
+                )).map_err(Into::into)?;
                 for sub_block in &body[..] {
-                    self.lower_block(ctx, sub_block, func)?;
+                    self.lower_block(ctx, sctx, sub_block, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::End)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::End).map_err(Into::into)?;
             }
             WasmBlock::Br { target } => {
-                func.instruction(&mut (), &wasm_encoder::Instruction::Br(target.index()))?;
+                func.instruction(sctx, &wasm_encoder::Instruction::Br(target.index())).map_err(Into::into)?;
             }
             WasmBlock::If {
                 cond,
                 if_true,
                 if_false,
             } => {
-                self.lower_value(ctx, *cond, func)?;
-                func.instruction(&mut (), &wasm_encoder::Instruction::If(
+                self.lower_value(ctx, sctx, *cond, func)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::If(
                     wasm_encoder::BlockType::Empty,
-                ))?;
+                )).map_err(Into::into)?;
                 for sub_block in &if_true[..] {
-                    self.lower_block(ctx, sub_block, func)?;
+                    self.lower_block(ctx, sctx, sub_block, func)?;
                 }
                 if if_false.len() > 0 {
-                    func.instruction(&mut (), &wasm_encoder::Instruction::Else)?;
+                    func.instruction(sctx, &wasm_encoder::Instruction::Else).map_err(Into::into)?;
                     for sub_block in &if_false[..] {
-                        self.lower_block(ctx, sub_block, func)?;
+                        self.lower_block(ctx, sctx, sub_block, func)?;
                     }
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::End)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::End).map_err(Into::into)?;
             }
             WasmBlock::Select {
                 selector,
                 targets,
                 default,
             } => {
-                self.lower_value(ctx, *selector, func)?;
-                func.instruction(&mut (), &wasm_encoder::Instruction::BrTable(
+                self.lower_value(ctx, sctx, *selector, func)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::BrTable(
                     Cow::Owned(
                         targets
                             .iter()
@@ -173,7 +181,7 @@ impl<'a> WasmFuncBackend<'a> {
                             .collect::<Vec<_>>(),
                     ),
                     default.index(),
-                ))?;
+                )).map_err(Into::into)?;
             }
             WasmBlock::Leaf { block } => {
                 for inst in &self.body.blocks[*block].insts {
@@ -184,7 +192,7 @@ impl<'a> WasmFuncBackend<'a> {
                         continue;
                     }
                     if let &ValueDef::Operator(..) = &self.body.values[inst] {
-                        self.lower_inst(ctx, inst, /* root = */ true, func)?;
+                        self.lower_inst(ctx, sctx, inst, /* root = */ true, func)?;
                     }
                 }
             }
@@ -205,15 +213,15 @@ impl<'a> WasmFuncBackend<'a> {
             // }
             WasmBlock::Return { values } => {
                 for &value in &values[..] {
-                    self.lower_value(ctx, value, func)?;
+                    self.lower_value(ctx, sctx, value, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::Return)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::Return).map_err(Into::into)?;
             }
             WasmBlock::ReturnCall { func: f, values } => {
                 for &value in &values[..] {
-                    self.lower_value(ctx, value, func)?;
+                    self.lower_value(ctx, sctx, value, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::ReturnCall(f.index() as u32))?;
+                func.instruction(sctx, &wasm_encoder::Instruction::ReturnCall(f.index() as u32)).map_err(Into::into)?;
             }
             WasmBlock::BlockParams { from, to, prefix } => {
                 debug_assert_eq!(from.len() + *prefix, to.len());
@@ -226,7 +234,7 @@ impl<'a> WasmFuncBackend<'a> {
                     if ctx.locals.values[to].len() == 1 {
                         assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
                     }
-                    self.lower_set_value(ctx, to, func)?;
+                    self.lower_set_value(ctx, sctx, to, func)?;
                 }
                 for (&from, &(to_ty, to)) in from.iter().zip(iter) {
                     if ctx.locals.values[to].is_empty() {
@@ -239,7 +247,7 @@ impl<'a> WasmFuncBackend<'a> {
                     if ctx.locals.values[from].len() == 1 {
                         assert_eq!(from_ty, ctx.locals.locals[ctx.locals.values[from][0]]);
                     }
-                    self.lower_value(ctx, from, func)?;
+                    self.lower_value(ctx, sctx, from, func)?;
                 }
                 for &(to_ty, to) in to.iter().skip(*prefix).rev() {
                     if ctx.locals.values[to].is_empty() {
@@ -248,40 +256,45 @@ impl<'a> WasmFuncBackend<'a> {
                     if ctx.locals.values[to].len() == 1 {
                         assert_eq!(to_ty, ctx.locals.locals[ctx.locals.values[to][0]]);
                     }
-                    self.lower_set_value(ctx, to, func)?;
+                    self.lower_set_value(ctx, sctx, to, func)?;
                 }
             }
             WasmBlock::ReturnCallIndirect { sig, table, values } => {
                 for &value in &values[..] {
-                    self.lower_value(ctx, value, func)?;
+                    self.lower_value(ctx, sctx, value, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::ReturnCallIndirect {
+                func.instruction(sctx, &wasm_encoder::Instruction::ReturnCallIndirect {
                     type_index: sig.index() as u32,
                     table_index: table.index() as u32,
-                })?;
+                }).map_err(Into::into)?;
             }
             WasmBlock::ReturnCallRef { sig, values } => {
                 for &value in &values[..] {
-                    self.lower_value(ctx, value, func)?;
+                    self.lower_value(ctx, sctx, value, func)?;
                 }
-                func.instruction(&mut (), &wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32))?;
+                func.instruction(sctx, &wasm_encoder::Instruction::ReturnCallRef(sig.index() as u32)).map_err(Into::into)?;
             }
             WasmBlock::Unreachable => {
-                func.instruction(&mut (), &wasm_encoder::Instruction::Unreachable)?;
+                func.instruction(sctx, &wasm_encoder::Instruction::Unreachable).map_err(Into::into)?;
             }
         }
         Ok(())
     }
-    fn lower_value<S: InstructionSink<(), anyhow::Error>>(
+    fn lower_value<Ctx, E, S>(
         &self,
         ctx: &CompileContext<'_>,
+        sctx: &mut Ctx,
         value: Value,
         func: &mut S,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         log::trace!("lower_value: value {}", value);
         let value = self.body.resolve_alias(value);
         if ctx.trees.remat.contains(&value) {
-            self.lower_inst(ctx, value, /* root = */ false, func)?;
+            self.lower_inst(ctx, sctx, value, /* root = */ false, func)?;
         } else {
             let local = match &self.body.values[value] {
                 &ValueDef::BlockParam(..) | &ValueDef::Operator(..) => ctx.locals.values[value][0],
@@ -290,16 +303,22 @@ impl<'a> WasmFuncBackend<'a> {
                 }
                 _ => unreachable!(),
             };
-            func.instruction(&mut (), &wasm_encoder::Instruction::LocalGet(local.index() as u32))?;
+            func.instruction(sctx, &wasm_encoder::Instruction::LocalGet(local.index() as u32))
+                .map_err(Into::into)?;
         }
         Ok(())
     }
-    fn lower_set_value<S: InstructionSink<(), anyhow::Error>>(
+    fn lower_set_value<Ctx, E, S>(
         &self,
         ctx: &CompileContext<'a>,
+        sctx: &mut Ctx,
         value: Value,
         func: &mut S,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         debug_assert_eq!(
             ctx.locals.values[value].len(),
             1,
@@ -307,16 +326,22 @@ impl<'a> WasmFuncBackend<'a> {
             value
         );
         let local = ctx.locals.values[value][0];
-        func.instruction(&mut (), &wasm_encoder::Instruction::LocalSet(local.index() as u32))?;
+        func.instruction(sctx, &wasm_encoder::Instruction::LocalSet(local.index() as u32))
+            .map_err(Into::into)?;
         Ok(())
     }
-    fn lower_inst<S: InstructionSink<(), anyhow::Error>>(
+    fn lower_inst<Ctx, E, S>(
         &self,
         ctx: &CompileContext<'a>,
+        sctx: &mut Ctx,
         value: Value,
         root: bool,
         func: &mut S,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         log::trace!("lower_inst: value {} root {}", value, root);
         match &self.body.values[value] {
             &ValueDef::Operator(ref op, args, tys) => {
@@ -324,33 +349,38 @@ impl<'a> WasmFuncBackend<'a> {
                     let arg = self.body.resolve_alias(arg);
                     if ctx.trees.owner.contains_key(&arg) || ctx.trees.remat.contains(&arg) {
                         log::trace!(" -> arg {} is owned", arg);
-                        self.lower_inst(ctx, arg, /* root = */ false, func)?;
+                        self.lower_inst(ctx, sctx, arg, /* root = */ false, func)?;
                     } else {
-                        self.lower_value(ctx, arg, func)?;
+                        self.lower_value(ctx, sctx, arg, func)?;
                     }
                 }
-                self.lower_op(op, func)?;
+                self.lower_op(sctx, op, func)?;
                 if root {
                     for &local in &ctx.locals.values[value] {
                         func.instruction(
-                            &mut (),
+                            sctx,
                             &wasm_encoder::Instruction::LocalSet(local.index() as u32),
-                        )?;
+                        ).map_err(Into::into)?;
                     }
                     let leftovers = tys.len() - ctx.locals.values[value].len();
                     for _ in 0..leftovers {
-                        func.instruction(&mut (), &wasm_encoder::Instruction::Drop)?;
+                        func.instruction(sctx, &wasm_encoder::Instruction::Drop)
+                            .map_err(Into::into)?;
                     }
                 }
             }
             &ValueDef::PickOutput(..) => {
-                self.lower_value(ctx, value, func)?;
+                self.lower_value(ctx, sctx, value, func)?;
             }
             def => unreachable!("Unexpected inst: {:?}", def),
         }
         Ok(())
     }
-    fn lower_op<S: InstructionSink<(), anyhow::Error>>(&self, op: &Operator, func: &mut S) -> Result<()> {
+    fn lower_op<Ctx, E, S>(&self, sctx: &mut Ctx, op: &Operator, func: &mut S) -> Result<()>
+    where
+        E: Into<anyhow::Error>,
+        S: InstructionSink<Ctx, E>,
+    {
         let inst = match op {
             Operator::Unreachable => Some(wasm_encoder::Instruction::Unreachable),
             Operator::Nop => None,
@@ -1377,20 +1407,21 @@ impl<'a> WasmFuncBackend<'a> {
             _ => todo!("Unknown operator"),
         };
         if let Some(inst) = inst {
-            func.instruction(&mut (), &inst)?;
+            func.instruction(sctx, &inst).map_err(Into::into)?;
         }
         Ok(())
     }
 }
-pub fn compile_func_to_sink<S>(body: &FunctionBody, sink: &mut S) -> Result<()>
+pub fn compile_func_to_sink<Ctx, E, S>(body: &FunctionBody, sctx: &mut Ctx, sink: &mut S) -> Result<()>
 where
-    S: InstructionSink<(), anyhow::Error>,
+    E: Into<anyhow::Error>,
+    S: InstructionSink<Ctx, E>,
 {
     body.validate()?;
     let body = Reducifier::new(body).run();
     let cfg = CFGInfo::new(&body);
     let state = WasmFuncBackend { body, cfg };
-    state.lower_to_sink(sink)
+    state.lower_to_sink(sctx, sink)
 }
 pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut into_mod = wasm_encoder::Module::new();

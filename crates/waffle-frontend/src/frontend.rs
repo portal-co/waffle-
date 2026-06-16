@@ -2022,10 +2022,10 @@ impl<'a, 'b> BodySink<'a, 'b> {
     }
 }
 
-impl<'a, 'b> wax_core::build::OperatorSink<(), anyhow::Error> for BodySink<'a, 'b> {
+impl<'a, 'b, Ctx> wax_core::build::OperatorSink<Ctx, anyhow::Error> for BodySink<'a, 'b> {
     fn operator(
         &mut self,
-        _ctx: &mut (),
+        _ctx: &mut Ctx,
         op: &wasmparser::Operator<'_>,
     ) -> anyhow::Result<()> {
         if self.inner.reachable {
