@@ -18,14 +18,39 @@ mod frontend;
 pub use frontend::*;
 pub use wax_core::build::OperatorSink;
 
+/// A source of indexed WASM module metadata and lazily materializable bodies.
+///
+/// Implement this on a byte-backed index or a synthetic module provider. This
+/// keeps callers such as Speet from having to serialize synthetic metadata into
+/// an actual WASM module solely to enter the Waffle frontend.
+pub trait WasmModuleSource<'a> {
+    /// Produce module declarations and deferred function bodies. Implementors
+    /// must not eagerly expand unrelated function bodies.
+    fn index_module(&self, options: &FrontendOptions) -> Result<Module<'a>>;
+}
+
+impl<'a> WasmModuleSource<'a> for &'a [u8] {
+    fn index_module(&self, options: &FrontendOptions) -> Result<Module<'a>> {
+        wasm_to_ir(self, options)
+    }
+}
+
+/// Build a WAFFLE module from either bytes or synthetic metadata.
+pub fn from_wasm_source<'a>(
+    source: &impl WasmModuleSource<'a>,
+    options: &FrontendOptions,
+) -> Result<Module<'a>> {
+    source.index_module(options)
+}
+
 /// Parse a WebAssembly module from bytes into a WAFFLE Module.
 pub fn from_wasm_bytes<'a>(bytes: &'a [u8], options: &FrontendOptions) -> Result<Module<'a>> {
-    wasm_to_ir(bytes, options)
+    from_wasm_source(&bytes, options)
 }
 
 /// Expand a function body, parsing its lazy reference to original bytecode into IR if needed.
 pub fn expand_func<'a, 'b>(module: &'b mut Module<'a>, id: Func) -> Result<&'b mut FuncDecl<'a>> {
-     #[cfg(feature = "backend")]
+    #[cfg(feature = "backend")]
     if let FuncDecl::Compiled(..) = module.funcs[id] {
         module.funcs[id].clone().decompile(|mut func| {
             let mut func = module.funcs[id].clone();
@@ -63,6 +88,35 @@ pub fn clone_and_expand_body<'a>(module: &Module<'a>, id: Func) -> Result<Functi
         FuncDecl::Body(_, _, body) => body,
         _ => unreachable!(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::cell::Cell;
+
+    struct SyntheticSource<'a> {
+        bytes: &'a [u8],
+        calls: Cell<u8>,
+    }
+
+    impl<'a> WasmModuleSource<'a> for SyntheticSource<'a> {
+        fn index_module(&self, _: &FrontendOptions) -> Result<Module<'a>> {
+            self.calls.set(self.calls.get() + 1);
+            Ok(Module::with_orig_bytes(self.bytes))
+        }
+    }
+
+    #[test]
+    fn accepts_a_synthetic_module_source_without_wasm_parsing() {
+        let source = SyntheticSource {
+            bytes: &[],
+            calls: Cell::new(0),
+        };
+        let module = from_wasm_source(&source, &FrontendOptions::default()).unwrap();
+        assert_eq!(source.calls.get(), 1);
+        assert_eq!(module.funcs.len(), 0);
+    }
 }
 
 /// For all functions that are lazy references to initial bytecode, expand them into IR.
