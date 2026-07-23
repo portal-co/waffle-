@@ -31,6 +31,7 @@ pub mod op_traits;
 mod ops;
 pub mod scoped_map;
 pub mod interp;
+pub mod metadata;
 pub mod util;
 
 pub use errors::*;
