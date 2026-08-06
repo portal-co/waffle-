@@ -1,6 +1,6 @@
 use crate::{
     entity::EntityVec, pool::ListRef, Block, BlockDef, BlockTarget, FunctionBody, Operator,
-    Terminator, Type, Value, ValueDef,
+    Terminator, TerminatorRecord, Type, Value, ValueDef,
 };
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
@@ -124,7 +124,7 @@ impl ssa_traits::op::OpValue<FunctionBody, u32> for ValueDef {
     }
 }
 impl cfg_traits::Block<FunctionBody> for BlockDef {
-    type Terminator = Terminator;
+    type Terminator = TerminatorRecord;
     fn term(&self) -> &Self::Terminator {
         &self.terminator
     }
@@ -253,6 +253,47 @@ impl cfg_traits::Term<FunctionBody> for Terminator {
         })
     }
 }
+
+/// Delegates the trait-facing terminator view through Waffle's metadata wrapper.
+/// Keeping the core `Terminator` implementations above preserves existing
+/// traversal behavior while making `BlockDef` satisfy `cfg_traits::Block`.
+impl cfg_traits::Term<FunctionBody> for TerminatorRecord {
+    type Target = BlockTarget;
+
+    fn targets<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Self::Target> + 'a>
+    where
+        FunctionBody: 'a,
+    {
+        <Terminator as cfg_traits::Term<FunctionBody>>::targets(&self.terminator)
+    }
+
+    fn targets_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut Self::Target> + 'a>
+    where
+        FunctionBody: 'a,
+    {
+        <Terminator as cfg_traits::Term<FunctionBody>>::targets_mut(&mut self.terminator)
+    }
+}
+
+impl ssa_traits::HasValues<FunctionBody> for TerminatorRecord {
+    fn values<'a>(
+        &'a self,
+        f: &'a FunctionBody,
+    ) -> Box<dyn Iterator<Item = <FunctionBody as ssa_traits::Func>::Value> + 'a> {
+        <Terminator as ssa_traits::HasValues<FunctionBody>>::values(&self.terminator, f)
+    }
+
+    fn values_mut<'a>(
+        &'a mut self,
+        f: &'a mut FunctionBody,
+    ) -> Box<dyn Iterator<Item = &'a mut <FunctionBody as ssa_traits::Func>::Value> + 'a>
+    where
+        FunctionBody: 'a,
+    {
+        <Terminator as ssa_traits::HasValues<FunctionBody>>::values_mut(&mut self.terminator, f)
+    }
+}
+
 impl ssa_traits::HasValues<FunctionBody> for Terminator {
     fn values<'a>(
         &'a self,
