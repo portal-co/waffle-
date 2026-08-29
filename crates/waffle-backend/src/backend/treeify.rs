@@ -37,7 +37,27 @@ impl Trees {
         let mut owned = HashMap::default();
         let mut remat = HashSet::default();
         let mut multi_use: HashSet<Value> = HashSet::default();
-        for block_def in body.blocks.values() {
+        // A treeified ("owned") value is re-emitted as a nested
+        // sub-expression directly at its single use site, relying on the
+        // Wasm value stack to carry it there instead of a local. That is
+        // only sound when the use site is in the *same block* as the
+        // definition: the value stack doesn't survive a branch, so
+        // ownership across a block boundary would either silently move a
+        // side-effecting computation (e.g. a call) to a different point in
+        // the control-flow graph than the source program placed it, or
+        // reference operands that were never computed on that path at
+        // all. Record each value's defining block up front so the
+        // ownership checks below can require same-block placement.
+        let mut def_block: HashMap<Value, Block> = HashMap::default();
+        for (block_id, block_def) in body.blocks.entries() {
+            for &(_, param) in &block_def.params {
+                def_block.insert(param, block_id);
+            }
+            for inst in &block_def.insts {
+                def_block.insert(inst.value, block_id);
+            }
+        }
+        for (block_id, block_def) in body.blocks.entries() {
             let mut last_non_pure = None;
             for value in &block_def.insts {
                 match &body.values[value.value] {
@@ -61,12 +81,15 @@ impl Trees {
                         // `multi_use`.
                         for (i, &arg) in body.arg_pool[args].iter().enumerate() {
                             let arg = body.resolve_alias(arg);
+                            let same_block = def_block.get(&arg) == Some(&block_id);
                             if multi_use.contains(&arg) {
                                 continue;
                             } else if let Some(old_owner) = owner.remove(&arg) {
                                 owned.remove(&old_owner);
                                 multi_use.insert(arg);
-                            } else if Self::is_movable(body, arg) || Some(arg) == last_non_pure {
+                            } else if same_block
+                                && (Self::is_movable(body, arg) || Some(arg) == last_non_pure)
+                            {
                                 let pos = u16::try_from(i).unwrap();
                                 let value_arg = ValueArg(value.value, pos);
                                 owner.insert(arg, value_arg);
