@@ -27,7 +27,7 @@ repository = "https://github.com/portal-co/waffle-"
 wasmparser = { version = "0.240", default-features = false, features = ["simd"] }
 wasm-encoder = { version = "0.240", default-features = false }
 wax-core = { version = "0.1.0", git = "https://github.com/portal-co/wax.git" }
-wax-meta = { version = "0.1.0", git = "https://github.com/portal-co/wax.git" }
+wax-meta = { version = "0.1.0", git = "https://github.com/portal-co/portal-container.git" }
 anyhow = { version = "^1.0", default-features = false }
 
 log = { version = "0.4", default-features = false }
@@ -107,6 +107,13 @@ ssa-traits-03 ={workspace = true,optional=true}
 wat = "1.212.0"
 env_logger = "0.11"
 structopt = "0.3.26"
+waffle-frontend = { workspace = true }
+ssa-traits.workspace = true
+cfg-traits.workspace = true
+
+[[test]]
+name = "ssa_traits_02"
+required-features = ["frontend", "ssa-traits-02"]
 
 [features]
 default = []
