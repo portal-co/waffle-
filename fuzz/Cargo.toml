@@ -19,7 +19,7 @@ wasmparser = "0.202.0"
 wasmtime = "19.0"
 
 [dependencies.waffle]
-path = ".."
+git = "https://github.com/portal-co/waffle-"
 features = ["fuzzing"]
 
 # Prevent this from interfering with workspaces
