@@ -356,7 +356,14 @@ impl<'a> WasmFuncBackend<'a> {
                 }
                 self.lower_op(sctx, op, func)?;
                 if root {
-                    for &local in &ctx.locals.values[value] {
+                    // The operator's results are on the stack in declaration
+                    // order with the last result on top; `local.set` pops
+                    // the top of the stack, so results must be stored into
+                    // their locals in *reverse* order. The locals list is in
+                    // declaration order, so iterate it backwards. Getting
+                    // this wrong silently swaps the values of a multi-result
+                    // operator (e.g. a two-result call).
+                    for &local in ctx.locals.values[value].iter().rev() {
                         func.instruction(
                             sctx,
                             &wasm_encoder::Instruction::LocalSet(local.index() as u32),
