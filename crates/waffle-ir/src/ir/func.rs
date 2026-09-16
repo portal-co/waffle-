@@ -996,6 +996,11 @@ impl Terminator {
                     f(*value);
                 }
             }
+            &Terminator::ReturnCallRef { sig, ref args } => {
+                for value in args {
+                    f(*value);
+                }
+            }
             _ => {}
         }
     }
