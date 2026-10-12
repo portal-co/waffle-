@@ -58,6 +58,7 @@ cfg-traits-03 = {version="0.3.0-alpha.2",package="cfg-traits",git="https://githu
 ssa-traits-03 = {version="0.3.0-alpha.2",package="ssa-traits",git="https://github.com/portal-co/codegen-utils.git",branch="dev/0.3"}
 lending-iterator = "0.1.7"
 hashbrown = { version = "0.15.2", default-features = false, features = ["alloc", "default-hasher", "equivalent", "serde"] }
+foldhash = { version = "0.1.5", default-features = false }
 impl-trait-for-tuples = "0.2.3"
 sha3 = { version = "0.10.8", default-features = false }
 

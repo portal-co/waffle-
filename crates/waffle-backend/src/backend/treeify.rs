@@ -6,7 +6,7 @@ use crate::Operator;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
-use hashbrown::{HashMap, HashSet};
+use crate::backend::{DeterministicMap as HashMap, DeterministicSet as HashSet};
 /// One "argument slot" of an operator defining a value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ValueArg(Value, u16);

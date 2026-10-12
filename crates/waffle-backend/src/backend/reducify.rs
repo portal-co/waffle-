@@ -153,7 +153,7 @@ use alloc::borrow::Cow;
 use alloc::collections::VecDeque;
 use alloc::vec;
 use alloc::vec::Vec;
-use hashbrown::{HashMap as FxHashMap, HashSet as FxHashSet, HashSet};
+use crate::backend::{DeterministicMap as FxHashMap, DeterministicSet as FxHashSet, DeterministicSet as HashSet};
 use smallvec::SmallVec;
 pub struct Reducifier<'a> {
     body: &'a FunctionBody,
@@ -247,7 +247,10 @@ impl<'a> Reducifier<'a> {
         // Now, in the irreducible case, "elaborate" the CFG.
         // First do limited conversion to max-SSA to fix up references
         // across contexts.
-        let mut cut_blocks = HashSet::default();
+        // Passed to `maxssa::run`, whose signature uses the default-hasher
+        // set; it is membership-only (never iterated), so iteration-order
+        // determinism does not depend on its hasher.
+        let mut cut_blocks: hashbrown::HashSet<Block> = hashbrown::HashSet::default();
         for (block, data) in self.body.blocks.entries() {
             for &succ in &data.succs {
                 // Loop exits

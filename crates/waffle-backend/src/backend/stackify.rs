@@ -15,7 +15,7 @@ use crate::{Func, Signature, Table};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::convert::TryFrom;
-use hashbrown::HashSet;
+use crate::backend::DeterministicSet as HashSet;
 #[derive(Clone, Debug)]
 pub enum WasmBlock<'a> {
     /// A Wasm block that has the given contents and whose label jumps
@@ -147,9 +147,9 @@ impl<'a, 'b> Context<'a, 'b> {
         body: &FunctionBody,
         cfg: &CFGInfo,
     ) -> anyhow::Result<(HashSet<Block>, HashSet<Block>)> {
-        let mut loop_headers = HashSet::new();
-        let mut branched_once = HashSet::new();
-        let mut merge_nodes = HashSet::new();
+        let mut loop_headers = HashSet::default();
+        let mut branched_once = HashSet::default();
+        let mut merge_nodes = HashSet::default();
         for (block_rpo, &block) in cfg.rpo.entries() {
             for &succ in &body.blocks[block].succs {
                 log::trace!(

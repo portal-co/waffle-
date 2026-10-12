@@ -18,6 +18,7 @@ anyhow .workspace = true
 log .workspace = true
 smallvec .workspace = true
 hashbrown .workspace = true
+foldhash .workspace = true
 
 [features]
 default = []

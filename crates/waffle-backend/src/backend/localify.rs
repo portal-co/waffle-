@@ -4,11 +4,11 @@ use crate::backend::treeify::Trees;
 use crate::CFGInfo;
 use crate::{EntityVec, PerEntity};
 use crate::{Block, FunctionBody, Local, Type, Value, ValueDef};
+use crate::backend::{DeterministicMap as HashMap, DeterministicSet as HashSet};
 use alloc::collections::BTreeMap;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::ops::Range;
-use hashbrown::{HashMap, HashSet};
 use smallvec::{smallvec, SmallVec};
 #[derive(Clone, Debug, Default)]
 pub struct Localifier {
@@ -223,12 +223,12 @@ impl<'a> Context<'a> {
             self.ranges.iter().map(|(k, v)| (*k, v.clone())).collect();
         ranges.sort_unstable_by_key(|(val, range)| (range.start, *val));
         // Keep a list of expiring Locals by expiry point.
-        let mut expiring: HashMap<usize, SmallVec<[(Type, Local); 8]>> = HashMap::new();
+        let mut expiring: HashMap<usize, SmallVec<[(Type, Local); 8]>> = HashMap::default();
         // Iterate over allocation space, processing range starts (at
         // which point we allocate) and ends (at which point we add to
         // the freelist).
         let mut range_idx = 0;
-        let mut freelist: HashMap<Type, Vec<Local>> = HashMap::new();
+        let mut freelist: HashMap<Type, Vec<Local>> = HashMap::default();
         for i in 0..self.points {
             // Process ends. (Ends are exclusive, so we do them
             // first; another range can grab the local at the same

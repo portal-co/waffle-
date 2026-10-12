@@ -23,6 +23,24 @@ pub mod treeify;
 use treeify::Trees;
 pub mod localify;
 use localify::Localifier;
+
+/// Deterministic, instance-local hasher state for every backend-internal
+/// hash collection.
+///
+/// `hashbrown`'s default hasher (foldhash `RandomState`) seeds from
+/// process-global atomic counters and a lazily-initialized global random
+/// seed, so iteration order — and therefore pass outputs — can vary with
+/// process history, address layout, and target. Compiler passes must be a
+/// pure function of the input module, so all backend maps/sets are built
+/// with this fixed, explicit seed instead of any global state.
+pub(crate) type DeterministicHasher = foldhash::fast::FixedState;
+
+/// Map type every backend-internal hash map uses. `Default`/`FromIterator`
+/// keep working because `FixedState: Default`.
+pub(crate) type DeterministicMap<K, V> = hashbrown::HashMap<K, V, DeterministicHasher>;
+
+/// Set type every backend-internal hash set uses.
+pub(crate) type DeterministicSet<K> = hashbrown::HashSet<K, DeterministicHasher>;
 pub struct WasmFuncBackend<'a> {
     body: Cow<'a, FunctionBody>,
     cfg: CFGInfo,
