@@ -1731,9 +1731,15 @@ pub fn compile(module: &Module<'_>) -> anyhow::Result<wasm_encoder::Module> {
     let mut data = wasm_encoder::DataSection::new();
     for (mem, mem_data) in module.memories.entries() {
         for segment in &mem_data.segments {
+            // memory64 memories require a 64-bit offset expression.
+            let offset = if mem_data.memory64 {
+                wasm_encoder::ConstExpr::i64_const(segment.offset as i64)
+            } else {
+                wasm_encoder::ConstExpr::i32_const(segment.offset as i32)
+            };
             data.active(
                 mem.index() as u32,
-                &wasm_encoder::ConstExpr::i32_const(segment.offset as i32),
+                &offset,
                 segment.data.iter().copied(),
             );
         }
