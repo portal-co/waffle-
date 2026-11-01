@@ -1390,7 +1390,37 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
             | wasmparser::Operator::F64x2PromoteLowF32x4
             | wasmparser::Operator::CallRef { .. }
             | wasmparser::Operator::RefIsNull
-            | wasmparser::Operator::RefFunc { .. } => {
+            | wasmparser::Operator::RefFunc { .. }
+            // WasmGC: struct/array allocation and access, reference
+            // tests/casts, i31 boxing, and extern/any conversions. Stack
+            // effects and types come from `op_inputs`/`op_outputs`.
+            | wasmparser::Operator::StructNew { .. }
+            | wasmparser::Operator::StructNewDefault { .. }
+            | wasmparser::Operator::StructGet { .. }
+            | wasmparser::Operator::StructGetS { .. }
+            | wasmparser::Operator::StructGetU { .. }
+            | wasmparser::Operator::StructSet { .. }
+            | wasmparser::Operator::ArrayNew { .. }
+            | wasmparser::Operator::ArrayNewDefault { .. }
+            | wasmparser::Operator::ArrayNewFixed { .. }
+            | wasmparser::Operator::ArrayGet { .. }
+            | wasmparser::Operator::ArrayGetS { .. }
+            | wasmparser::Operator::ArrayGetU { .. }
+            | wasmparser::Operator::ArraySet { .. }
+            | wasmparser::Operator::ArrayFill { .. }
+            | wasmparser::Operator::ArrayCopy { .. }
+            | wasmparser::Operator::ArrayLen
+            | wasmparser::Operator::RefNull { .. }
+            | wasmparser::Operator::RefTestNonNull { .. }
+            | wasmparser::Operator::RefTestNullable { .. }
+            | wasmparser::Operator::RefCastNonNull { .. }
+            | wasmparser::Operator::RefCastNullable { .. }
+            | wasmparser::Operator::RefEq
+            | wasmparser::Operator::RefI31
+            | wasmparser::Operator::I31GetS
+            | wasmparser::Operator::I31GetU
+            | wasmparser::Operator::AnyConvertExtern
+            | wasmparser::Operator::ExternConvertAny => {
                 self.emit(Operator::try_from(&op).unwrap(), loc)?
             }
             wasmparser::Operator::Nop => {}
@@ -1973,7 +2003,16 @@ impl<'a, 'b> FunctionBodyBuilder<'a, 'b> {
         let args = &mut self.body.arg_pool[input_operands];
         for (i, &input) in inputs.into_iter().enumerate().rev() {
             let (stack_top_ty, stack_top) = self.op_stack.pop().unwrap();
-            assert_eq!(stack_top_ty, input);
+            // The validator has already checked subtyping; non-null refs
+            // must be accepted where nullable refs of the same heap type
+            // are expected.
+            let compatible = stack_top_ty == input
+                || matches!(
+                    (&stack_top_ty, &input),
+                    (Type::Heap(a), Type::Heap(b))
+                        if a.value == b.value && (!a.nullable || b.nullable)
+                );
+            assert!(compatible, "stack top {stack_top_ty:?} is not a subtype of input {input:?}");
             args[i] = stack_top;
         }
         log::trace!(" -> operands: {:?}", input_operands);

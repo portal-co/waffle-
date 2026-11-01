@@ -1808,9 +1808,11 @@ pub fn op_outputs(
             let SignatureData::Struct { fields, .. } = &module.signatures[sig] else {
                 anyhow::bail!("invalid signature")
             };
+            // `struct.new` never produces null; match ArrayNew and the
+            // backend's exact block-param type equality.
             Ok(Cow::Owned(vec![Type::Heap(crate::WithNullable {
                 value: crate::HeapType::Sig { sig_index: sig },
-                nullable: true,
+                nullable: false,
             })]))
         }
         &Operator::StructGet { sig, idx } => {
