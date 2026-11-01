@@ -49,14 +49,31 @@ impl Trees {
         // all. Record each value's defining block up front so the
         // ownership checks below can require same-block placement.
         let mut def_block: HashMap<Value, Block> = HashMap::default();
+        // IR position (a global counter over blocks in order) for each
+        // value, so the *latest* side effect inside an owned tree can be
+        // found by comparison.
+        let mut position: HashMap<Value, u32> = HashMap::default();
+        let mut next_position: u32 = 0;
         for (block_id, block_def) in body.blocks.entries() {
             for &(_, param) in &block_def.params {
                 def_block.insert(param, block_id);
+                position.insert(param, next_position);
+                next_position += 1;
             }
             for inst in &block_def.insts {
                 def_block.insert(inst.value, block_id);
+                position.insert(inst.value, next_position);
+                next_position += 1;
             }
         }
+        // For each value, the latest (by IR position) side-effecting op
+        // inside the owned tree rooted at that value, or no entry if that
+        // tree is entirely pure. An owned value is re-emitted at its
+        // owner's position, so every side effect in its tree moves with
+        // it; tracking only the op's own purity (the old `is_movable`
+        // check) let a pure wrapper (e.g. an arithmetic op) carry a call
+        // in its subtree past another call, reordering side effects.
+        let mut tree_last_non_pure: HashMap<Value, Value> = HashMap::default();
         for (block_id, block_def) in body.blocks.entries() {
             let mut last_non_pure = None;
             for value in &block_def.insts {
@@ -88,7 +105,18 @@ impl Trees {
                                 owned.remove(&old_owner);
                                 multi_use.insert(arg);
                             } else if same_block
-                                && (Self::is_movable(body, arg) || Some(arg) == last_non_pure)
+                                && match tree_last_non_pure.get(&arg) {
+                                    // No side effects in the arg's owned
+                                    // subtree: freely movable iff the arg
+                                    // itself is pure.
+                                    None => Self::is_movable(body, arg),
+                                    // The arg's tree has side effects:
+                                    // absorb it only when its latest side
+                                    // effect is the most recent one before
+                                    // this op, so absorbing it cannot move
+                                    // it past any other side effect.
+                                    Some(tail) => Some(*tail) == last_non_pure,
+                                }
                             {
                                 let pos = u16::try_from(i).unwrap();
                                 let value_arg = ValueArg(value.value, pos);
@@ -96,8 +124,31 @@ impl Trees {
                                 owned.insert(value_arg, arg);
                             }
                         }
-                        if !op.is_pure() {
+                        let tail = if !op.is_pure() {
                             last_non_pure = Some(value.value);
+                            Some(value.value)
+                        } else {
+                            // A pure op's tree tail is the latest tail of
+                            // the args this op just absorbed (an unowned
+                            // arg emits at its own position, outside this
+                            // tree, so it does not count).
+                            body.arg_pool[args]
+                                .iter()
+                                .filter_map(|&arg| {
+                                    let arg = body.resolve_alias(arg);
+                                    match owner.get(&arg) {
+                                        Some(&ValueArg(owner_value, _))
+                                            if owner_value == value.value =>
+                                        {
+                                            tree_last_non_pure.get(&arg).copied()
+                                        }
+                                        _ => None,
+                                    }
+                                })
+                                .max_by_key(|tail| position[tail])
+                        };
+                        if let Some(tail) = tail {
+                            tree_last_non_pure.insert(value.value, tail);
                         }
                     }
                     &ValueDef::PickOutput(..) => {
@@ -134,5 +185,114 @@ impl Trees {
         Self::is_single_output_op(body, value)
             .map(|op| op.is_pure())
             .unwrap_or(false)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{FuncDecl, Module, ModuleExt, Operator, SignatureData, Terminator, Type};
+    use alloc::string::ToString;
+    use alloc::vec;
+    use alloc::vec::Vec;
+
+    /// Regression test: a pure operator whose single use is separated from
+    /// its definition by another side effect must not be treeified when its
+    /// owned subtree itself contains a side effect. Otherwise the subtree's
+    /// side effect is re-emitted at the pure op's (later) root position,
+    /// reordering calls: `c1*100 + c2*10 + c3` evaluated the calls in the
+    /// order c3, c1, c2 (jsaw#16).
+    #[test]
+    fn treeify_does_not_reorder_side_effects_across_pure_ops() {
+        let mut module = Module::empty();
+        // bump: () -> f64, increments a mutable global and returns it.
+        let bump_sig = module.signatures.push(SignatureData::Func {
+            params: vec![],
+            returns: vec![Type::F64],
+            shared: false,
+        });
+        // ident: (f64) -> f64 (identity, kept opaque so its call is a side
+        // effect boundary).
+        let ident_sig = module.signatures.push(SignatureData::Func {
+            params: vec![Type::F64],
+            returns: vec![Type::F64],
+            shared: false,
+        });
+        // main: () -> f64.
+        let main_sig = module.signatures.push(SignatureData::Func {
+            params: vec![],
+            returns: vec![Type::F64],
+            shared: false,
+        });
+        let global = module.globals.push(crate::GlobalData {
+            ty: Type::F64,
+            value: Some(0),
+            mutable: true,
+        });
+
+        let bump = module
+            .funcs
+            .push(FuncDecl::Body(bump_sig, "bump".to_string(), {
+                let mut body = FunctionBody::new(&module, bump_sig);
+                let entry = body.entry;
+                let g = body.add_op(entry, Operator::GlobalGet { global_index: global }, &[], &[Type::F64]);
+                let one = body.add_op(entry, Operator::F64Const { value: 1.0f64.to_bits() }, &[], &[Type::F64]);
+                let next = body.add_op(entry, Operator::F64Add, &[g, one], &[Type::F64]);
+                body.add_op(entry, Operator::GlobalSet { global_index: global }, &[next], &[]);
+                body.set_terminator(entry, Terminator::Return { values: vec![next] });
+                body
+            }));
+        let ident = module
+            .funcs
+            .push(FuncDecl::Body(ident_sig, "ident".to_string(), {
+                let mut body = FunctionBody::new(&module, ident_sig);
+                let entry = body.entry;
+                let arg = body.blocks[entry].params[0].1;
+                body.set_terminator(entry, Terminator::Return { values: vec![arg] });
+                body
+            }));
+
+        // main: a = bump()*100 + bump()*10; w1 = ident(a); c3 = bump();
+        // w2 = ident(c3); return w1 + w2.
+        let main = module
+            .funcs
+            .push(FuncDecl::Body(main_sig, "main".to_string(), {
+                let mut body = FunctionBody::new(&module, main_sig);
+                let entry = body.entry;
+                let c1 = body.add_op(entry, Operator::Call { function_index: bump }, &[], &[Type::F64]);
+                let k100 = body.add_op(entry, Operator::F64Const { value: 100.0f64.to_bits() }, &[], &[Type::F64]);
+                let m1 = body.add_op(entry, Operator::F64Mul, &[c1, k100], &[Type::F64]);
+                let c2 = body.add_op(entry, Operator::Call { function_index: bump }, &[], &[Type::F64]);
+                let k10 = body.add_op(entry, Operator::F64Const { value: 10.0f64.to_bits() }, &[], &[Type::F64]);
+                let m2 = body.add_op(entry, Operator::F64Mul, &[c2, k10], &[Type::F64]);
+                let a = body.add_op(entry, Operator::F64Add, &[m1, m2], &[Type::F64]);
+                let c3 = body.add_op(entry, Operator::Call { function_index: bump }, &[], &[Type::F64]);
+                // The tree root for the `a` chain sits *after* `c3`: under
+                // the bug, `a` (pure) is absorbed into `x` carrying `c1` and
+                // `c2` with it, while `c3` stays a root at its own earlier
+                // position — so `c3` runs first.
+                let x = body.add_op(entry, Operator::Call { function_index: ident }, &[a], &[Type::F64]);
+                let y = body.add_op(entry, Operator::Call { function_index: ident }, &[c3], &[Type::F64]);
+                let r = body.add_op(entry, Operator::F64Add, &[x, y], &[Type::F64]);
+                body.set_terminator(entry, Terminator::Return { values: vec![r] });
+                body
+            }));
+        module.exports.push(crate::Export {
+            name: "main".to_string(),
+            kind: crate::ExportKind::Func(main),
+        });
+        let _ = (bump, ident);
+
+        let bytes = module.to_wasm_bytes().expect("encodes");
+        let engine = wasmtime::Engine::default();
+        let compiled = wasmtime::Module::new(&engine, &bytes).expect("validates");
+        let mut store = wasmtime::Store::new(&engine, ());
+        let instance = wasmtime::Instance::new(&mut store, &compiled, &[]).expect("instantiates");
+        let main_fn = instance
+            .get_typed_func::<(), f64>(&mut store, "main")
+            .expect("main export");
+        // Correct left-to-right evaluation: bump() -> 1, 2, 3, so
+        // (1*100 + 2*10) + 3 = 123.
+        assert_eq!(main_fn.call(&mut store, ()).expect("runs"), 123.0);
     }
 }
